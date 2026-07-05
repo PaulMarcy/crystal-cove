@@ -9,6 +9,9 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [ ] npm-Scripts: `dev`, `build`, `test`, `typecheck`, `lint`
 - [ ] Leere Phaser-Szene + React-Overlay rendern („Hello Island")
 - [ ] CI-freundlicher Check: `npm run verify` (typecheck + lint + test)
+- [ ] Claude-Code-Skills installieren (siehe docs/08): gamedev-Router + web-engines
+- [ ] GitHub-Remote (public) + GitHub Action fuer `npm run verify`
+- [ ] ASSETS.md anlegen (Lizenz-Register)
 
 ## M1 — Kampf-Prototyp (Risiko zuerst: macht der Kern Spaß?)
 - [ ] Kampf-Zustandsmaschine in `core/combat` (seedbarer RNG, pure reducer)
