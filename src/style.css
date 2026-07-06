@@ -1,0 +1,32 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #0d1f28;
+  height: 100%;
+}
+
+#game {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none; /* overlay children opt back in with pointer-events: auto */
+}
+
+.overlay-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  color: #e8f4f8;
+  font-family: monospace;
+  font-size: 14px;
+  background: rgba(13, 31, 40, 0.7);
+  padding: 6px 10px;
+  border-radius: 4px;
+}
