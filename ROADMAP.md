@@ -9,7 +9,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Ordnerstruktur gemäß docs/05 anlegen, ESLint + Prettier
 - [x] npm-Scripts: `dev`, `build`, `test`, `typecheck`, `lint`, `verify`, `sim`
 - [x] Leere Phaser-Szene + React-Overlay rendern („Hello Island")
-- [ ] Claude-Code-Skills installieren (docs/08): gamedev-Router + web-engines
+- [x] Claude-Code-Skills installieren (docs/08): gamedev-Router + web-engines
 - [x] GitHub-Remote (public) + Actions: verify.yml (Push) & deploy.yml (Pages, manuell)
 - [x] ASSETS.md anlegen (Lizenz-Register) · LICENSE-Entscheidung dokumentieren
 
