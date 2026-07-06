@@ -49,3 +49,19 @@ Orange = „hier kannst du handeln"**. Diese Logik gilt auf Insel, im Kampf und 
 Statische Bühne: Spieler-Avatar links, 1–3 Gegner rechts (Absicht-Icons über
 den Köpfen), Handfächer unten, Energie-Anzeige links unten, Nachzieh-/
 Ablagestapel in den Ecken. Hintergrund = Biom der aktuellen Insel.
+
+## Grafik-Ausbaustufen (Mockups ≠ finale Optik)
+
+Die Design-Mockups definieren Layout, Farblogik und Zustände — nicht die
+Zielqualität. Die Optik wird in drei Stufen hochgezogen, ohne das UI-Skelett
+je umzubauen:
+
+| Stufe | Wann | Inhalt |
+|---|---|---|
+| 1 Funktional | M1–M4 | Freie Pixel-Packs + Formen-Platzhalter; alle Zonen/Zustände final |
+| 2 Stimmung | M5 | Animierte Sprites (Idle/Hit, 2–4 Frames), Juice-Pass, Parallax, Partikel (Pollen/Blätter), Vignette + Lichtstimmung je Biom, Papier-/Holz-Texturen im UI, Pixel-Font |
+| 3 Signatur | nach V1 | Karten-Artworks (AI-Pipeline mit Style-Referenz), eigene Charakter-Sprites, Biom-spezifische Kampf-Bühnen |
+
+**Effizienz-Trick Schattenkreaturen:** normale Tier-Sprites auf die
+Korruptions-Palette umfärben + Kristallauswüchse (#9668D8) aufsetzen —
+ein Tier-Set deckt das gesamte Gegner-Roster in normal UND korrumpiert ab.
