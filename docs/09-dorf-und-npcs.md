@@ -19,7 +19,7 @@
 | B2 | Kochstelle → Küche St. 2/3 | Onboarding / Tilda St.1 / Tilda St.2 | Gerichte-Rezepte je Stufe |
 | B3 | Schmiede St. 1→3 | Beat 6 / Maro St.1 / Maro St.2 | Prägerezepte je Stufe, Werkzeug-Upgrades |
 | B4 | Wohnhaus 1 | Holz+Stein | Tilda zieht ein |
-| B5 | Steg | Hartholz (Kriecher-Drops!) | Bruna zieht ein; Angeln |
+| B5 | Steg | 4 Holz + 4 Ranken (Kriecher-Drops) | Bruna zieht ein; Angeln |
 | B6 | Kristallschrein | Orin befreit + Schattenstaub | Verzaubern, Karten-Upgrade, später Resonanz |
 | B7 | Wohnhaus 2 | nach Orin-Rettung | Orin zieht ein |
 | B8 | Markt | Insel gereinigt | Piya; Handel + Schwarzes Brett |
@@ -76,7 +76,7 @@
 - **Funktion:** Markt (kauft Glanzstücke/Überschuss, verkauft seltene Materialien,
   rotierendes Sortiment pro Besuch der Weltkarte — nicht pro Echtzeit),
   Schwarzes Brett
-- **Kette = Boot-Reparatur (Tor zu Insel 2):** (1) 10 Hartholz + 4 Zähes Leder ·
+- **Kette = Boot-Reparatur (Tor zu Insel 2):** (1) 10 Holz + 4 Zähes Leder ·
   (2) 5 Harz (Kriecher-Chance-Drop) · (3) Probefahrt-Quest →
   **Überfahrt Nebelwald freigeschaltet**
 
