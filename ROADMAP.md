@@ -1,51 +1,73 @@
 # ROADMAP — Crystal Cove
 
 Vertikale Schnitte: Jeder Meilenstein endet in etwas Spielbarem.
+Detailplan mit Akzeptanzkriterien, Agenten- und Skill-Zuordnung: docs/12.
 Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 
 ## M0 — Projekt-Setup
 - [ ] Vite + TypeScript (strict) + React + Phaser 3 + Zustand + Vitest aufsetzen
 - [ ] Ordnerstruktur gemäß docs/05 anlegen, ESLint + Prettier
-- [ ] npm-Scripts: `dev`, `build`, `test`, `typecheck`, `lint`
+- [ ] npm-Scripts: `dev`, `build`, `test`, `typecheck`, `lint`, `verify`, `sim`
 - [ ] Leere Phaser-Szene + React-Overlay rendern („Hello Island")
-- [ ] CI-freundlicher Check: `npm run verify` (typecheck + lint + test)
-- [ ] Claude-Code-Skills installieren (siehe docs/08): gamedev-Router + web-engines
-- [ ] GitHub-Remote (public) + GitHub Action fuer `npm run verify`
-- [ ] ASSETS.md anlegen (Lizenz-Register)
+- [ ] Claude-Code-Skills installieren (docs/08): gamedev-Router + web-engines
+- [ ] GitHub-Remote (public) + Actions: verify.yml (Push) & deploy.yml (Pages, manuell)
+- [ ] ASSETS.md anlegen (Lizenz-Register) · LICENSE-Entscheidung dokumentieren
 
-## M1 — Kampf-Prototyp (Risiko zuerst: macht der Kern Spaß?)
-- [ ] Kampf-Zustandsmaschine in `core/combat` (seedbarer RNG, pure reducer)
-- [ ] Effekt-Interpreter: damage, block, draw, heal, applyStatus, gainEnergy
-- [ ] Statuseffekte: Stärke, Verwundbar, Schwäche, Gift
-- [ ] Starter-Deck (12 Karten) + 4 Gegner Tier 1 + 1 Elite als Daten
-- [ ] Gegner-Absichten (Zyklus-Muster) inkl. Anzeige-Daten
-- [ ] React-Kampf-UI: Hand, Energie, Stapel, Gegner mit Absicht, Sieg/Niederlage
-- [ ] Unit-Tests: Kartenkosten, Block-Verfall, Gift-Tick, Mischen, Sieg/Niederlage
+## M1 — Kampf-Prototyp
+- [ ] Kampf-Zustandsmaschine in core/combat (seedbarer RNG, pure Reducer)
+- [ ] Effekt-Interpreter: damage, block, draw, heal, applyStatus, gainEnergy, addCard, ignoreBlock, retaliate
+- [ ] Statuseffekte: Stärke, Verwundbar, Schwäche, Gift, Vergeltung
+- [ ] Daten: Starter-Deck + alle Karten aus docs/10 + Gegner/Elite aus docs/07
+- [ ] Gegner-Absichten (cycle/phased) inkl. „echte Zahl"-Berechnung
+- [ ] Kampf-UI vollständig nach docs/11 (Zonen, Zustände, Targeting)
+- [ ] Headless-Simulator: `npm run sim -- --deck starter --enemy blighted_boar --n 1000`
+- [ ] Unit-Tests: Kosten, Block-Verfall, Gift-Tick, Mischen, Sieg/Niederlage, Seeds
 - [ ] Playtest-Kriterium: 3 Kämpfe in Folge fühlen sich unterschiedlich an
 
-## M2 — Insel-Slice (Heimatbucht Minimalfassung)
-- [ ] Tilemap Heimatbucht (kleiner Ausschnitt), Spielerbewegung, Kollision
-- [ ] 3 erntbare Ressourcen (Holz, Kupfer, Beeren) + Inventar
-- [ ] Kreaturen auf der Karte; Berührung → Übergang in den Kampf und zurück
-- [ ] Kampf-Beute: Ressourcen-Drops nach Gegnertyp
-- [ ] Spielstand speichern/laden (localStorage, versioniert)
+## M2 — Insel-Slice (Heimatbucht minimal)
+- [ ] Tilemap Heimatbucht (Strand + Wiese), Bewegung, Kollision (Tiled-Import)
+- [ ] Ernten: Holz, Kupfer, Beeren + Inventar-UI
+- [ ] Kreaturen auf Karte, Begegnungs-Trigger → Kampf → Rückkehr mit Beute
+- [ ] Begegnungstabellen nach Gebiet (docs/07)
+- [ ] Save V1: localStorage, versioniert, Backup-Slot, Korruptions-Recovery
 
-## M3 — Crafting-Loop (Insel füttert Deck)
-- [ ] Schmiede: 5 prägbare Karten aus Erz/Holz (Rezepte als Daten)
-- [ ] Kräuterküche: 3 Gerichte als Verbrauchskarten
-- [ ] Deck-Truhe: Kampfdeck (12) aus Sammlung zusammenstellen
-- [ ] Karten zerlegen (Teilerstattung)
-- [ ] Werkzeug-Upgrade Kupferaxt → Eisenaxt hebt Karte „Axtschlag" an
+## M3 — Crafting-Loop
+- [ ] Schmiede + Küche St. 1 (Rezepte aus docs/10), Werkstatt-UI
+- [ ] Deck-Truhe (Kampfdeck 12 aus Sammlung), Karten zerlegen (50 %)
+- [ ] Gerichte als Verbrauchskarten inkl. Nachkochen
+- [ ] Werkzeugstufe 2 („Verstärkt") hebt Axtschlag 6→8
+- [ ] Farming: Beete, Wachstum pro Schlafphase (docs/10)
 
 ## M4 — Progression
-- [ ] XP-System + Level 1–10 mit Meilensteinen (Deck 15, Talisman-Slot 1)
-- [ ] Talentbaum V1 (3 Zweige × 3 Stufen)
-- [ ] Erkundungsfortschritt + Schattendichte 0–3 auf der Heimatbucht (Eliten ab 2)
-- [ ] Dungeon „Verwachsene Höhle": 3 Kämpfe + Boss Wurzelwächter, ohne Heilung
-- [ ] Reinigung der Insel nach Boss-Sieg (Dichte dauerhaft 0)
+- [ ] XP/Level 1–10 + Meilensteine (Deck 15, Talisman-Slot 1), Talentbaum 3×3
+- [ ] Erkundungs-% + Schattendichte 0–3 (Eliten ab 2, Affixe)
+- [ ] Dungeon „Verwachsene Höhle": 3 Kämpfe + Wurzelwächter (phased), Orin-Rettung
+- [ ] Reinigung (Dichte dauerhaft 0), Talismane funktional
+- [ ] Niederlage-Fluss: Aufwachen im Bett + Beute-Malus
 
-## M5 — Content & Polish
-- [ ] Nebelwald (Insel 2) mit Gift-Schule (12 Karten)
-- [ ] Resonanz-Stufen 1–3 für die Verwachsene Höhle
-- [ ] Animation/Juice-Pass: Karten-Hover, Treffer-Shake, Partikel
-- [ ] Audio-Grundgerüst, Balancing-Pass mit Playtest-Daten
+## M5 — Dorf, NPCs & Quests
+- [ ] Bauplatz-System B1–B9 (docs/09), Bau-UI
+- [ ] Dialog-System (Portrait, Textbox, Weiter; Choices vorbereitet)
+- [ ] NPC-Ankunftstrigger, Freundschaftsketten aller 6 NPCs, Questlog minimal
+- [ ] Markt + Schwarzes Brett (Münz-Ökonomie), Angeln (Steg)
+- [ ] Schrein: Verzaubern + Karten-Upgrade (Karte+)
+- [ ] Piya-Kette bis „Überfahrt freigeschaltet" (Weltkarte zeigt Insel 2 gesperrt)
+
+## M6 — Onboarding, Menüs, Audio, Einstellungen
+- [ ] Onboarding Beats 1–6 (docs/06) inkl. Skript-Kämpfe, Flags, Skip-Option
+- [ ] Hauptmenü (Neu/Laden/Slots), Pause, Beute-Panel, Game-Over-frei-Niederlage
+- [ ] Einstellungen: SFX-/Musik-Lautstärke, Textgeschwindigkeit, Effekte reduzieren, Vollbild, Schriftgröße
+- [ ] Audio-Grundgerüst (howler.js): SFX-Liste v1 (Karte, Treffer, Block, Ernte, Bau, UI) + 2 Musik-Loops (Insel, Kampf) aus CC0
+- [ ] strings.ts vollständig (DE), EN-Gerüst
+
+## M7 — Polish, Balancing & Content-Fill
+- [ ] Juice-Pass (docs/11-Feedback + game-feel-Skill), Grafik-Stufe 2 (docs/04)
+- [ ] Balancing-Pass mit Simulator-Reports + Playtests, Kartenpool auf ~30 füllen
+- [ ] Performance: 60 fps Budget, Textur-Atlas, Insel-Lazy-Load
+- [ ] Regressions-Checkliste QA (docs/12), Bugfix-Runde
+
+## M8 — Release
+- [ ] itch.io-Seite (Texte, Screenshots, GIF) + Butler-Upload (itch-publish-Skill)
+- [ ] GitHub Pages Deploy, Versionierung v1.0 (semver ↔ Save-Version)
+- [ ] ASSETS.md final geprüft (jede Lizenz), LICENSE im Repo
+- [ ] Post-Release-Backlog: Nebelwald (Insel 2), Resonanz 1–3, Deko-Bau, Touch

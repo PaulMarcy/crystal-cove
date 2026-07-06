@@ -72,3 +72,10 @@ Kaufen ist Abkürzung, nie Pflicht).
 - doc 09: Steg kostet 4 Holz + 4 Ranken (statt Hartholz — das ist Insel-2-exklusiv)
 - doc 09: Piya-Boot Teil 1 kostet 10 Holz + 4 Leder (statt Hartholz) —
   verhinderte Deadlock: Insel-2-Material für Insel-2-Freischaltung
+
+## Farming & Zeit (Lückenschluss)
+
+Es gibt KEINEN Echtzeit-/Tageszyklus. Pflanzenwachstum ist an Schlafphasen
+gebunden (Zelt/Bett): Beeren 1 · Kürbis 2 · Chili 3 Schlafzyklen.
+Schlafen heilt vollständig (in Dungeons nicht verfügbar). Nichts verwelkt,
+nichts verdirbt — Cozy-Regel: Abwesenheit wird nie bestraft.
