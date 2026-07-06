@@ -20,6 +20,21 @@ Ernte wird zu Verbrauchskarten, NPCs lehren Kartenschulen.
 | `docs/04-art-direction.md` | Stil, Palette, Asset-Pipeline |
 | `docs/05-technik-architektur.md` | Tech-Stack, Architektur, Datenmodell |
 
+## Entwicklung
+
+```bash
+npm ci          # Abhängigkeiten
+npm run dev     # Dev-Server (Vite)
+npm run verify  # typecheck + lint + test — Pflicht vor jedem Commit
+```
+
+Stack: TypeScript (strict) · Vite · Phaser 3 (Inselwelt) · React (Kampf-/Menü-UI) ·
+Zustand · Vitest. Details: `docs/05-technik-architektur.md`.
+
+## Lizenz
+
+Code: [MIT](LICENSE) (Entscheidung M0). Fremd-Assets: je Eintrag in `ASSETS.md`.
+
 ## Status
 
-Konzeptphase abgeschlossen. Nächster Schritt: Meilenstein M0 (Projekt-Setup), siehe `ROADMAP.md`.
+M0 (Projekt-Setup) in Arbeit, siehe `ROADMAP.md`.
