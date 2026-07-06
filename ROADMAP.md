@@ -5,13 +5,13 @@ Detailplan mit Akzeptanzkriterien, Agenten- und Skill-Zuordnung: docs/12.
 Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 
 ## M0 — Projekt-Setup
-- [ ] Vite + TypeScript (strict) + React + Phaser 3 + Zustand + Vitest aufsetzen
-- [ ] Ordnerstruktur gemäß docs/05 anlegen, ESLint + Prettier
-- [ ] npm-Scripts: `dev`, `build`, `test`, `typecheck`, `lint`, `verify`, `sim`
-- [ ] Leere Phaser-Szene + React-Overlay rendern („Hello Island")
+- [x] Vite + TypeScript (strict) + React + Phaser 3 + Zustand + Vitest aufsetzen
+- [x] Ordnerstruktur gemäß docs/05 anlegen, ESLint + Prettier
+- [x] npm-Scripts: `dev`, `build`, `test`, `typecheck`, `lint`, `verify`, `sim`
+- [x] Leere Phaser-Szene + React-Overlay rendern („Hello Island")
 - [ ] Claude-Code-Skills installieren (docs/08): gamedev-Router + web-engines
-- [ ] GitHub-Remote (public) + Actions: verify.yml (Push) & deploy.yml (Pages, manuell)
-- [ ] ASSETS.md anlegen (Lizenz-Register) · LICENSE-Entscheidung dokumentieren
+- [x] GitHub-Remote (public) + Actions: verify.yml (Push) & deploy.yml (Pages, manuell)
+- [x] ASSETS.md anlegen (Lizenz-Register) · LICENSE-Entscheidung dokumentieren
 
 ## M1 — Kampf-Prototyp
 - [ ] Kampf-Zustandsmaschine in core/combat (seedbarer RNG, pure Reducer)
