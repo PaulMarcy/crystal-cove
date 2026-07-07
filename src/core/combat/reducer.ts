@@ -10,13 +10,7 @@
  * createCombatState; END_TURN chains turnEnd → enemyTurn → next turnStart.
  */
 import { combatConfig } from '../../data/combat';
-import {
-  applyEffects,
-  applyPoisonTick,
-  decayTurnStatuses,
-  drawCards,
-  type Actor,
-} from './effects';
+import { applyEffects, applyPoisonTick, decayTurnStatuses, drawCards, type Actor } from './effects';
 import { shuffle, type Rng } from './rng';
 import type {
   CombatCard,

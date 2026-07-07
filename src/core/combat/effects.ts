@@ -60,7 +60,8 @@ export function resolveAmount(amount: EffectAmount, state: CombatState): number 
   switch (amount.scaling) {
     case 'toolTier':
       return (
-        amount.base + (state.toolTier - combatConfig.baseToolTier) * combatConfig.toolTierBonusPerTier
+        amount.base +
+        (state.toolTier - combatConfig.baseToolTier) * combatConfig.toolTierBonusPerTier
       );
   }
 }
@@ -216,7 +217,13 @@ export function applyEffects(
         // dead targets stop absorbing the remaining hits.
         for (let i = 0; i < times; i++) {
           for (const unit of resolveTargets(state, actor, effect.target, chosenEnemyId)) {
-            performAttack(state, actor, unit, resolveAmount(effect.amount, state), effect.ignoresBlock);
+            performAttack(
+              state,
+              actor,
+              unit,
+              resolveAmount(effect.amount, state),
+              effect.ignoresBlock,
+            );
           }
         }
         break;
