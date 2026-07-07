@@ -5,8 +5,15 @@
  * simple deterministic bot policy — no combat logic is duplicated here.
  * The CLI lives in scripts/sim.ts; tests in scripts/sim.test.ts.
  *
- * Bot policy ("greedy", deterministic — swap via SimOptions.policy):
- *   Per decision step, first match wins:
+ * Two built-in bot policies (swap via SimOptions.policy):
+ *
+ * "noise" (corridor baseline per docs/12, human proxy):
+ *   plays a uniformly random playable card (via the injected sim RNG, so a
+ *   fixed seed replays exactly) on a random living target until nothing is
+ *   playable, then END_TURN. No intent-aware blocking, no heal priority,
+ *   never RETREAT.
+ *
+ * "greedy" (upper-bound reference), per decision step, first match wins:
  *   1. Dish with a heal effect if player hp < 50 % of max hp.
  *   2. Block card (highest block first, then hand order) while the
  *      telegraphed incoming damage exceeds current block.
@@ -19,7 +26,7 @@ import { combatConfig } from '../src/data/combat';
 import { resolveAmount } from '../src/core/combat/effects';
 import { getIntentPreview } from '../src/core/combat/intent';
 import { combatReducer, createCombatState } from '../src/core/combat/reducer';
-import { createRng } from '../src/core/combat/rng';
+import { createRng, type Rng } from '../src/core/combat/rng';
 import { cardNeedsTarget, isCardPlayable } from '../src/core/combat/view';
 import type {
   CardDef,
@@ -32,7 +39,8 @@ import type {
 /** Safety net against degenerate stalls; a capped combat counts as a loss. */
 export const MAX_TURNS = 100;
 
-export type Policy = (state: CombatState) => CombatEvent;
+/** Policies draw from the same injected RNG stream as the combat itself. */
+export type Policy = (state: CombatState, rng: Rng) => CombatEvent;
 
 export interface SimOptions {
   deck: readonly CardDef[];
@@ -97,7 +105,23 @@ function playEvent(state: CombatState, card: CombatCard): CombatEvent {
   };
 }
 
-/** Default deterministic bot (see module doc for the rule order). */
+/**
+ * Human-proxy baseline (module doc): random playable card, random living
+ * target. Deterministic per seed — all randomness comes from the injected RNG.
+ */
+export const noisePolicy: Policy = (state, rng) => {
+  const playable = state.hand.filter((card) => isCardPlayable(state, card));
+  if (playable.length === 0) return { type: 'END_TURN' };
+  const card = playable[Math.floor(rng() * playable.length)]!;
+  let targetEnemyId: string | undefined;
+  if (cardNeedsTarget(card.def)) {
+    const living = state.enemies.filter((enemy) => enemy.hp > 0);
+    targetEnemyId = living[Math.floor(rng() * living.length)]!.instanceId;
+  }
+  return { type: 'PLAY_CARD', cardInstanceId: card.instanceId, targetEnemyId };
+};
+
+/** Near-optimal reference bot (see module doc for the rule order). */
 export const greedyPolicy: Policy = (state) => {
   const playable = state.hand.filter((card) => isCardPlayable(state, card));
 
@@ -136,7 +160,7 @@ export function runCombat(
   deck: readonly CardDef[],
   enemies: readonly EnemyDef[],
   seed: number,
-  policy: Policy = greedyPolicy,
+  policy: Policy = noisePolicy,
 ): SingleRunResult {
   const rng = createRng(seed);
   let state = createCombatState(
@@ -150,7 +174,7 @@ export function runCombat(
   );
 
   while (state.phase === 'playerTurn' && state.turn <= MAX_TURNS) {
-    const event = policy(state);
+    const event = policy(state, rng);
     const next = combatReducer(state, event, rng);
     if (next === state && event.type !== 'END_TURN') {
       // Policy proposed an unplayable move — force end turn to avoid stalls.
@@ -166,7 +190,7 @@ export function runCombat(
 }
 
 export function runSimulation(options: SimOptions): SimResult {
-  const { deck, enemies, n, baseSeed, policy = greedyPolicy } = options;
+  const { deck, enemies, n, baseSeed, policy = noisePolicy } = options;
   let wins = 0;
   let defeats = 0;
   let timeouts = 0;

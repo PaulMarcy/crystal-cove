@@ -6,11 +6,30 @@
 import { describe, expect, it } from 'vitest';
 import { starterDeck } from '../src/data/cards/tier1';
 import { blightedBoar, shadowRat } from '../src/data/enemies/tier1';
-import { runSimulation } from './simlib';
+import { greedyPolicy, noisePolicy, runSimulation } from './simlib';
 
 describe('headless simulator', () => {
-  it('is deterministic for a fixed seed', () => {
-    const options = { deck: starterDeck, enemies: [blightedBoar], n: 10, baseSeed: 42 };
+  it('is deterministic for a fixed seed (greedy policy)', () => {
+    const options = {
+      deck: starterDeck,
+      enemies: [blightedBoar],
+      n: 10,
+      baseSeed: 42,
+      policy: greedyPolicy,
+    };
+    const a = runSimulation(options);
+    const b = runSimulation(options);
+    expect(a).toEqual(b);
+  });
+
+  it('is deterministic for a fixed seed (noise policy, the corridor baseline)', () => {
+    const options = {
+      deck: starterDeck,
+      enemies: [blightedBoar],
+      n: 10,
+      baseSeed: 42,
+      policy: noisePolicy,
+    };
     const a = runSimulation(options);
     const b = runSimulation(options);
     expect(a).toEqual(b);

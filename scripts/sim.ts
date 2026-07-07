@@ -13,6 +13,7 @@
  *   --all              one single-enemy run per tier-1 enemy incl. elite
  *   --n <count>        runs per matchup (default: 1000)
  *   --seed <number>    base seed; runs use seed..seed+n-1 (default: 1000)
+ *   --policy <name>    noise (default, corridor baseline) | greedy (reference)
  *
  * No dependencies — args parsed by hand (CLAUDE.md: no new deps).
  */
@@ -27,7 +28,7 @@ import {
   thornTerror,
 } from '../src/data/enemies/tier1';
 import type { CardDef, EnemyDef } from '../src/core/combat/types';
-import { runSimulation, type SimResult } from './simlib';
+import { greedyPolicy, noisePolicy, runSimulation, type Policy, type SimResult } from './simlib';
 
 const decks: Record<string, readonly CardDef[]> = { starter: starterDeck };
 
@@ -91,6 +92,14 @@ function main(): void {
     process.exit(1);
   }
 
+  const policies: Record<string, Policy> = { noise: noisePolicy, greedy: greedyPolicy };
+  const policyName = args.get('policy') ?? 'noise';
+  const policy = policies[policyName];
+  if (!policy) {
+    console.error(`sim: unknown policy '${policyName}'. Known: ${Object.keys(policies).join(', ')}`);
+    process.exit(1);
+  }
+
   const matchups: { label: string; enemies: EnemyDef[] }[] = [];
   if (args.has('all')) {
     for (const enemy of m1Enemies) matchups.push({ label: enemy.id, enemies: [enemy] });
@@ -106,10 +115,10 @@ function main(): void {
     matchups.push({ label: id, enemies: [enemyById(id)] });
   }
 
-  console.log(`deck=${deckId}  n=${n}  seeds=${baseSeed}..${baseSeed + n - 1}  policy=greedy`);
+  console.log(`deck=${deckId}  n=${n}  seeds=${baseSeed}..${baseSeed + n - 1}  policy=${policyName}`);
   console.log(`${'matchup'.padEnd(28)} winrate  ØTurns  ØHP(win)`);
   for (const matchup of matchups) {
-    const result = runSimulation({ deck, enemies: matchup.enemies, n, baseSeed });
+    const result = runSimulation({ deck, enemies: matchup.enemies, n, baseSeed, policy });
     console.log(formatRow(matchup.label, result));
   }
 }
