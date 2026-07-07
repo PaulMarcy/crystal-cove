@@ -21,7 +21,10 @@ const weaken: CardDef = {
   effects: [{ kind: 'applyStatus', status: 'weak', amount: 2, target: 'target' }],
 };
 
-function newCombat(enemies: EnemyDef[], deck: CardDef[] = [strike, strike, strike, weaken, weaken]) {
+function newCombat(
+  enemies: EnemyDef[],
+  deck: CardDef[] = [strike, strike, strike, weaken, weaken],
+) {
   const rng = createRng(7);
   return { state: createCombatState({ playerHp: 60, deck, enemies }, rng), rng };
 }
@@ -146,7 +149,10 @@ describe('getIntentPreview — stays live after status changes', () => {
       cost: 0,
       effects: [{ kind: 'applyStatus', status: 'vulnerable', amount: 1, target: 'player' }],
     };
-    const { state, rng } = newCombat([shadowRat], [reckless, reckless, reckless, reckless, reckless]);
+    const { state, rng } = newCombat(
+      [shadowRat],
+      [reckless, reckless, reckless, reckless, reckless],
+    );
     const card = state.hand[0]!;
     const next = combatReducer(state, { type: 'PLAY_CARD', cardInstanceId: card.instanceId }, rng);
     expect(previewOf(next).attacks[0]!.amount).toBe(4); // 3 × 1.5 → 4

@@ -1,9 +1,29 @@
+/* Palette docs/04: Orange = handeln, Violett = Magie, dunkles Violett = Korruption. */
+:root {
+  --color-action: #ff9a4a;
+  --color-magic: #9668d8;
+  --color-corruption: #55486e;
+  --color-nature: #8fbf6f;
+  --color-water: #79bfd1;
+  --color-sand: #ecd9a3;
+  --color-ui-ground: #3a2e28;
+  --color-text: #f4ead9;
+  --type-attack: #c9584a;
+  --type-skill: #79bfd1;
+  --type-power: #9668d8;
+  --type-dish: #8fbf6f;
+  --type-status: #55486e;
+  /* docs/06: Schriftgröße von Anfang an respektieren. */
+  --base-font-size: 15px;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
   background: #0d1f28;
   height: 100%;
+  font-size: var(--base-font-size);
 }
 
 #game {
@@ -17,6 +37,8 @@ body {
   position: fixed;
   inset: 0;
   pointer-events: none; /* overlay children opt back in with pointer-events: auto */
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  color: var(--color-text);
 }
 
 .overlay-badge {
@@ -29,4 +51,617 @@ body {
   background: rgba(13, 31, 40, 0.7);
   padding: 6px 10px;
   border-radius: 4px;
+}
+
+.dev-combat-button {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  background: var(--color-action);
+  color: #3a2312;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ── Combat screen (docs/11 Zonen-Layout) ─────────────────────────────── */
+
+.combat-screen {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Bühne: oberes ~65 %, Biom-Hintergrund (Heimatbucht-Wiese, Stufe-1-Platzhalter). */
+.combat-stage {
+  position: relative;
+  flex: 0 0 65%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 8% 3vh;
+  background: linear-gradient(#79bfd1 0%, #a8d8b9 45%, #8fbf6f 46%, #7cae60 100%);
+}
+
+.combat-bottom {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  background: var(--color-ui-ground);
+  padding: 8px 16px 14px;
+}
+
+.location-chip {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  background: rgba(58, 46, 40, 0.85);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+.retreat-button {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: rgba(58, 46, 40, 0.85);
+  color: var(--color-text);
+  border: 1px solid var(--color-action);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.retreat-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Units on stage ───────────────────────────────────────────────────── */
+
+.player-view,
+.enemy-view {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.enemy-group {
+  display: flex;
+  gap: 4vw;
+  align-items: flex-end;
+}
+
+.player-sprite,
+.enemy-sprite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sprite-glyph {
+  font-size: 64px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.3));
+}
+
+.enemy-sprite .sprite-glyph {
+  /* Schattenkreaturen: Korruptions-Violett (docs/04). */
+  text-shadow: 0 0 14px var(--color-magic);
+}
+
+.sprite-name {
+  font-size: 0.85rem;
+  margin-top: 2px;
+  background: rgba(13, 31, 40, 0.55);
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+
+.enemy-view {
+  cursor: default;
+}
+.enemy-view--targetable {
+  cursor: pointer;
+}
+.enemy-view--dead {
+  opacity: 0.35;
+}
+
+/* Gegner-Hover-Tooltip: exakte HP + Status (docs/11). */
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(13, 31, 40, 0.95);
+  border: 1px solid var(--color-sand);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  white-space: normal;
+  width: max-content;
+  max-width: 220px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms;
+  z-index: 30;
+}
+.enemy-view:hover > .tooltip--enemy,
+.status-chip:hover > .tooltip,
+.card:hover > .tooltip--card {
+  opacity: 1;
+}
+.tooltip--enemy {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+
+/* HP bar (Gegner: ohne Zahl, docs/11) */
+.hp-bar {
+  width: 92px;
+  height: 10px;
+  background: rgba(13, 31, 40, 0.6);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+}
+.hp-bar-fill {
+  height: 100%;
+  background: #d9534f;
+  transition: width 250ms ease-out;
+}
+/* Gift-Tick: grüner Puls am HP-Balken (docs/11). */
+.hp-bar--poison .hp-bar-fill {
+  animation: poison-pulse 1.4s ease-in-out infinite;
+}
+@keyframes poison-pulse {
+  0%,
+  100% {
+    box-shadow: none;
+  }
+  50% {
+    box-shadow: 0 0 8px 2px #6fbf6f inset;
+  }
+}
+
+.hp-plate,
+.block-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(13, 31, 40, 0.7);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.block-chip {
+  color: var(--color-water);
+  animation: block-plop 220ms ease-out; /* Block-Gewinn ploppt (docs/11) */
+}
+@keyframes block-plop {
+  0% {
+    transform: scale(0.4);
+  }
+  70% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.player-status,
+.enemy-substatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-row {
+  display: flex;
+  gap: 4px;
+}
+.status-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(13, 31, 40, 0.7);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.8rem;
+  cursor: help;
+}
+.status-stacks {
+  font-weight: 700;
+}
+
+/* Absichts-Chip: blendet NACH der Gegneraktion ein (docs/11) — remount + delay. */
+.intent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(13, 31, 40, 0.85);
+  border: 1px solid var(--color-corruption);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.9rem;
+  opacity: 0;
+  animation: intent-in 260ms ease-out 320ms forwards;
+}
+@keyframes intent-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.intent-number {
+  font-weight: 700;
+  color: var(--color-action);
+}
+.intent-label {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+/* Treffer: Ziel zuckt 4 px + weißer Blitz 80 ms (docs/11). */
+.hit-flash {
+  animation:
+    hit-jerk 160ms ease-out,
+    hit-white 80ms linear;
+}
+@keyframes hit-jerk {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  60% {
+    transform: translateX(4px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+@keyframes hit-white {
+  0% {
+    filter: brightness(4) saturate(0);
+  }
+  100% {
+    filter: none;
+  }
+}
+
+/* ── Bottom bar: Energie, Stapel, Hand, Zug beenden ───────────────────── */
+
+.combat-bottom-left,
+.combat-bottom-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+}
+
+.energy-orb {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffc890, var(--color-action) 60%, #c76a20);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #3a2312;
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+.energy-value {
+  font-size: 1.05rem;
+}
+
+.pile-badge {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+.pile-back {
+  font-size: 34px;
+  line-height: 1;
+  color: var(--color-water);
+}
+.pile-badge--discard .pile-back {
+  color: var(--color-sand);
+}
+.pile-count {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.end-turn-button {
+  background: var(--color-action);
+  color: #3a2312;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 22px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #b85f1d;
+}
+.end-turn-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.end-turn-button:not(:disabled):hover {
+  filter: brightness(1.08);
+}
+
+/* ── Hand & cards (Anatomie 86×120, docs/11) ──────────────────────────── */
+
+.hand {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.card {
+  position: relative;
+  width: 103px; /* 86×120 ratio, ×1.2 */
+  height: 144px;
+  margin: 0 -12px; /* Überlappung erlaubt (docs/11) */
+  background: linear-gradient(#4a3b33, var(--color-ui-ground));
+  border: 2px solid #241c17;
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 6px 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  transform: rotate(var(--card-rotation)) translateY(0);
+  transform-origin: 50% 120%;
+  transition:
+    transform 140ms ease-out,
+    filter 140ms;
+  animation: card-draw 220ms ease-out backwards;
+  animation-delay: var(--draw-delay); /* Kartenzug-Stagger 60 ms (docs/11) */
+}
+@keyframes card-draw {
+  from {
+    opacity: 0;
+    transform: translate(-40vw, 20vh) rotate(-20deg) scale(0.5);
+  }
+}
+
+/* Zustand: Hover — 8 px Lift + Tooltip (docs/11). */
+.card--playable:hover {
+  transform: rotate(var(--card-rotation)) translateY(-8px);
+  z-index: 5;
+}
+
+/* Zustand: nicht spielbar — abgedunkelt, grauer Gem; Klick → Wackeln. */
+.card--unplayable {
+  filter: brightness(0.55) saturate(0.6);
+}
+.card--wiggle {
+  animation: card-wiggle 300ms ease-in-out;
+}
+@keyframes card-wiggle {
+  0%,
+  100% {
+    transform: rotate(var(--card-rotation)) translateX(0);
+  }
+  25% {
+    transform: rotate(var(--card-rotation)) translateX(-6px);
+  }
+  75% {
+    transform: rotate(var(--card-rotation)) translateX(6px);
+  }
+}
+
+/* Zustand: gewählt — 26 px Lift, Rotation 0, oranger Doppelrahmen. */
+.card--selected {
+  transform: rotate(0deg) translateY(-26px);
+  border-color: var(--color-action);
+  box-shadow:
+    0 0 0 2px var(--color-ui-ground),
+    0 0 0 4px var(--color-action);
+  z-index: 6;
+}
+
+/* Zustand: Ziel bestätigt — Karte fliegt zum Ziel, dann Ablage. */
+.card--flying {
+  transform: translate(var(--fly-x, 0), var(--fly-y, -140px)) rotate(0deg) scale(0.7);
+  opacity: 0;
+  transition:
+    transform 240ms ease-in,
+    opacity 240ms ease-in;
+  z-index: 7;
+  pointer-events: none;
+}
+
+.cost-gem {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffc890, var(--color-action) 65%);
+  color: #3a2312;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #241c17;
+}
+.cost-gem--grey {
+  background: radial-gradient(circle at 35% 30%, #bdbdbd, #7a7a7a 65%);
+  color: #2c2c2c;
+}
+
+.card-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+.card-art {
+  font-size: 34px;
+  margin: auto 0;
+}
+.card-text {
+  font-size: 0.6rem;
+  text-align: center;
+  line-height: 1.15;
+  opacity: 0.9;
+  margin-bottom: 4px;
+  overflow: hidden;
+}
+.type-stripe {
+  width: calc(100% + 12px);
+  margin: 0 -6px;
+  border-radius: 0 0 7px 7px;
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #10161a;
+  padding: 2px 0;
+}
+/* Typ-Streifen-Farben exakt nach docs/11. */
+.type-stripe[data-card-type='attack'] {
+  background: var(--type-attack);
+}
+.type-stripe[data-card-type='skill'] {
+  background: var(--type-skill);
+}
+.type-stripe[data-card-type='power'] {
+  background: var(--type-power);
+}
+.type-stripe[data-card-type='dish'] {
+  background: var(--type-dish);
+}
+.type-stripe[data-card-type='status'] {
+  background: var(--type-status);
+  color: var(--color-text);
+}
+
+.tooltip--card {
+  bottom: calc(100% + 10px);
+}
+
+/* ── Targeting overlay (docs/11 Zielwahl) ─────────────────────────────── */
+
+.targeting-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 20;
+}
+.target-ring {
+  animation: ring-pulse 900ms ease-in-out infinite;
+}
+@keyframes ring-pulse {
+  0%,
+  100% {
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-opacity: 0.5;
+  }
+}
+
+/* ── Outcome (Sieg/Niederlage/Rückzug, docs/11) ───────────────────────── */
+
+.outcome-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 31, 40, 0.55);
+  animation: backdrop-in 400ms ease-out;
+  z-index: 40;
+}
+/* Niederlage: sanfte Abblende, kein "GAME OVER"-Schrei. */
+.outcome-backdrop--fade {
+  background: rgba(13, 31, 40, 0.85);
+  animation: backdrop-in 1600ms ease-in;
+}
+@keyframes backdrop-in {
+  from {
+    background: rgba(13, 31, 40, 0);
+    opacity: 0;
+  }
+}
+.outcome-panel {
+  background: var(--color-ui-ground);
+  border: 2px solid var(--color-sand);
+  border-radius: 12px;
+  padding: 22px 34px;
+  text-align: center;
+  min-width: 260px;
+}
+.outcome-panel h2 {
+  margin: 0 0 8px;
+}
+.outcome-panel--victory h2 {
+  color: var(--color-action);
+}
+.loot-list {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 16px;
+}
+.loot-list li {
+  padding: 2px 0;
+}
+
+/* Einstellungen: „Effekte reduzieren" respektieren (docs/06/11). */
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .intent-chip,
+  .block-chip,
+  .hit-flash,
+  .target-ring,
+  .hp-bar--poison .hp-bar-fill,
+  .outcome-backdrop {
+    animation: none !important;
+  }
+  .intent-chip {
+    opacity: 1;
+  }
+  .card {
+    transition: none;
+  }
 }

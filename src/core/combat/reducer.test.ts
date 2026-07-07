@@ -357,7 +357,10 @@ describe('enemy intents', () => {
           hpBelow: 0.5,
           steps: [
             { intent: 'attack', effects: [{ kind: 'damage', amount: 7, target: 'player' }] },
-            { intent: 'buff', effects: [{ kind: 'applyStatus', status: 'strength', amount: 1, target: 'self' }] },
+            {
+              intent: 'buff',
+              effects: [{ kind: 'applyStatus', status: 'strength', amount: 1, target: 'self' }],
+            },
           ],
         },
       ],
