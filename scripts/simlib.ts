@@ -21,7 +21,13 @@ import { getIntentPreview } from '../src/core/combat/intent';
 import { combatReducer, createCombatState } from '../src/core/combat/reducer';
 import { createRng } from '../src/core/combat/rng';
 import { cardNeedsTarget, isCardPlayable } from '../src/core/combat/view';
-import type { CardDef, CombatCard, CombatEvent, CombatState, EnemyDef } from '../src/core/combat/types';
+import type {
+  CardDef,
+  CombatCard,
+  CombatEvent,
+  CombatState,
+  EnemyDef,
+} from '../src/core/combat/types';
 
 /** Safety net against degenerate stalls; a capped combat counts as a loss. */
 export const MAX_TURNS = 100;

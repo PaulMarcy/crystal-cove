@@ -95,7 +95,11 @@ function main(): void {
   if (args.has('all')) {
     for (const enemy of m1Enemies) matchups.push({ label: enemy.id, enemies: [enemy] });
   } else if (args.has('enemies')) {
-    const ids = args.get('enemies')!.split(',').map((s) => s.trim()).filter(Boolean);
+    const ids = args
+      .get('enemies')!
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     matchups.push({ label: ids.join('+'), enemies: ids.map(enemyById) });
   } else {
     const id = args.get('enemy') ?? 'blighted_boar';
