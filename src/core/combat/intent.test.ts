@@ -38,51 +38,51 @@ function withEnemyStatuses(state: CombatState, statuses: CombatState['enemies'][
 const previewOf = (state: CombatState) => getIntentPreview(state, state.enemies[0]!.instanceId)!;
 
 describe('getIntentPreview — echte Zahl', () => {
-  // shadow_rat telegraphs Biss 3 at combat start.
+  // shadow_rat telegraphs Biss 5 at combat start.
   it('shows the base damage without statuses', () => {
     const { state } = newCombat([shadowRat]);
     const preview = previewOf(state);
     expect(preview.kind).toBe('attack');
-    expect(preview.attacks).toEqual([{ times: 1, amount: 3, total: 3, ignoresBlock: false }]);
+    expect(preview.attacks).toEqual([{ times: 1, amount: 5, total: 5, ignoresBlock: false }]);
   });
 
   it('adds enemy strength to the shown number', () => {
     const { state } = newCombat([shadowRat]);
     const preview = previewOf(withEnemyStatuses(state, { strength: 2 }));
-    expect(preview.attacks[0]!.amount).toBe(5);
+    expect(preview.attacks[0]!.amount).toBe(7);
   });
 
   it('applies ×0.75 while the enemy is weak, floored', () => {
     const { state } = newCombat([shadowRat]);
     const preview = previewOf(withEnemyStatuses(state, { weak: 1 }));
-    expect(preview.attacks[0]!.amount).toBe(2); // 3 × 0.75 = 2.25 → 2
+    expect(preview.attacks[0]!.amount).toBe(3); // 5 × 0.75 = 3.75 → 3
   });
 
   it('applies ×1.5 while the PLAYER is vulnerable, floored', () => {
     const { state } = newCombat([shadowRat]);
     const clone = structuredClone(state);
     clone.player.statuses.vulnerable = 1;
-    expect(previewOf(clone).attacks[0]!.amount).toBe(4); // 3 × 1.5 = 4.5 → 4
+    expect(previewOf(clone).attacks[0]!.amount).toBe(7); // 5 × 1.5 = 7.5 → 7
   });
 
   it('combines strength, weak and vulnerable with the exact formula', () => {
     const { state } = newCombat([shadowRat]);
     const clone = withEnemyStatuses(state, { strength: 1, weak: 1 });
     clone.player.statuses.vulnerable = 1;
-    // (3 + 1) × 0.75 × 1.5 = 4.5 → 4
-    expect(previewOf(clone).attacks[0]!.amount).toBe(4);
+    // (5 + 1) × 0.75 × 1.5 = 6.75 → 6
+    expect(previewOf(clone).attacks[0]!.amount).toBe(6);
   });
 
-  it('exposes multi-hit as times × amount (Sturzflug 2×2)', () => {
+  it('exposes multi-hit as times × amount (Sturzflug 2×3)', () => {
     const { state } = newCombat([shadowGull]);
     const preview = previewOf(state);
-    expect(preview.attacks).toEqual([{ times: 2, amount: 2, total: 4, ignoresBlock: false }]);
+    expect(preview.attacks).toEqual([{ times: 2, amount: 3, total: 6, ignoresBlock: false }]);
   });
 
   it('applies strength per hit for multi-hit previews', () => {
     const { state } = newCombat([shadowGull]);
     const preview = previewOf(withEnemyStatuses(state, { strength: 2 }));
-    expect(preview.attacks).toEqual([{ times: 2, amount: 4, total: 8, ignoresBlock: false }]);
+    expect(preview.attacks).toEqual([{ times: 2, amount: 5, total: 10, ignoresBlock: false }]);
   });
 
   it('passes through the ignoresBlock flag', () => {
@@ -127,7 +127,7 @@ describe('getIntentPreview — non-attacks & edge cases', () => {
 describe('getIntentPreview — stays live after status changes', () => {
   it('recomputes after the player weakens the enemy mid-turn', () => {
     const { state, rng } = newCombat([shadowRat]);
-    expect(previewOf(state).attacks[0]!.amount).toBe(3);
+    expect(previewOf(state).attacks[0]!.amount).toBe(5);
     const weakenCard = state.hand.find((c) => c.def.id === 'weaken')!;
     const next = combatReducer(
       state,
@@ -138,7 +138,7 @@ describe('getIntentPreview — stays live after status changes', () => {
       },
       rng,
     );
-    expect(previewOf(next).attacks[0]!.amount).toBe(2); // 3 × 0.75 → 2
+    expect(previewOf(next).attacks[0]!.amount).toBe(3); // 5 × 0.75 → 3
   });
 
   it('recomputes after the player becomes vulnerable via a card', () => {
@@ -155,6 +155,6 @@ describe('getIntentPreview — stays live after status changes', () => {
     );
     const card = state.hand[0]!;
     const next = combatReducer(state, { type: 'PLAY_CARD', cardInstanceId: card.instanceId }, rng);
-    expect(previewOf(next).attacks[0]!.amount).toBe(4); // 3 × 1.5 → 4
+    expect(previewOf(next).attacks[0]!.amount).toBe(7); // 5 × 1.5 → 7
   });
 });

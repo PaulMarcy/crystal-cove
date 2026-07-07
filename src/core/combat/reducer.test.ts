@@ -119,7 +119,7 @@ describe('block', () => {
     let s = play(state, rng, 'wooden_shield');
     expect(s.player.block).toBe(5);
     s = combatReducer(s, { type: 'END_TURN' }, rng);
-    // shadow_rat hits for 3 into 5 block → no hp loss, 2 block left…
+    // shadow_rat hits for 5 into 5 block → no hp loss, block used up…
     expect(s.player.hp).toBe(50);
     // …but block decayed at the new turn start.
     expect(s.turn).toBe(2);
@@ -175,8 +175,8 @@ describe('poison', () => {
     const poisoned = structuredClone(state);
     poisoned.player.statuses.poison = 2;
     const s = combatReducer(poisoned, { type: 'END_TURN' }, rng);
-    // 2 poison (ignores block) + 3 rat bite = 5.
-    expect(s.player.hp).toBe(50 - 2 - 3);
+    // 2 poison (ignores block) + 5 rat bite = 7.
+    expect(s.player.hp).toBe(50 - 2 - 5);
     expect(s.player.statuses.poison).toBe(1);
   });
 });
@@ -284,7 +284,7 @@ describe('retreat', () => {
     const next = combatReducer(state, { type: 'RETREAT' }, alwaysHigh);
     expect(next.phase).toBe('playerTurn');
     expect(next.turn).toBe(2); // enemies acted, new player turn started
-    expect(next.player.hp).toBe(50 - 3); // rat bit for 3
+    expect(next.player.hp).toBe(50 - 5); // rat bit for 5
   });
 
   it('uses the configured base chance from src/data', () => {
@@ -297,12 +297,12 @@ describe('enemy intents', () => {
   it('cycles through the pattern after each action', () => {
     const { state, rng } = newCombat({ deck: deckOf(woodenShield, 20) });
     expect(state.enemies[0]!.intent.effects).toEqual([
-      { kind: 'damage', amount: 3, target: 'player' },
+      { kind: 'damage', amount: 5, target: 'player' },
     ]);
     let s = combatReducer(state, { type: 'END_TURN' }, rng);
     s = combatReducer(s, { type: 'END_TURN' }, rng);
-    // after two actions the rat telegraphs Nagen 4
-    expect(s.enemies[0]!.intent.effects).toEqual([{ kind: 'damage', amount: 4, target: 'player' }]);
+    // after two actions the rat telegraphs Nagen 6
+    expect(s.enemies[0]!.intent.effects).toEqual([{ kind: 'damage', amount: 6, target: 'player' }]);
   });
 
   it('phased patterns switch when hp drops below the threshold', () => {

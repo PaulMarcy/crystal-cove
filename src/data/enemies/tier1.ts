@@ -21,9 +21,9 @@ export const shadowRat: EnemyDef = {
   pattern: {
     kind: 'cycle',
     steps: [
-      { intent: 'attack', effects: [{ kind: 'damage', amount: 3, target: 'player' }] },
-      { intent: 'attack', effects: [{ kind: 'damage', amount: 3, target: 'player' }] },
-      { intent: 'attack', effects: [{ kind: 'damage', amount: 4, target: 'player' }] },
+      { intent: 'attack', effects: [{ kind: 'damage', amount: 5, target: 'player' }] },
+      { intent: 'attack', effects: [{ kind: 'damage', amount: 5, target: 'player' }] },
+      { intent: 'attack', effects: [{ kind: 'damage', amount: 6, target: 'player' }] },
     ],
   },
   loot: {
@@ -48,7 +48,7 @@ export const blightedBoar: EnemyDef = {
         intent: 'buff',
         effects: [{ kind: 'applyStatus', status: 'strength', amount: 2, target: 'self' }],
       },
-      { intent: 'attack', effects: [{ kind: 'damage', amount: 6, target: 'player' }] },
+      { intent: 'attack', effects: [{ kind: 'damage', amount: 9, target: 'player' }] },
     ],
   },
   loot: {
@@ -76,7 +76,7 @@ export const thornCreeper: EnemyDef = {
           { kind: 'applyStatus', status: 'retaliate', amount: 2, target: 'self' },
         ],
       },
-      { intent: 'attack', effects: [{ kind: 'damage', amount: 5, target: 'player' }] },
+      { intent: 'attack', effects: [{ kind: 'damage', amount: 8, target: 'player' }] },
       {
         intent: 'debuff',
         effects: [{ kind: 'applyStatus', status: 'weak', amount: 1, target: 'player' }],
@@ -103,7 +103,7 @@ export const copperBeetle: EnemyDef = {
     kind: 'cycle',
     steps: [
       { intent: 'defend', effects: [{ kind: 'block', amount: 6, target: 'self' }] },
-      { intent: 'attack', effects: [{ kind: 'damage', amount: 4, target: 'player' }] },
+      { intent: 'attack', effects: [{ kind: 'damage', amount: 6, target: 'player' }] },
     ],
   },
   loot: {
@@ -126,7 +126,7 @@ export const shadowGull: EnemyDef = {
     steps: [
       {
         intent: 'attack',
-        effects: [{ kind: 'damage', amount: 2, target: 'player', times: 2 }],
+        effects: [{ kind: 'damage', amount: 3, target: 'player', times: 2 }],
       },
       {
         intent: 'debuff',
@@ -167,7 +167,7 @@ export const thornTerror: EnemyDef = {
       },
       {
         intent: 'attack',
-        effects: [{ kind: 'damage', amount: 5, target: 'player', times: 2 }],
+        effects: [{ kind: 'damage', amount: 7, target: 'player', times: 2 }],
       },
       {
         intent: 'deck',

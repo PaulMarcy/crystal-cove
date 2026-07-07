@@ -261,8 +261,8 @@ describe('status durations', () => {
     });
     let s = play(state, rng, 'kreischen');
     s = combatReducer(s, { type: 'END_TURN' }, rng);
-    // rat bite 3 × 0.75 → 2 while weak; weak gone afterwards.
-    expect(s.player.hp).toBe(50 - 2);
+    // rat bite 5 × 0.75 → 3 while weak; weak gone afterwards.
+    expect(s.player.hp).toBe(50 - 3);
     expect(s.enemies[0]!.statuses.weak).toBeUndefined();
   });
 
@@ -293,8 +293,8 @@ describe('retaliate stays applyStatus (Gegenhalten)', () => {
     let s = play(state, rng, 'gegenhalten');
     expect(s.player.statuses.retaliate).toBe(3);
     s = combatReducer(s, { type: 'END_TURN' }, rng);
-    // rat attacked into 4 block (bite 3) and took 3 retaliation.
+    // rat attacked into 4 block (bite 5, 1 gets through) and took 3 retaliation.
     expect(s.enemies[0]!.hp).toBe(shadowRat.hp - 3);
-    expect(s.player.hp).toBe(50);
+    expect(s.player.hp).toBe(49);
   });
 });
