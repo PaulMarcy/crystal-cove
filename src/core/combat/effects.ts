@@ -7,17 +7,18 @@
  */
 import { combatConfig } from '../../data/combat';
 import type {
+  CardDef,
+  CardZone,
   CombatState,
   Effect,
+  EffectAmount,
   EffectTarget,
   EnemyState,
   StatusMap,
 } from './types';
 
 /** The acting side, used to resolve 'self' and to read attacker statuses. */
-export type Actor =
-  | { side: 'player' }
-  | { side: 'enemy'; enemy: EnemyState };
+export type Actor = { side: 'player' } | { side: 'enemy'; enemy: EnemyState };
 
 interface Unit {
   hp: number;
@@ -47,6 +48,20 @@ function resolveTargets(
       const enemy = livingEnemies(state).find((e) => e.instanceId === chosenEnemyId);
       return enemy ? [enemy] : [];
     }
+  }
+}
+
+/**
+ * Resolve a DSL amount against combat context (docs/05):
+ * 'toolTier' scaling adds a per-tier bonus above the base tool tier.
+ */
+export function resolveAmount(amount: EffectAmount, state: CombatState): number {
+  if (typeof amount === 'number') return amount;
+  switch (amount.scaling) {
+    case 'toolTier':
+      return (
+        amount.base + (state.toolTier - combatConfig.baseToolTier) * combatConfig.toolTierBonusPerTier
+      );
   }
 }
 
@@ -85,10 +100,25 @@ export function applyPoisonTick(unit: Unit): void {
   }
 }
 
-function performAttack(state: CombatState, actor: Actor, targetUnit: Unit, base: number): void {
+/** Damage bypassing block entirely (Panzerbrecher „ignoriert Block", docs/10). */
+export function dealUnblockableDamage(unit: Unit, amount: number): void {
+  unit.hp -= amount;
+}
+
+function performAttack(
+  state: CombatState,
+  actor: Actor,
+  targetUnit: Unit,
+  base: number,
+  ignoresBlock = false,
+): void {
   const attackerUnit: Unit = actor.side === 'player' ? state.player : actor.enemy;
   const damage = calculateAttackDamage(base, attackerUnit.statuses, targetUnit.statuses);
-  dealBlockableDamage(targetUnit, damage);
+  if (ignoresBlock) {
+    dealUnblockableDamage(targetUnit, damage);
+  } else {
+    dealBlockableDamage(targetUnit, damage);
+  }
   // Vergeltung X (docs/03): attacking a unit with retaliate deals X plain
   // damage to the attacker, absorbed by the attacker's block.
   const retaliate = targetUnit.statuses.retaliate ?? 0;
@@ -97,7 +127,10 @@ function performAttack(state: CombatState, actor: Actor, targetUnit: Unit, base:
   }
 }
 
-function drawOne(state: CombatState, shuffleFn: (cards: CombatState['discardPile']) => CombatState['discardPile']): void {
+function drawOne(
+  state: CombatState,
+  shuffleFn: (cards: CombatState['discardPile']) => CombatState['discardPile'],
+): void {
   if (state.drawPile.length === 0) {
     if (state.discardPile.length === 0) return;
     state.drawPile = shuffleFn(state.discardPile);
@@ -117,6 +150,53 @@ export function drawCards(
 }
 
 /**
+ * Add freshly created cards to a player zone (docs/07 Wildwuchs: shuffle
+ * 1 Erschöpfung into the player's discard pile). Deck zones exist only on
+ * the player side. Cards added to the draw pile are shuffled in via the
+ * injected RNG to keep their position unpredictable but seeded.
+ */
+export function addCards(
+  state: CombatState,
+  card: CardDef,
+  zone: CardZone,
+  amount: number,
+  shuffleFn: (cards: CombatState['drawPile']) => CombatState['drawPile'],
+): void {
+  for (let i = 0; i < amount; i++) {
+    state.addedCardCounter += 1;
+    const instance = { instanceId: `${card.id}+${state.addedCardCounter}`, def: card };
+    switch (zone) {
+      case 'hand':
+        state.hand.push(instance);
+        break;
+      case 'discard':
+        state.discardPile.push(instance);
+        break;
+      case 'draw':
+        state.drawPile.push(instance);
+        break;
+    }
+  }
+  if (zone === 'draw') state.drawPile = shuffleFn(state.drawPile);
+}
+
+/**
+ * End-of-turn decay for duration statuses (Schwäche, Verwundbar): −1 stack
+ * at the end of the affected unit's turn. List lives in src/data.
+ */
+export function decayTurnStatuses(unit: Unit): void {
+  for (const status of combatConfig.decayingStatuses) {
+    const stacks = unit.statuses[status];
+    if (stacks === undefined) continue;
+    if (stacks > 1) {
+      unit.statuses[status] = stacks - 1;
+    } else {
+      delete unit.statuses[status];
+    }
+  }
+}
+
+/**
  * Interpret a list of effects for one actor.
  * `shuffleFn` carries the injected RNG for draw-triggered reshuffles.
  */
@@ -131,16 +211,19 @@ export function applyEffects(
     switch (effect.kind) {
       case 'damage': {
         const times = effect.times ?? 1;
+        // Multi-hit: targets are re-resolved and strength re-applied per hit
+        // (StS convention — Sturzflug 2×2 with +2 strength deals 2×4);
+        // dead targets stop absorbing the remaining hits.
         for (let i = 0; i < times; i++) {
           for (const unit of resolveTargets(state, actor, effect.target, chosenEnemyId)) {
-            performAttack(state, actor, unit, effect.amount);
+            performAttack(state, actor, unit, resolveAmount(effect.amount, state), effect.ignoresBlock);
           }
         }
         break;
       }
       case 'block':
         for (const unit of resolveTargets(state, actor, effect.target, chosenEnemyId)) {
-          unit.block += effect.amount;
+          unit.block += resolveAmount(effect.amount, state);
         }
         break;
       case 'draw':
@@ -158,6 +241,12 @@ export function applyEffects(
         break;
       case 'gainEnergy':
         state.player.energy += effect.amount;
+        break;
+      case 'addCard':
+        addCards(state, effect.card, effect.zone, effect.amount ?? 1, shuffleFn);
+        break;
+      case 'modifyNextCardCost':
+        state.nextCardCostDelta += effect.amount;
         break;
     }
   }

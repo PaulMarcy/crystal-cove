@@ -15,8 +15,8 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 
 ## M1 — Kampf-Prototyp
 - [x] Kampf-Zustandsmaschine in core/combat (seedbarer RNG, pure Reducer)
-- [ ] Effekt-Interpreter: damage, block, draw, heal, applyStatus, gainEnergy, addCard, ignoreBlock, retaliate
-- [ ] Statuseffekte: Stärke, Verwundbar, Schwäche, Gift, Vergeltung
+- [x] Effekt-Interpreter: damage, block, draw, heal, applyStatus, gainEnergy, addCard, ignoreBlock, retaliate
+- [x] Statuseffekte: Stärke, Verwundbar, Schwäche, Gift, Vergeltung
 - [ ] Daten: Starter-Deck + alle Karten aus docs/10 + Gegner/Elite aus docs/07
 - [ ] Gegner-Absichten (cycle/phased) inkl. „echte Zahl"-Berechnung
 - [ ] Kampf-UI vollständig nach docs/11 (Zonen, Zustände, Targeting)

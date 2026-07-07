@@ -13,6 +13,7 @@ import { combatConfig } from '../../data/combat';
 import {
   applyEffects,
   applyPoisonTick,
+  decayTurnStatuses,
   drawCards,
   type Actor,
 } from './effects';
@@ -93,6 +94,9 @@ export function createCombatState(setup: CombatSetup, rng: Rng): CombatState {
     discardPile: [],
     consumed: [],
     retreatChance: setup.retreatChance ?? combatConfig.retreatBaseChance,
+    toolTier: setup.toolTier ?? combatConfig.baseToolTier,
+    nextCardCostDelta: 0,
+    addedCardCounter: 0,
   };
   startPlayerTurn(state, rng);
   return state;
@@ -122,8 +126,10 @@ function checkOutcome(state: CombatState): void {
 
 function endPlayerTurn(state: CombatState, rng: Rng): void {
   // turnEnd (docs/03 step 4): poison tick on player, then poison −1;
+  // duration statuses (Schwäche/Verwundbar) lose 1 stack;
   // status cards vanish; remaining hand is discarded.
   applyPoisonTick(state.player);
+  decayTurnStatuses(state.player);
   // Zustandskarten verschwinden am Zugende — they never reach the discard pile.
   state.discardPile.push(...state.hand.filter((card) => card.def.type !== 'status'));
   state.hand = [];
@@ -139,6 +145,7 @@ function endPlayerTurn(state: CombatState, rng: Rng): void {
     applyEffects(state, actor, enemy.intent.effects, reshuffler(rng));
     if (enemy.hp > 0) {
       applyPoisonTick(enemy);
+      decayTurnStatuses(enemy);
     }
     if (enemy.hp > 0) {
       advanceIntent(enemy);
@@ -163,14 +170,20 @@ function playCard(
   if (!card) return;
   // Zustandskarten sind unspielbar — keine Energie-Interaktion (docs/03).
   if (card.def.type === 'status') return;
-  if (card.def.cost > state.player.energy) return;
-  const needsTarget = card.def.effects.some((effect) => 'target' in effect && effect.target === 'target');
+  // Cost modifier (docs/10 Kristallschild „nächste Karte −1⚡"): the pending
+  // delta shifts this card's cost (never below 0) and is consumed by it.
+  const effectiveCost = Math.max(0, card.def.cost + state.nextCardCostDelta);
+  if (effectiveCost > state.player.energy) return;
+  const needsTarget = card.def.effects.some(
+    (effect) => 'target' in effect && effect.target === 'target',
+  );
   if (needsTarget) {
     const target = state.enemies.find((enemy) => enemy.instanceId === targetEnemyId);
     if (!target || target.hp <= 0) return;
   }
 
-  state.player.energy -= card.def.cost;
+  state.player.energy -= effectiveCost;
+  state.nextCardCostDelta = 0;
   state.hand.splice(index, 1);
   applyEffects(state, { side: 'player' }, card.def.effects, reshuffler(rng), targetEnemyId);
   // Gerichte sind Verbrauchskarten (docs/03) — sie verlassen das Deck.

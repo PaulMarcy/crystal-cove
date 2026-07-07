@@ -20,13 +20,43 @@ export type StatusMap = Partial<Record<StatusId, number>>;
  */
 export type EffectTarget = 'target' | 'allEnemies' | 'player' | 'self';
 
+/** Card zones addressable by 'addCard' (deck zones exist only for the player). */
+export type CardZone = 'hand' | 'discard' | 'draw';
+
+/**
+ * Amounts are either fixed or scaled by a combat context value
+ * (docs/05: `{ base: 6, scaling: 'toolTier' }` — Axtschlag 6 → 8 at tier 2).
+ */
+export type ScalingSource = 'toolTier';
+export type EffectAmount = number | { base: number; scaling: ScalingSource };
+
+/**
+ * Effect DSL notes:
+ * - 'damage' with `times` = multi-hit (Sturzflug 2×2, Doppelhieb 2×5);
+ *   strength counts per hit (StS convention).
+ * - 'damage' with `ignoresBlock` = attack bypasses block (Panzerbrecher);
+ *   status multipliers and retaliation still apply.
+ * - Vergeltung (retaliate) needs no own kind — it is applied via
+ *   `applyStatus` (Gegenhalten: { kind: 'applyStatus', status: 'retaliate', … })
+ *   and triggered inside the damage interpreter.
+ * - 'modifyNextCardCost' shifts the energy cost of the next card played
+ *   (Kristallschild: amount −1); cost never drops below 0.
+ */
 export type Effect =
-  | { kind: 'damage'; amount: number; target: EffectTarget; times?: number }
-  | { kind: 'block'; amount: number; target: EffectTarget }
+  | {
+      kind: 'damage';
+      amount: EffectAmount;
+      target: EffectTarget;
+      times?: number;
+      ignoresBlock?: boolean;
+    }
+  | { kind: 'block'; amount: EffectAmount; target: EffectTarget }
   | { kind: 'draw'; amount: number }
   | { kind: 'heal'; amount: number; target: EffectTarget }
   | { kind: 'applyStatus'; status: StatusId; amount: number; target: EffectTarget }
-  | { kind: 'gainEnergy'; amount: number };
+  | { kind: 'gainEnergy'; amount: number }
+  | { kind: 'addCard'; card: CardDef; zone: CardZone; amount?: number }
+  | { kind: 'modifyNextCardCost'; amount: number };
 
 // ── Card definitions ─────────────────────────────────────────────────────
 
@@ -130,6 +160,15 @@ export interface CombatState {
   consumed: CombatCard[];
   /** Retreat success chance for this combat (base value from src/data). */
   retreatChance: number;
+  /** Equipped tool tier — context for 'toolTier' scaling (docs/05). */
+  toolTier: number;
+  /**
+   * Pending cost shift for the next card played ('modifyNextCardCost').
+   * Negative = discount; consumed by the next successfully played card.
+   */
+  nextCardCostDelta: number;
+  /** Monotonic counter for unique instance ids of cards added mid-combat. */
+  addedCardCounter: number;
 }
 
 // ── Events ───────────────────────────────────────────────────────────────
@@ -146,4 +185,6 @@ export interface CombatSetup {
   enemies: EnemyDef[];
   /** Override of the base retreat chance (e.g. Wanderer talent, docs/02). */
   retreatChance?: number;
+  /** Equipped tool tier for 'toolTier'-scaled amounts (default in src/data). */
+  toolTier?: number;
 }

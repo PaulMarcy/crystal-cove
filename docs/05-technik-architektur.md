@@ -48,13 +48,26 @@ export const axtschlag: CardDef = {
   type: 'attack',
   cost: 1,
   school: 'basics',
-  effects: [{ kind: 'damage', amount: { base: 6, scaling: 'toolTier' }, target: 'enemy' }],
+  effects: [{ kind: 'damage', amount: { base: 6, scaling: 'toolTier' }, target: 'target' }],
 };
 ```
 
 Der Interpreter in `core/combat/effects.ts` kennt eine geschlossene Menge an
-Effekt-Kinds (`damage, block, draw, heal, applyStatus, gainEnergy, addCard, …`).
-Neue Mechaniken = neuer Kind + Tests, keine Karten-Sonderlogik.
+Effekt-Kinds (`damage, block, draw, heal, applyStatus, gainEnergy, addCard,
+modifyNextCardCost`). Neue Mechaniken = neuer Kind + Tests, keine
+Karten-Sonderlogik. Zwei bewusste Nicht-Kinds:
+
+- **ignoreBlock** ist kein eigener Kind, sondern das Flag `ignoresBlock` auf
+  `damage` (Panzerbrecher) — Status-Multiplikatoren und Vergeltung greifen
+  weiterhin, nur Block wird übersprungen.
+- **retaliate** ist kein eigener Kind: Vergeltung wird per `applyStatus` mit
+  `status: 'retaliate'` vergeben (Gegenhalten, Dornenwall) und im
+  Schadens-Interpreter ausgelöst.
+
+Beträge sind Zahlen oder skaliert: `{ base: 6, scaling: 'toolTier' }` —
+`toolTier` kommt als Kontext über das Combat-Setup, der Bonus pro Stufe liegt
+in `src/data/combat.ts`. Mehrfachschläge über `times` (Sturzflug `2×2`),
+Stärke zählt pro Treffer (StS-Konvention).
 
 ## Gegner-KI
 
