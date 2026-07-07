@@ -24,17 +24,48 @@ import type {
 
 // ── Intents ──────────────────────────────────────────────────────────────
 
+/** Phase specificity: lower hpBelow = later phase; the default phase ranks last. */
+function phaseRank(phase: { hpBelow?: number }): number {
+  return phase.hpBelow ?? Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Pick the phase for the enemy's current hp. Monotonic: only advances to a
+ * strictly lower-ranked (more damaged) phase — healing above a crossed
+ * hpBelow threshold never reverts to an earlier phase (StS convention,
+ * see EnemyState.phaseIndex).
+ */
+function selectPhaseIndex(enemy: Pick<EnemyState, 'def' | 'hp' | 'maxHp' | 'phaseIndex'>): number {
+  const pattern = enemy.def.pattern;
+  if (pattern.kind === 'cycle') return 0;
+  const ratio = enemy.hp / enemy.maxHp;
+  let best = enemy.phaseIndex;
+  pattern.phases.forEach((phase, index) => {
+    if (
+      phase.hpBelow !== undefined &&
+      ratio < phase.hpBelow &&
+      phaseRank(phase) < phaseRank(pattern.phases[best]!)
+    ) {
+      best = index;
+    }
+  });
+  return best;
+}
+
+/** Default phase at full hp: the one without hpBelow (highest rank). */
+function initialPhaseIndex(pattern: EnemyDef['pattern']): number {
+  if (pattern.kind === 'cycle') return 0;
+  let best = 0;
+  pattern.phases.forEach((phase, index) => {
+    if (phaseRank(phase) > phaseRank(pattern.phases[best]!)) best = index;
+  });
+  return best;
+}
+
 function activeSteps(enemy: EnemyState): IntentStep[] {
   const pattern = enemy.def.pattern;
   if (pattern.kind === 'cycle') return pattern.steps;
-  // phased: first matching hpBelow phase wins, otherwise the default phase.
-  const ratio = enemy.hp / enemy.maxHp;
-  const matching = pattern.phases.find(
-    (phase) => phase.hpBelow !== undefined && ratio < phase.hpBelow,
-  );
-  const fallback = pattern.phases.find((phase) => phase.hpBelow === undefined);
-  const phase = matching ?? fallback ?? pattern.phases[0]!;
-  return phase.steps;
+  return pattern.phases[enemy.phaseIndex]!.steps;
 }
 
 function intentAt(enemy: EnemyState, index: number): IntentStep {
@@ -42,9 +73,20 @@ function intentAt(enemy: EnemyState, index: number): IntentStep {
   return steps[index % steps.length]!;
 }
 
+/**
+ * Determine the next telegraphed intent — runs AFTER the enemy action
+ * (docs/11: first the action, then the new intent becomes visible).
+ * Phase transitions are evaluated here: a crossed hpBelow threshold takes
+ * effect with the next intent and restarts the new phase's step list.
+ */
 function advanceIntent(enemy: EnemyState): void {
-  const steps = activeSteps(enemy);
-  enemy.patternIndex = (enemy.patternIndex + 1) % steps.length;
+  const nextPhase = selectPhaseIndex(enemy);
+  if (nextPhase !== enemy.phaseIndex) {
+    enemy.phaseIndex = nextPhase;
+    enemy.patternIndex = 0;
+  } else {
+    enemy.patternIndex = (enemy.patternIndex + 1) % activeSteps(enemy).length;
+  }
   enemy.intent = intentAt(enemy, enemy.patternIndex);
 }
 
@@ -59,6 +101,7 @@ function createEnemyState(def: EnemyDef, index: number): EnemyState {
     // combatStart: apply start block (docs/03 step 1).
     block: def.startBlock ?? 0,
     statuses: {},
+    phaseIndex: initialPhaseIndex(def.pattern),
     patternIndex: 0,
     intent: { intent: 'attack', effects: [] },
   };

@@ -141,6 +141,13 @@ export interface EnemyState {
   maxHp: number;
   block: number;
   statuses: StatusMap;
+  /**
+   * Index of the active phase in a 'phased' pattern (0 for 'cycle').
+   * Monotonic: once a hpBelow threshold is crossed the enemy never falls
+   * back to an earlier phase, even if healed above the threshold
+   * (StS convention — docs/07 leaves this open, assumption documented here).
+   */
+  phaseIndex: number;
   /** Index of the current intent within the active pattern step list. */
   patternIndex: number;
   intent: IntentStep;

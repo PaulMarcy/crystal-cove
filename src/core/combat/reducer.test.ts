@@ -335,6 +335,64 @@ describe('enemy intents', () => {
     // enraged phase intent after acting
     expect(s.enemies[0]!.intent.effects).toEqual([{ kind: 'damage', amount: 9, target: 'player' }]);
   });
+
+  // Wurzelwächter-style fixture (docs/07 boss pre-spec): default cycle at
+  // full hp, shortened/enraged cycle below 50 %. Two steps per phase so we
+  // can also verify the step-index reset on transition.
+  const twoPhaseEnemy: EnemyDef = {
+    id: 'root_test',
+    name: 'Wurzeltest',
+    tier: 1,
+    hp: 20,
+    pattern: {
+      kind: 'phased',
+      phases: [
+        {
+          steps: [
+            { intent: 'attack', effects: [{ kind: 'damage', amount: 2, target: 'player' }] },
+            { intent: 'defend', effects: [{ kind: 'block', amount: 5, target: 'self' }] },
+          ],
+        },
+        {
+          hpBelow: 0.5,
+          steps: [
+            { intent: 'attack', effects: [{ kind: 'damage', amount: 7, target: 'player' }] },
+            { intent: 'buff', effects: [{ kind: 'applyStatus', status: 'strength', amount: 1, target: 'self' }] },
+          ],
+        },
+      ],
+    },
+  };
+
+  it('restarts the new phase at its first step when the threshold is crossed', () => {
+    const { state, rng } = newCombat({ enemies: [twoPhaseEnemy], deck: deckOf(axeStrike, 10) });
+    // advance within phase 1 first, so patternIndex is 1
+    let s = combatReducer(state, { type: 'END_TURN' }, rng);
+    expect(s.enemies[0]!.patternIndex).toBe(1);
+    s = play(s, rng, 'axe_strike');
+    s = play(s, rng, 'axe_strike'); // 20 − 12 = 8 → below 50 %
+    s = combatReducer(s, { type: 'END_TURN' }, rng);
+    // phase 2 begins at step 0 (attack 7), not at the carried-over index.
+    expect(s.enemies[0]!.patternIndex).toBe(0);
+    expect(s.enemies[0]!.intent.effects).toEqual([{ kind: 'damage', amount: 7, target: 'player' }]);
+  });
+
+  it('never falls back to an earlier phase when healed above the threshold', () => {
+    // Assumption (StS convention, docs/07 silent): phase transitions are
+    // one-way — documented on EnemyState.phaseIndex.
+    const { state, rng } = newCombat({ enemies: [twoPhaseEnemy], deck: deckOf(axeStrike, 10) });
+    let s = play(state, rng, 'axe_strike');
+    s = play(s, rng, 'axe_strike'); // hp 8 < 50 %
+    s = combatReducer(s, { type: 'END_TURN' }, rng);
+    expect(s.enemies[0]!.intent.effects).toEqual([{ kind: 'damage', amount: 7, target: 'player' }]);
+    // heal the enemy back to full…
+    const healed = structuredClone(s);
+    healed.enemies[0]!.hp = healed.enemies[0]!.maxHp;
+    const after = combatReducer(healed, { type: 'END_TURN' }, rng);
+    // …it still rotates within phase 2 (buff step), no revert to phase 1.
+    expect(after.enemies[0]!.intent.intent).toBe('buff');
+    expect(after.enemies[0]!.phaseIndex).toBe(1);
+  });
 });
 
 describe('determinism', () => {
