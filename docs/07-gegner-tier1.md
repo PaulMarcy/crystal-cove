@@ -8,17 +8,17 @@ Leitprinzip: **Jeder Gegner ist eine Lektion.** Werte sind V1-Richtwerte
 
 | ID | Name | HP | Zyklus (Absichten) | Lektion |
 |---|---|---|---|---|
-| shadow_rat | Schattenratte | 12 | Biss 3 → Biss 3 → Nagen 4 | Baseline |
-| blighted_boar | Befallenes Wildschwein | 22 | Schnauben (+2 Stärke) → Rammstoß 6 (+Stärke) | Tempo: schnell töten |
-| thorn_creeper | Dornenkriecher | 18 | Dornenpanzer (4 Block, Vergeltung 2) → Peitschenhieb 5 → Ranken (1 Schwäche) | Vergeltung, Timing |
-| copper_beetle | Kupferkäfer | 16 (+4 Start-Block) | Einigeln (6 Block) ⇄ Zwicken 4 | Block brechen, Burst |
-| shadow_gull | Schattenmöwe | 12 | Sturzflug 2×2 → Kreischen (1 Schwäche) | Debuffs, Kill-Order |
+| shadow_rat | Schattenratte | 12 | Biss 5 → Biss 5 → Nagen 6 | Baseline |
+| blighted_boar | Befallenes Wildschwein | 22 | Schnauben (+2 Stärke) → Rammstoß 9 (+Stärke) | Tempo: schnell töten |
+| thorn_creeper | Dornenkriecher | 18 | Dornenpanzer (4 Block, Vergeltung 2) → Peitschenhieb 8 → Ranken (1 Schwäche) | Vergeltung, Timing |
+| copper_beetle | Kupferkäfer | 16 (+4 Start-Block) | Einigeln (6 Block) ⇄ Zwicken 6 | Block brechen, Burst |
+| shadow_gull | Schattenmöwe | 12 | Sturzflug 2×3 → Kreischen (1 Schwäche) | Debuffs, Kill-Order |
 
 ## Elite
 
 | ID | Name | HP | Zyklus | Besonderheit |
 |---|---|---|---|---|
-| thorn_terror | Dornenschreck | 38 | Dornenwall (8 Block, Vergeltung 3) → Doppelhieb 2×5 → Wildwuchs (mischt 1 Erschöpfung in Spieler-Ablage) | Ab Dichte 2: +1 zufälliges Affix (Gepanzert/Dornig/Zehrend) |
+| thorn_terror | Dornenschreck | 38 | Dornenwall (8 Block, Vergeltung 3) → Doppelhieb 2×7 → Wildwuchs (mischt 1 Erschöpfung in Spieler-Ablage) | Ab Dichte 2: +1 zufälliges Affix (Gepanzert/Dornig/Zehrend) |
 
 ## Boss (Vorab-Spezifikation für M4)
 
@@ -82,7 +82,7 @@ export const copperBeetle: EnemyDef = {
   startBlock: 4,
   pattern: { kind: 'cycle', steps: [
     { intent: 'defend', effects: [{ kind: 'block', amount: 6, target: 'self' }] },
-    { intent: 'attack', effects: [{ kind: 'damage', amount: 4, target: 'player' }] },
+    { intent: 'attack', effects: [{ kind: 'damage', amount: 6, target: 'player' }] },
   ]},
   loot: {
     guaranteed: [{ item: 'copper_ore', min: 1, max: 2 }, { item: 'shadow_dust', min: 1, max: 1 }],

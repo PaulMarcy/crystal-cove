@@ -92,7 +92,7 @@ Bosse bewachen die Inselkristalle → Story-Fortschritt läuft durch den Kampf.
 ## Balancing-Basiswerte (V1-Richtwerte, in src/data pflegen)
 
 - Gegner-HP Tier 1: normal 12–22, Elite ~38, Boss 90
-- Gegnerschaden Tier 1: 3–8 pro Angriff
+- Gegnerschaden Tier 1: 5–14 pro Angriff (Sim-Kalibrierung M1: +50 % auf V0-Werte)
 - Bei Abweichungen ist das Gegner-Roster in docs/07 maßgeblich
 - Tier-Progression: HP ×1,6 / Schaden ×1,35 pro Tier (vor Schattendichte)
 - Spieler-HP: 50 + 5×(Level−1)
