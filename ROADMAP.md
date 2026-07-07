@@ -20,7 +20,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Daten: Starter-Deck + alle Karten aus docs/10 + Gegner/Elite aus docs/07
 - [x] Gegner-Absichten (cycle/phased) inkl. „echte Zahl"-Berechnung
 - [x] Kampf-UI vollständig nach docs/11 (Zonen, Zustände, Targeting)
-- [ ] Headless-Simulator: `npm run sim -- --deck starter --enemy blighted_boar --n 1000`
+- [x] Headless-Simulator: `npm run sim -- --deck starter --enemy blighted_boar --n 1000`
 - [ ] Unit-Tests: Kosten, Block-Verfall, Gift-Tick, Mischen, Sieg/Niederlage, Seeds
 - [ ] Playtest-Kriterium: 3 Kämpfe in Folge fühlen sich unterschiedlich an
 

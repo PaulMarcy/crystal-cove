@@ -19,5 +19,14 @@
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "scripts"]
+  "include": [
+    "vite.config.ts",
+    "vitest.config.ts",
+    "scripts",
+    // The headless simulator (scripts/) imports the engine-free combat core:
+    "src/core",
+    "src/data",
+    "src/shared/strings.ts"
+  ],
+  "exclude": ["**/*.test.ts"]
 }
