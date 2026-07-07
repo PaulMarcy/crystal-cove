@@ -17,7 +17,12 @@ import type { CardDef, CombatEvent, CombatState, EnemyDef } from './types';
 const deckOf = (def: CardDef, count: number): CardDef[] => Array.from({ length: count }, () => def);
 
 function newCombat(
-  overrides: { deck?: CardDef[]; enemies?: EnemyDef[]; playerHp?: number; retreatChance?: number } = {},
+  overrides: {
+    deck?: CardDef[];
+    enemies?: EnemyDef[];
+    playerHp?: number;
+    retreatChance?: number;
+  } = {},
   seed = 42,
 ) {
   const rng = createRng(seed);
@@ -39,10 +44,19 @@ function handCard(state: CombatState, cardId: string) {
   return card;
 }
 
-function play(state: CombatState, rng: () => number, cardId: string, target = state.enemies[0]!.instanceId) {
+function play(
+  state: CombatState,
+  rng: () => number,
+  cardId: string,
+  target = state.enemies[0]!.instanceId,
+) {
   return combatReducer(
     state,
-    { type: 'PLAY_CARD', cardInstanceId: handCard(state, cardId).instanceId, targetEnemyId: target },
+    {
+      type: 'PLAY_CARD',
+      cardInstanceId: handCard(state, cardId).instanceId,
+      targetEnemyId: target,
+    },
     rng,
   );
 }
@@ -282,7 +296,9 @@ describe('retreat', () => {
 describe('enemy intents', () => {
   it('cycles through the pattern after each action', () => {
     const { state, rng } = newCombat({ deck: deckOf(holzschild, 20) });
-    expect(state.enemies[0]!.intent.effects).toEqual([{ kind: 'damage', amount: 3, target: 'player' }]);
+    expect(state.enemies[0]!.intent.effects).toEqual([
+      { kind: 'damage', amount: 3, target: 'player' },
+    ]);
     let s = combatReducer(state, { type: 'END_TURN' }, rng);
     s = combatReducer(s, { type: 'END_TURN' }, rng);
     // after two actions the rat telegraphs Nagen 4
@@ -298,8 +314,17 @@ describe('enemy intents', () => {
       pattern: {
         kind: 'phased',
         phases: [
-          { hpBelow: 0.5, steps: [{ intent: 'attack', effects: [{ kind: 'damage', amount: 9, target: 'player' }] }] },
-          { steps: [{ intent: 'attack', effects: [{ kind: 'damage', amount: 2, target: 'player' }] }] },
+          {
+            hpBelow: 0.5,
+            steps: [
+              { intent: 'attack', effects: [{ kind: 'damage', amount: 9, target: 'player' }] },
+            ],
+          },
+          {
+            steps: [
+              { intent: 'attack', effects: [{ kind: 'damage', amount: 2, target: 'player' }] },
+            ],
+          },
         ],
       },
     };
@@ -317,11 +342,19 @@ describe('determinism', () => {
     const run = (seed: number) => {
       const rng = createRng(seed);
       let s = createCombatState(
-        { playerHp: 50, deck: [...deckOf(axtschlag, 5), ...deckOf(holzschild, 5)], enemies: [thornCreeper] },
+        {
+          playerHp: 50,
+          deck: [...deckOf(axtschlag, 5), ...deckOf(holzschild, 5)],
+          enemies: [thornCreeper],
+        },
         rng,
       );
       const events: CombatEvent[] = [
-        { type: 'PLAY_CARD', cardInstanceId: s.hand[0]!.instanceId, targetEnemyId: s.enemies[0]!.instanceId },
+        {
+          type: 'PLAY_CARD',
+          cardInstanceId: s.hand[0]!.instanceId,
+          targetEnemyId: s.enemies[0]!.instanceId,
+        },
         { type: 'END_TURN' },
         { type: 'END_TURN' },
         { type: 'RETREAT' },
@@ -333,7 +366,9 @@ describe('determinism', () => {
     // different seed shuffles differently
     const a = run(1234);
     const b = run(9999);
-    expect(JSON.stringify(a.drawPile) === JSON.stringify(b.drawPile) && a.phase === b.phase).toBe(false);
+    expect(JSON.stringify(a.drawPile) === JSON.stringify(b.drawPile) && a.phase === b.phase).toBe(
+      false,
+    );
   });
 
   it('the reducer never mutates the input state', () => {
