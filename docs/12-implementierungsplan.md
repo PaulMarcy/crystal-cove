@@ -37,11 +37,13 @@ Analytics, Echtgeld, Backend/Accounts.
 
 - **M0:** `npm run verify` läuft lokal und in GitHub Action; leere Szene +
   Overlay sichtbar; Skills installiert (Nachweis: /skills-Listing im PR-Text).
-- **M1:** Alle docs/07-Gegner und docs/10-Karten spielbar; Sim-Lauf
-  starter vs. jeden Gegner liegt zwischen 55–95 % Winrate, gemessen mit der
-  Noise-Policy (Human-Proxy; `--policy noise`, Default) — die Greedy-Policy
-  dient als Obergrenzen-Referenz (sonst data:-Fix);
-  UI erfüllt alle 7 Zustände aus docs/11; Testabdeckung core/combat > 80 %.
+- **M1:** Alle docs/07-Gegner und docs/10-Karten spielbar; Sim-Winrate
+  (Noise-Policy als Human-Proxy; `--policy noise`, Default; Greedy als
+  Obergrenzen-Referenz): Tier-1-Normalgegner ≥ 95 % zulässig (Cozy-Baseline,
+  docs/01 — Druck entsteht über Attrition und Kampf-Ketten), Elite 55–95 %
+  (sonst data:-Fix); der Ketten-Korridor 50–65 % wird ab M4 am Dungeon
+  gemessen. UI erfüllt alle 7 Zustände aus docs/11; Testabdeckung
+  core/combat > 80 %.
 - **M2:** Loop Insel→Kampf→Insel ohne Reload; Save überlebt Browser-Neustart
   und absichtliche Korruption (Recovery-Test).
 - **M3:** Kern-Hook erlebbar: Erz sammeln → Karte prägen → im Kampf ziehen;
