@@ -14,7 +14,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] ASSETS.md anlegen (Lizenz-Register) · LICENSE-Entscheidung dokumentieren
 
 ## M1 — Kampf-Prototyp
-- [ ] Kampf-Zustandsmaschine in core/combat (seedbarer RNG, pure Reducer)
+- [x] Kampf-Zustandsmaschine in core/combat (seedbarer RNG, pure Reducer)
 - [ ] Effekt-Interpreter: damage, block, draw, heal, applyStatus, gainEnergy, addCard, ignoreBlock, retaliate
 - [ ] Statuseffekte: Stärke, Verwundbar, Schwäche, Gift, Vergeltung
 - [ ] Daten: Starter-Deck + alle Karten aus docs/10 + Gegner/Elite aus docs/07
