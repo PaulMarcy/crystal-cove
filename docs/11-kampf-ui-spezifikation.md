@@ -9,8 +9,8 @@ Farben & Regeln aus docs/04. Diese Spezifikation ist verbindlich für M1.
 |---|---|---|
 | Bühne | oberes ~65 % | Biom-Hintergrund; Spieler links, 1–3 Gegner rechts |
 | Standort-Chip | oben links | „<Gebiet> · Dichte <n>" (bzw. Dungeon-Raum „2/4") |
-| Rückzug | oben rechts | Freies Feld: Kampf verlassen ohne Strafe; Dungeon: „Dungeon verlassen" mit Beute-Malus |
-| Spieler-Status | unter Spielerfigur | HP als Zahl (42/55) + Herz; Block-Chip (Schild + Zahl), nur sichtbar wenn > 0 |
+| Rückzug | oben rechts | Freies Feld: „Rückzugsversuch (Chance)" — Aktion im Spielerzug, kann scheitern (docs/03); Dungeon: „Dungeon verlassen" mit Beute-Malus |
+| Spieler-Status | unter Spielerfigur | HP als Zahl (42/55) + Herz; Block-Chip (Schild + Zahl), nur sichtbar wenn > 0; Statuseffekt-Icons neben Block-Chip |
 | Gegner-Status | unter jedem Gegner | HP-Balken ohne Zahl (Hover: exakte Werte); Statuseffekt-Icons daneben |
 | Absichts-Chip | über jedem Gegner | Icon-Vokabular aus docs/07; Angriffszahlen IMMER inkl. Buffs („echte Zahl"); Mehrfachschlag „2×2" |
 | Hand | unten Mitte | Fächer, max. Rotation ±12°, Überlappung erlaubt |
@@ -48,7 +48,8 @@ Sieg: Beute-Panel; Niederlage: sanfte Abblende → Aufwachen im Bett (kein „GA
 ## Komponenten-Zuordnung (src/ui/combat/)
 
 CombatScreen (liest nur Store) → Stage, EnemyView (+IntentChip, StatusRow,
-HpBar), PlayerView (+HpPlate, BlockChip), Hand (+CardView), EnergyOrb,
+HpBar), PlayerView (+HpPlate, BlockChip, StatusRow — gleiche Komponente wie
+EnemyView), Hand (+CardView), EnergyOrb,
 PileBadge ×2, EndTurnButton, RetreatButton, TargetingLayer (Pfeil/Ring, Canvas
 oder SVG-Overlay). Alle Aktionen dispatchen Events an core/combat — keine
 Spiellogik in Komponenten (docs/05, Regel 1).

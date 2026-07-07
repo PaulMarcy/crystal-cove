@@ -10,7 +10,7 @@ Leitprinzip: **Jeder Gegner ist eine Lektion.** Werte sind V1-Richtwerte
 |---|---|---|---|---|
 | shadow_rat | Schattenratte | 12 | Biss 3 → Biss 3 → Nagen 4 | Baseline |
 | blighted_boar | Befallenes Wildschwein | 22 | Schnauben (+2 Stärke) → Rammstoß 6 (+Stärke) | Tempo: schnell töten |
-| thorn_creeper | Dornenkriecher | 18 | Dornenpanzer (4 Block, Dornen 2) → Peitschenhieb 5 → Ranken (1 Schwäche) | Vergeltung, Timing |
+| thorn_creeper | Dornenkriecher | 18 | Dornenpanzer (4 Block, Vergeltung 2) → Peitschenhieb 5 → Ranken (1 Schwäche) | Vergeltung, Timing |
 | copper_beetle | Kupferkäfer | 16 (+4 Start-Block) | Einigeln (6 Block) ⇄ Zwicken 4 | Block brechen, Burst |
 | shadow_gull | Schattenmöwe | 12 | Sturzflug 2×2 → Kreischen (1 Schwäche) | Debuffs, Kill-Order |
 
@@ -18,7 +18,7 @@ Leitprinzip: **Jeder Gegner ist eine Lektion.** Werte sind V1-Richtwerte
 
 | ID | Name | HP | Zyklus | Besonderheit |
 |---|---|---|---|---|
-| thorn_terror | Dornenschreck | 38 | Dornenwall (8 Block, Dornen 3) → Doppelhieb 2×5 → Wildwuchs (mischt 1 Erschöpfung in Spieler-Ablage) | Ab Dichte 2: +1 zufälliges Affix (Gepanzert/Dornig/Zehrend) |
+| thorn_terror | Dornenschreck | 38 | Dornenwall (8 Block, Vergeltung 3) → Doppelhieb 2×5 → Wildwuchs (mischt 1 Erschöpfung in Spieler-Ablage) | Ab Dichte 2: +1 zufälliges Affix (Gepanzert/Dornig/Zehrend) |
 
 ## Boss (Vorab-Spezifikation für M4)
 
@@ -36,13 +36,16 @@ Verwurzelt (Zustandskarte): unspielbar, verstopft die Hand, verschwindet am Zuge
 | Wiese | Schwein · Ratte+Ratte | Möwe+Schwein (Kill-Order!) · Elite 15 % | Schwein+Schwein · Elite 30 % |
 | Waldrand | Kriecher · Kriecher+Ratte | Kriecher+Käfer · Elite 20 % | Kriecher+Kriecher+Möwe · Elite 35 % |
 
-Tutorial-Kämpfe (siehe docs/06) nutzen shadow_rat und 2× shadow_rat-Variante
-„Schattenmaus" (7 HP, [Biss 2 → Ducken 3 Block]).
+Tutorial-Kämpfe (siehe docs/06) nutzen die shadow_rat-Varianten
+`shadow_rat_tutorial` „Schattenratte" (10 HP, Zyklus nur [Biss 3]) und
+2× „Schattenmaus" (7 HP, [Biss 2 → Ducken 3 Block]).
 
 ## XP
 
 Begegnung Tier 1: 15 XP Basis + 7 XP je zusätzlichem Gegner.
 Elite-Begegnung: 38 XP. Boss: 300 XP.
+XP werden pro Begegnung in core/progression berechnet:
+15 + 7×(Zusatzgegner); Elite 38; Boss 300 — Werte in src/data/progression.
 
 ## Beutetabellen
 
@@ -53,7 +56,7 @@ Elite-Begegnung: 38 XP. Boss: 300 XP.
 | Dornenkriecher | 2 Ranken | 40 % 1 Harz |
 | Kupferkäfer | 1–2 Kupfererz (Schmiede-Link!) | 25 % 1 Käferpanzer |
 | Schattenmöwe | 2 Federn | 20 % 1 Glanzstück (Verkauf 15 Münzen) |
-| Dornenschreck (Elite) | 3 Ranken + 1 Herzdorn (Prägematerial selten) | 25 % Talisman „Dornenring" (Spieler erhält Dornen 1 dauerhaft im Kampf) |
+| Dornenschreck (Elite) | 3 Ranken + 1 Herzdorn (Prägematerial selten) | 25 % Talisman „Dornenring" (Spieler erhält Vergeltung 1 dauerhaft im Kampf) |
 | Alle Schattenkreaturen | +1 Schattenstaub (Schrein-Währung) | — |
 
 Dichte 3 / Schattenrisse: Beutemengen ×2, Chance-Drops +20 Prozentpunkte.
@@ -85,7 +88,6 @@ export const copperBeetle: EnemyDef = {
     guaranteed: [{ item: 'copper_ore', min: 1, max: 2 }, { item: 'shadow_dust', min: 1, max: 1 }],
     chance: [{ item: 'beetle_shell', min: 1, max: 1, p: 0.25 }],
   },
-  xp: 15,
 };
 ```
 

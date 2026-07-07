@@ -73,7 +73,7 @@ Erkundungsfortschritt.
 |---|---|
 | 0 | Grundwerte |
 | 1 | Gegner +10 % HP & Schaden |
-| 2 | +20 %; **Eliten** erscheinen (Affixe: Gepanzert = 10 Start-Block, Dornig = Vergeltung, Zehrend = mischt Erschöpfungskarte ins Spielerdeck) |
+| 2 | +20 %; **Eliten** erscheinen (Affixe: Gepanzert = 10 Start-Block, Dornig = Vergeltung, Zehrend = mischt Erschöpfungskarte in die Spieler-Ablage (nur dieser Kampf)) |
 | 3 | +30 %; **Schattenrisse**: optionale Hochrisiko-Kämpfe mit bester Beute der Insel |
 
 Inselboss besiegt → Insel **gereinigt**: Dichte dauerhaft 0, Insel wird sichere,
