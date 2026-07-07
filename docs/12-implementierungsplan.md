@@ -38,7 +38,9 @@ Analytics, Echtgeld, Backend/Accounts.
 - **M0:** `npm run verify` läuft lokal und in GitHub Action; leere Szene +
   Overlay sichtbar; Skills installiert (Nachweis: /skills-Listing im PR-Text).
 - **M1:** Alle docs/07-Gegner und docs/10-Karten spielbar; Sim-Lauf
-  starter vs. jeden Gegner liegt zwischen 55–95 % Winrate (sonst data:-Fix);
+  starter vs. jeden Gegner liegt zwischen 55–95 % Winrate, gemessen mit der
+  Noise-Policy (Human-Proxy; `--policy noise`, Default) — die Greedy-Policy
+  dient als Obergrenzen-Referenz (sonst data:-Fix);
   UI erfüllt alle 7 Zustände aus docs/11; Testabdeckung core/combat > 80 %.
 - **M2:** Loop Insel→Kampf→Insel ohne Reload; Save überlebt Browser-Neustart
   und absichtliche Korruption (Recovery-Test).
