@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { combatConfig } from '../../data/combat';
 import {
-  axtschlag,
-  beerensnack,
-  erschoepfung,
-  holzschild,
-  steinwurf,
-  verschnaufen,
-} from '../../data/cards/testCards';
-import { copperBeetle, shadowRat, thornCreeper } from '../../data/enemies/testEnemies';
+  axeStrike,
+  berrySnack,
+  exhaustion,
+  woodenShield,
+  stoneThrow,
+  catchBreath,
+} from '../../data/cards/tier1';
+import { copperBeetle, shadowRat, thornCreeper } from '../../data/enemies/tier1';
 import { calculateAttackDamage } from './effects';
 import { combatReducer, createCombatState } from './reducer';
 import { createRng } from './rng';
@@ -29,7 +29,7 @@ function newCombat(
   const state = createCombatState(
     {
       playerHp: overrides.playerHp ?? 50,
-      deck: overrides.deck ?? [...deckOf(axtschlag, 5), ...deckOf(holzschild, 5)],
+      deck: overrides.deck ?? [...deckOf(axeStrike, 5), ...deckOf(woodenShield, 5)],
       enemies: overrides.enemies ?? [shadowRat],
       ...(overrides.retreatChance !== undefined ? { retreatChance: overrides.retreatChance } : {}),
     },
@@ -79,12 +79,12 @@ describe('combat start & turn start', () => {
 describe('card costs & energy', () => {
   it('deducts the card cost from energy', () => {
     const { state, rng } = newCombat();
-    const next = play(state, rng, 'axtschlag');
-    expect(next.player.energy).toBe(combatConfig.energyPerTurn - axtschlag.cost);
+    const next = play(state, rng, 'axe_strike');
+    expect(next.player.energy).toBe(combatConfig.energyPerTurn - axeStrike.cost);
   });
 
   it('rejects a card the player cannot afford', () => {
-    const expensive: CardDef = { ...axtschlag, id: 'teuer', cost: 4 };
+    const expensive: CardDef = { ...axeStrike, id: 'teuer', cost: 4 };
     const { state, rng } = newCombat({ deck: deckOf(expensive, 5) });
     const next = play(state, rng, 'teuer');
     expect(next.player.energy).toBe(combatConfig.energyPerTurn);
@@ -93,8 +93,8 @@ describe('card costs & energy', () => {
   });
 
   it('rejects unplayable status cards without touching energy', () => {
-    const { state, rng } = newCombat({ deck: deckOf(erschoepfung, 5) });
-    const next = play(state, rng, 'erschoepfung');
+    const { state, rng } = newCombat({ deck: deckOf(exhaustion, 5) });
+    const next = play(state, rng, 'exhaustion');
     expect(next.hand).toHaveLength(combatConfig.handSize);
     expect(next.player.energy).toBe(combatConfig.energyPerTurn);
   });
@@ -115,8 +115,8 @@ describe('card costs & energy', () => {
 
 describe('block', () => {
   it('grants block via skill and decays it at the start of the next player turn', () => {
-    const { state, rng } = newCombat({ deck: deckOf(holzschild, 10) });
-    let s = play(state, rng, 'holzschild');
+    const { state, rng } = newCombat({ deck: deckOf(woodenShield, 10) });
+    let s = play(state, rng, 'wooden_shield');
     expect(s.player.block).toBe(5);
     s = combatReducer(s, { type: 'END_TURN' }, rng);
     // shadow_rat hits for 3 into 5 block → no hp loss, 2 block left…
@@ -127,7 +127,7 @@ describe('block', () => {
   });
 
   it('decays enemy block at the start of the enemy action', () => {
-    const { state, rng } = newCombat({ enemies: [copperBeetle], deck: deckOf(holzschild, 10) });
+    const { state, rng } = newCombat({ enemies: [copperBeetle], deck: deckOf(woodenShield, 10) });
     const next = combatReducer(state, { type: 'END_TURN' }, rng);
     // start block (4) decayed, then intent "Einigeln" grants 6 fresh block.
     expect(next.enemies[0]!.block).toBe(6);
@@ -144,8 +144,8 @@ describe('damage formula & statuses', () => {
   });
 
   it('consumes block before hp', () => {
-    const { state, rng } = newCombat({ enemies: [copperBeetle], deck: deckOf(axtschlag, 10) });
-    const next = play(state, rng, 'axtschlag');
+    const { state, rng } = newCombat({ enemies: [copperBeetle], deck: deckOf(axeStrike, 10) });
+    const next = play(state, rng, 'axe_strike');
     expect(next.enemies[0]!.block).toBe(0);
     expect(next.enemies[0]!.hp).toBe(copperBeetle.hp - (6 - 4));
   });
@@ -171,7 +171,7 @@ describe('poison', () => {
   });
 
   it('ticks on the player at turn end before enemies act', () => {
-    const { state, rng } = newCombat({ deck: deckOf(holzschild, 10) });
+    const { state, rng } = newCombat({ deck: deckOf(woodenShield, 10) });
     const poisoned = structuredClone(state);
     poisoned.player.statuses.poison = 2;
     const s = combatReducer(poisoned, { type: 'END_TURN' }, rng);
@@ -183,7 +183,7 @@ describe('poison', () => {
 
 describe('draw pile & reshuffle', () => {
   it('reshuffles the discard pile when the draw pile runs out', () => {
-    const deck = [...deckOf(axtschlag, 4), ...deckOf(holzschild, 2)]; // 6 cards
+    const deck = [...deckOf(axeStrike, 4), ...deckOf(woodenShield, 2)]; // 6 cards
     const { state, rng } = newCombat({ deck, enemies: [thornCreeper] });
     expect(state.drawPile).toHaveLength(1);
     const next = combatReducer(state, { type: 'END_TURN' }, rng);
@@ -194,11 +194,11 @@ describe('draw pile & reshuffle', () => {
   });
 
   it('draw effect reshuffles mid-turn', () => {
-    const deck = [...deckOf(verschnaufen, 5)];
+    const deck = [...deckOf(catchBreath, 5)];
     const { state, rng } = newCombat({ deck });
     expect(state.drawPile).toHaveLength(0);
     // No discard yet: first draw does nothing until cards are discarded.
-    const s = play(state, rng, 'verschnaufen');
+    const s = play(state, rng, 'catch_breath');
     // the played card itself went to discard, then draw 2 → reshuffle pulls it back.
     expect(s.hand.length).toBeGreaterThanOrEqual(combatConfig.handSize - 1);
     expect(s.hand.length + s.drawPile.length + s.discardPile.length).toBe(5);
@@ -207,7 +207,7 @@ describe('draw pile & reshuffle', () => {
 
 describe('status cards & dishes at turn end', () => {
   it('status cards vanish at turn end instead of being discarded', () => {
-    const deck = [...deckOf(erschoepfung, 3), ...deckOf(holzschild, 2)];
+    const deck = [...deckOf(exhaustion, 3), ...deckOf(woodenShield, 2)];
     const { state, rng } = newCombat({ deck });
     const next = combatReducer(state, { type: 'END_TURN' }, rng);
     const allCards = [...next.hand, ...next.drawPile, ...next.discardPile];
@@ -216,11 +216,11 @@ describe('status cards & dishes at turn end', () => {
   });
 
   it('dish cards are consumed, not discarded', () => {
-    const deck = [...deckOf(beerensnack, 1), ...deckOf(holzschild, 4)];
+    const deck = [...deckOf(berrySnack, 1), ...deckOf(woodenShield, 4)];
     const { state, rng } = newCombat({ deck, playerHp: 40 });
     const hurt = structuredClone(state);
     hurt.player.maxHp = 50;
-    const next = play(hurt, rng, 'beerensnack');
+    const next = play(hurt, rng, 'berry_snack');
     expect(next.player.hp).toBe(45);
     expect(next.consumed).toHaveLength(1);
     expect(next.discardPile).toHaveLength(0);
@@ -229,16 +229,16 @@ describe('status cards & dishes at turn end', () => {
 
 describe('victory & defeat', () => {
   it('reaches victory when the last enemy dies mid-turn', () => {
-    const { state, rng } = newCombat({ deck: deckOf(axtschlag, 10) });
-    let s = play(state, rng, 'axtschlag');
-    s = play(s, rng, 'axtschlag'); // 12 damage → rat dead
+    const { state, rng } = newCombat({ deck: deckOf(axeStrike, 10) });
+    let s = play(state, rng, 'axe_strike');
+    s = play(s, rng, 'axe_strike'); // 12 damage → rat dead
     expect(s.phase).toBe('victory');
     // terminal state ignores further events
     expect(combatReducer(s, { type: 'END_TURN' }, rng)).toBe(s);
   });
 
   it('reaches defeat when enemy damage kills the player', () => {
-    const { state, rng } = newCombat({ playerHp: 3, deck: deckOf(steinwurf, 10) });
+    const { state, rng } = newCombat({ playerHp: 3, deck: deckOf(stoneThrow, 10) });
     const next = combatReducer(state, { type: 'END_TURN' }, rng);
     expect(next.phase).toBe('defeat');
     expect(next.player.hp).toBeLessThanOrEqual(0);
@@ -247,24 +247,24 @@ describe('victory & defeat', () => {
 
 describe('retaliation (Vergeltung)', () => {
   it('deals plain damage to the attacker when hitting a retaliating enemy', () => {
-    const { state, rng } = newCombat({ enemies: [thornCreeper], deck: deckOf(axtschlag, 10) });
+    const { state, rng } = newCombat({ enemies: [thornCreeper], deck: deckOf(axeStrike, 10) });
     // Creeper's first intent is Dornenpanzer — end turn so it gains retaliate 2.
     let s = combatReducer(state, { type: 'END_TURN' }, rng);
     expect(s.enemies[0]!.statuses.retaliate).toBe(2);
     const hpBefore = s.player.hp;
-    s = play(s, rng, 'axtschlag');
+    s = play(s, rng, 'axe_strike');
     expect(s.player.hp).toBe(hpBefore - 2);
   });
 
   it('retaliation damage is absorbed by the attacker block', () => {
     const { state, rng } = newCombat({
       enemies: [thornCreeper],
-      deck: [...deckOf(holzschild, 5), ...deckOf(axtschlag, 5)],
+      deck: [...deckOf(woodenShield, 5), ...deckOf(axeStrike, 5)],
     });
     let s = combatReducer(state, { type: 'END_TURN' }, rng);
-    s = play(s, rng, 'holzschild'); // 5 block
+    s = play(s, rng, 'wooden_shield'); // 5 block
     const hpBefore = s.player.hp;
-    s = play(s, rng, 'axtschlag');
+    s = play(s, rng, 'axe_strike');
     expect(s.player.hp).toBe(hpBefore);
     expect(s.player.block).toBe(3);
   });
@@ -295,7 +295,7 @@ describe('retreat', () => {
 
 describe('enemy intents', () => {
   it('cycles through the pattern after each action', () => {
-    const { state, rng } = newCombat({ deck: deckOf(holzschild, 20) });
+    const { state, rng } = newCombat({ deck: deckOf(woodenShield, 20) });
     expect(state.enemies[0]!.intent.effects).toEqual([
       { kind: 'damage', amount: 3, target: 'player' },
     ]);
@@ -328,9 +328,9 @@ describe('enemy intents', () => {
         ],
       },
     };
-    const { state, rng } = newCombat({ enemies: [phasedEnemy], deck: deckOf(axtschlag, 10) });
-    let s = play(state, rng, 'axtschlag');
-    s = play(s, rng, 'axtschlag'); // 20 − 12 = 8 → below 50 %
+    const { state, rng } = newCombat({ enemies: [phasedEnemy], deck: deckOf(axeStrike, 10) });
+    let s = play(state, rng, 'axe_strike');
+    s = play(s, rng, 'axe_strike'); // 20 − 12 = 8 → below 50 %
     s = combatReducer(s, { type: 'END_TURN' }, rng);
     // enraged phase intent after acting
     expect(s.enemies[0]!.intent.effects).toEqual([{ kind: 'damage', amount: 9, target: 'player' }]);
@@ -344,7 +344,7 @@ describe('determinism', () => {
       let s = createCombatState(
         {
           playerHp: 50,
-          deck: [...deckOf(axtschlag, 5), ...deckOf(holzschild, 5)],
+          deck: [...deckOf(axeStrike, 5), ...deckOf(woodenShield, 5)],
           enemies: [thornCreeper],
         },
         rng,

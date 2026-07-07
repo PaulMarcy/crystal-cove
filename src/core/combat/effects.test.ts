@@ -5,8 +5,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { combatConfig } from '../../data/combat';
-import { axtschlag, erschoepfung, holzschild } from '../../data/cards/testCards';
-import { copperBeetle, shadowRat } from '../../data/enemies/testEnemies';
+import { axeStrike, exhaustion, woodenShield } from '../../data/cards/tier1';
+import { copperBeetle, shadowRat } from '../../data/enemies/tier1';
 import { combatReducer, createCombatState } from './reducer';
 import { createRng } from './rng';
 import type { CardDef, CombatState, EnemyDef } from './types';
@@ -60,7 +60,7 @@ const wildwuchsTerror: EnemyDef = {
     steps: [
       {
         intent: 'deck',
-        effects: [{ kind: 'addCard', card: erschoepfung, zone: 'discard' }],
+        effects: [{ kind: 'addCard', card: exhaustion, zone: 'discard' }],
       },
     ],
   },
@@ -74,7 +74,7 @@ function newCombat(
   const state = createCombatState(
     {
       playerHp: overrides.playerHp ?? 50,
-      deck: overrides.deck ?? deckOf(axtschlag, 10),
+      deck: overrides.deck ?? deckOf(axeStrike, 10),
       enemies: overrides.enemies ?? [shadowRat],
       ...(overrides.toolTier !== undefined ? { toolTier: overrides.toolTier } : {}),
     },
@@ -142,11 +142,14 @@ describe('multi-hit damage (times)', () => {
       pattern: {
         kind: 'cycle',
         steps: [
-          { intent: 'attack', effects: [{ kind: 'damage', amount: 2, target: 'player', times: 2 }] },
+          {
+            intent: 'attack',
+            effects: [{ kind: 'damage', amount: 2, target: 'player', times: 2 }],
+          },
         ],
       },
     };
-    const { state, rng } = newCombat({ enemies: [gull], deck: deckOf(holzschild, 10) });
+    const { state, rng } = newCombat({ enemies: [gull], deck: deckOf(woodenShield, 10) });
     const buffed = structuredClone(state);
     buffed.enemies[0]!.statuses.strength = 2; // Schnauben-style +2 Stärke
     const next = combatReducer(buffed, { type: 'END_TURN' }, rng);
@@ -168,9 +171,9 @@ describe('multi-hit damage (times)', () => {
 
 describe('addCard (Wildwuchs etc.)', () => {
   it('enemy intent shuffles an Erschöpfung into the player discard pile', () => {
-    const { state, rng } = newCombat({ enemies: [wildwuchsTerror], deck: deckOf(holzschild, 10) });
+    const { state, rng } = newCombat({ enemies: [wildwuchsTerror], deck: deckOf(woodenShield, 10) });
     const next = combatReducer(state, { type: 'END_TURN' }, rng);
-    expect(next.discardPile.filter((c) => c.def.id === 'erschoepfung')).toHaveLength(1);
+    expect(next.discardPile.filter((c) => c.def.id === 'exhaustion')).toHaveLength(1);
   });
 
   it('adds cards to hand and draw pile with unique instance ids', () => {
@@ -180,14 +183,14 @@ describe('addCard (Wildwuchs etc.)', () => {
       type: 'skill',
       cost: 0,
       effects: [
-        { kind: 'addCard', card: erschoepfung, zone: 'hand', amount: 2 },
-        { kind: 'addCard', card: erschoepfung, zone: 'draw' },
+        { kind: 'addCard', card: exhaustion, zone: 'hand', amount: 2 },
+        { kind: 'addCard', card: exhaustion, zone: 'draw' },
       ],
     };
-    const { state, rng } = newCombat({ deck: [...deckOf(summon, 5), ...deckOf(axtschlag, 5)] });
+    const { state, rng } = newCombat({ deck: [...deckOf(summon, 5), ...deckOf(axeStrike, 5)] });
     const next = play(state, rng, 'summon');
-    expect(next.hand.filter((c) => c.def.id === 'erschoepfung')).toHaveLength(2);
-    expect(next.drawPile.filter((c) => c.def.id === 'erschoepfung')).toHaveLength(1);
+    expect(next.hand.filter((c) => c.def.id === 'exhaustion')).toHaveLength(2);
+    expect(next.drawPile.filter((c) => c.def.id === 'exhaustion')).toHaveLength(1);
     const ids = [...next.hand, ...next.drawPile, ...next.discardPile].map((c) => c.instanceId);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -196,26 +199,26 @@ describe('addCard (Wildwuchs etc.)', () => {
 describe('cost modifier (Kristallschild „nächste Karte −1⚡")', () => {
   it('discounts exactly the next card and is then consumed', () => {
     const { state, rng } = newCombat({
-      deck: [...deckOf(kristallschild, 5), ...deckOf(axtschlag, 5)],
+      deck: [...deckOf(kristallschild, 5), ...deckOf(axeStrike, 5)],
     });
     let s = play(state, rng, 'kristallschild'); // pays 1
     expect(s.nextCardCostDelta).toBe(-1);
-    s = play(s, rng, 'axtschlag'); // 1 − 1 → free
+    s = play(s, rng, 'axe_strike'); // 1 − 1 → free
     expect(s.player.energy).toBe(combatConfig.energyPerTurn - kristallschild.cost);
     expect(s.nextCardCostDelta).toBe(0);
-    s = play(s, rng, 'axtschlag'); // full price again
-    expect(s.player.energy).toBe(combatConfig.energyPerTurn - kristallschild.cost - axtschlag.cost);
+    s = play(s, rng, 'axe_strike'); // full price again
+    expect(s.player.energy).toBe(combatConfig.energyPerTurn - kristallschild.cost - axeStrike.cost);
   });
 
   it('stacks and never pushes a cost below zero', () => {
     const { state, rng } = newCombat({
-      deck: [...deckOf(kristallschild, 3), ...deckOf(axtschlag, 3)],
+      deck: [...deckOf(kristallschild, 3), ...deckOf(axeStrike, 3)],
     });
     let s = play(state, rng, 'kristallschild');
     s = play(s, rng, 'kristallschild'); // second one pays 1 − 1 = 0
     expect(s.nextCardCostDelta).toBe(-1);
     const energyBefore = s.player.energy;
-    s = play(s, rng, 'axtschlag'); // max(0, 1 − 1) = 0
+    s = play(s, rng, 'axe_strike'); // max(0, 1 − 1) = 0
     expect(s.player.energy).toBe(energyBefore);
   });
 });
@@ -236,7 +239,7 @@ describe('toolTier scaling (docs/05 Axtschlag)', () => {
 
 describe('status durations', () => {
   it('weak and vulnerable decay by 1 at the end of the player turn', () => {
-    const { state, rng } = newCombat({ deck: deckOf(holzschild, 10) });
+    const { state, rng } = newCombat({ deck: deckOf(woodenShield, 10) });
     const cursed = structuredClone(state);
     cursed.player.statuses.weak = 2;
     cursed.player.statuses.vulnerable = 1;
@@ -254,7 +257,7 @@ describe('status durations', () => {
       effects: [{ kind: 'applyStatus', status: 'weak', amount: 1, target: 'target' }],
     };
     const { state, rng } = newCombat({
-      deck: [...deckOf(weakCurse, 5), ...deckOf(holzschild, 5)],
+      deck: [...deckOf(weakCurse, 5), ...deckOf(woodenShield, 5)],
     });
     let s = play(state, rng, 'kreischen');
     s = combatReducer(s, { type: 'END_TURN' }, rng);
@@ -264,7 +267,7 @@ describe('status durations', () => {
   });
 
   it('strength and retaliate persist across turns (docs/03)', () => {
-    const { state, rng } = newCombat({ deck: deckOf(holzschild, 10) });
+    const { state, rng } = newCombat({ deck: deckOf(woodenShield, 10) });
     const buffed = structuredClone(state);
     buffed.player.statuses.strength = 2;
     buffed.enemies[0]!.statuses.retaliate = 3;

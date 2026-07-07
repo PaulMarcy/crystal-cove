@@ -17,7 +17,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Kampf-Zustandsmaschine in core/combat (seedbarer RNG, pure Reducer)
 - [x] Effekt-Interpreter: damage, block, draw, heal, applyStatus, gainEnergy, addCard, ignoreBlock, retaliate
 - [x] Statuseffekte: Stärke, Verwundbar, Schwäche, Gift, Vergeltung
-- [ ] Daten: Starter-Deck + alle Karten aus docs/10 + Gegner/Elite aus docs/07
+- [x] Daten: Starter-Deck + alle Karten aus docs/10 + Gegner/Elite aus docs/07
 - [ ] Gegner-Absichten (cycle/phased) inkl. „echte Zahl"-Berechnung
 - [ ] Kampf-UI vollständig nach docs/11 (Zonen, Zustände, Targeting)
 - [ ] Headless-Simulator: `npm run sim -- --deck starter --enemy blighted_boar --n 1000`
