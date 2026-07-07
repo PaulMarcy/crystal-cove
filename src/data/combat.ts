@@ -9,6 +9,8 @@ export const combatConfig = {
   handSize: 5,
   /** Energy refilled at the start of each player turn. */
   energyPerTurn: 3,
+  /** Starting max HP at level 1: 50 + 5×(Level−1) (docs/02, docs/03). */
+  basePlayerHp: 50,
   /** Base success chance of retreating in the open field (docs/03 Rückzug). */
   retreatBaseChance: 0.75,
   /** Outgoing damage multiplier while the attacker has Schwäche. */
