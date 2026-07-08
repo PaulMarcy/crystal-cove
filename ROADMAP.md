@@ -22,11 +22,11 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Kampf-UI vollständig nach docs/11 (Zonen, Zustände, Targeting)
 - [x] Headless-Simulator: `npm run sim -- --deck starter --enemy blighted_boar --n 1000`
 - [x] Unit-Tests: Kosten, Block-Verfall, Gift-Tick, Mischen, Sieg/Niederlage, Seeds
-- [ ] Playtest-Kriterium: 3 Kämpfe in Folge fühlen sich unterschiedlich an
+- [x] Playtest-Kriterium: 3 Kämpfe in Folge fühlen sich unterschiedlich an
 
 ## M2 — Insel-Slice (Heimatbucht minimal)
-- [ ] Tilemap Heimatbucht (Strand + Wiese), Bewegung, Kollision (Tiled-Import)
-- [ ] Ernten: Holz, Kupfer, Beeren + Inventar-UI
+- [ ] Tilemap Heimatbucht (Strand + Wiese + Waldrand), Bewegung, Kollision (Tiled-Import)
+- [ ] Ernten: Holz, Stein, Kupfer, Beeren + Inventar-UI
 - [ ] Kreaturen auf Karte, Begegnungs-Trigger → Kampf → Rückkehr mit Beute
 - [ ] Begegnungstabellen nach Gebiet (docs/07)
 - [ ] Save V1: localStorage, versioniert, Backup-Slot, Korruptions-Recovery
