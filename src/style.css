@@ -69,6 +69,64 @@ body {
   cursor: pointer;
 }
 
+/* ── Inventory overlay (M2) ───────────────────────────────────────────── */
+
+.inventory-hint {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--color-text);
+  background: rgba(58, 46, 40, 0.85);
+  border: 1px solid var(--color-action);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.inventory-panel {
+  position: absolute;
+  top: 48px;
+  right: 12px;
+  min-width: 190px;
+  background: var(--color-ui-ground);
+  border: 2px solid var(--color-sand);
+  border-radius: 8px;
+  padding: 10px 14px;
+  pointer-events: auto;
+}
+
+.inventory-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--color-sand);
+}
+
+.inventory-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.inventory-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inventory-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 0;
+  font-size: 0.95rem;
+}
+
+.inventory-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-sand);
+}
+
 /* ── Combat screen (docs/11 Zonen-Layout) ─────────────────────────────── */
 
 .combat-screen {

@@ -1,9 +1,25 @@
 import Phaser from 'phaser';
 import { gameStore } from '../../shared/store';
+import { strings } from '../../shared/strings';
 import { isZoneId, zoneAt, type ZoneRect } from '../../core/world/zones';
+import {
+  heimatbuchtHarvestNodes,
+  type HarvestNodeType,
+} from '../../data/resources';
 
 const PLAYER_SPEED = 140;
 const TILE = 16;
+/** Max distance (px) at which a harvest node can be interacted with. */
+const HARVEST_RANGE = 26;
+/** Orange = actionable (docs/04 color rule) — highlight + prompt border. */
+const ACTION_TINT = 0xff9a4a;
+
+interface WorldHarvestNode {
+  id: string;
+  type: HarvestNodeType;
+  sprite: Phaser.GameObjects.Sprite;
+  harvested: boolean;
+}
 
 /**
  * Heimatbucht — first island area (M2): Tiled-JSON tilemap with the three
@@ -19,6 +35,10 @@ export class HeimatbuchtScene extends Phaser.Scene {
   private wasd!: Record<'up' | 'down' | 'left' | 'right', Phaser.Input.Keyboard.Key>;
   private zones: ZoneRect[] = [];
   private lastTile = { x: -1, y: -1 };
+  private harvestNodes: WorldHarvestNode[] = [];
+  private interactKey!: Phaser.Input.Keyboard.Key;
+  private harvestPrompt!: Phaser.GameObjects.Text;
+  private focusedNode: WorldHarvestNode | null = null;
 
   constructor() {
     super('heimatbucht');
@@ -27,6 +47,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
   init(): void {
     this.zones = [];
     this.lastTile = { x: -1, y: -1 };
+    this.harvestNodes = [];
+    this.focusedNode = null;
   }
 
   preload(): void {
@@ -43,6 +65,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
     ground.setCollisionByProperty({ collides: true });
 
     this.zones = this.readZones(map);
+
+    this.spawnHarvestNodes();
 
     this.player = this.createPlayer(map.widthInPixels / 2, map.heightInPixels / 2);
     this.physics.add.collider(this.player, ground);
@@ -63,6 +87,21 @@ export class HeimatbuchtScene extends Phaser.Scene {
       left: Phaser.Input.Keyboard.KeyCodes.A,
       right: Phaser.Input.Keyboard.KeyCodes.D,
     }) as typeof this.wasd;
+    this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+
+    // Prompt text follows the focused node; key label in text — information
+    // is never color-only (docs/11 accessibility rule).
+    this.harvestPrompt = this.add
+      .text(0, 0, '', {
+        fontFamily: 'monospace',
+        fontSize: '10px',
+        color: '#3a2e28',
+        backgroundColor: '#ff9a4a',
+        padding: { x: 3, y: 1 },
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(20)
+      .setVisible(false);
 
     this.publishLocation(); // initial zone before first movement
     gameStore.getState().setWorldReady(true);
@@ -89,6 +128,141 @@ export class HeimatbuchtScene extends Phaser.Scene {
       this.lastTile = { x: tileX, y: tileY };
       this.publishLocation();
     }
+
+    this.updateHarvestFocus();
+    if (this.focusedNode && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+      this.tryHarvest(this.focusedNode);
+    }
+  }
+
+  /** Spawns harvest-node sprites from data placements; depleted state comes from the store. */
+  private spawnHarvestNodes(): void {
+    this.createHarvestTextures();
+    const harvested = new Set(gameStore.getState().harvestedNodeIds);
+    for (const placement of heimatbuchtHarvestNodes) {
+      const x = placement.tileX * TILE + TILE / 2;
+      const y = placement.tileY * TILE + TILE / 2;
+      const isHarvested = harvested.has(placement.id);
+      const sprite = this.add
+        .sprite(x, y, this.nodeTextureKey(placement.type, isHarvested))
+        .setDepth(5);
+      this.harvestNodes.push({
+        id: placement.id,
+        type: placement.type,
+        sprite,
+        harvested: isHarvested,
+      });
+    }
+  }
+
+  /** Finds the nearest harvestable node in range and moves highlight + prompt onto it. */
+  private updateHarvestFocus(): void {
+    let nearest: WorldHarvestNode | null = null;
+    let nearestDist = HARVEST_RANGE;
+    for (const node of this.harvestNodes) {
+      if (node.harvested) continue;
+      const dist = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        node.sprite.x,
+        node.sprite.y,
+      );
+      if (dist <= nearestDist) {
+        nearest = node;
+        nearestDist = dist;
+      }
+    }
+    if (nearest === this.focusedNode) return;
+
+    this.focusedNode?.sprite.clearTint();
+    this.focusedNode = nearest;
+    if (!nearest) {
+      this.harvestPrompt.setVisible(false);
+      return;
+    }
+    nearest.sprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
+    this.harvestPrompt
+      .setText(strings.world.harvestPrompt.replace('{node}', strings.world.harvestNodes[nearest.type]))
+      .setPosition(nearest.sprite.x, nearest.sprite.y - 12)
+      .setVisible(true);
+  }
+
+  /** Dispatches the harvest to the store (logic lives in core) and mirrors the result. */
+  private tryHarvest(node: WorldHarvestNode): void {
+    if (!gameStore.getState().harvestNode(node.id)) return;
+    node.harvested = true;
+    node.sprite.clearTint();
+    node.sprite.setTexture(this.nodeTextureKey(node.type, true));
+    if (this.focusedNode === node) {
+      this.focusedNode = null;
+      this.harvestPrompt.setVisible(false);
+    }
+  }
+
+  private nodeTextureKey(type: HarvestNodeType, harvested: boolean): string {
+    return `node-${type}-${harvested ? 'depleted' : 'full'}`;
+  }
+
+  /**
+   * Placeholder textures for harvest nodes (grade 1 "Funktional", docs/04).
+   * Neutral biome tones — orange appears only as focus tint on the
+   * currently actionable node.
+   */
+  private createHarvestTextures(): void {
+    const make = (key: string, draw: (g: Phaser.GameObjects.Graphics) => void): void => {
+      if (this.textures.exists(key)) return;
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      draw(g);
+      g.generateTexture(key, 16, 16);
+      g.destroy();
+    };
+    make('node-tree-full', (g) => {
+      g.fillStyle(0x6b4a2f); // trunk
+      g.fillRect(6, 9, 4, 7);
+      g.fillStyle(0x4f7d3a); // crown (darker than meadow green for silhouette)
+      g.fillCircle(8, 6, 6);
+    });
+    make('node-tree-depleted', (g) => {
+      g.fillStyle(0x6b4a2f); // stump
+      g.fillRect(5, 10, 6, 6);
+      g.fillStyle(0x8a6a4a);
+      g.fillRect(6, 11, 4, 2);
+    });
+    make('node-rock-full', (g) => {
+      g.fillStyle(0x8d8d94);
+      g.fillCircle(8, 10, 6);
+      g.fillStyle(0xb0b0b8);
+      g.fillRect(5, 6, 5, 4);
+    });
+    make('node-rock-depleted', (g) => {
+      g.fillStyle(0x8d8d94);
+      g.fillRect(4, 12, 3, 3);
+      g.fillRect(10, 13, 3, 2);
+    });
+    make('node-copper_vein-full', (g) => {
+      g.fillStyle(0x8d8d94); // host rock
+      g.fillCircle(8, 10, 6);
+      g.fillStyle(0xb87333); // copper seams (material color, not action-orange)
+      g.fillRect(5, 8, 3, 2);
+      g.fillRect(9, 11, 3, 2);
+    });
+    make('node-copper_vein-depleted', (g) => {
+      g.fillStyle(0x8d8d94);
+      g.fillRect(4, 12, 4, 3);
+      g.fillRect(10, 12, 3, 3);
+    });
+    make('node-berry_bush-full', (g) => {
+      g.fillStyle(0x5a8f46); // bush
+      g.fillCircle(8, 9, 6);
+      g.fillStyle(0xc4534f); // berries — warm red (purple is reserved for magic/corruption, docs/04)
+      g.fillCircle(5, 8, 1.5);
+      g.fillCircle(10, 7, 1.5);
+      g.fillCircle(8, 11, 1.5);
+    });
+    make('node-berry_bush-depleted', (g) => {
+      g.fillStyle(0x5a8f46);
+      g.fillCircle(8, 10, 5);
+    });
   }
 
   /** Parse zone rectangles from the Tiled "zones" object layer. */

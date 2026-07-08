@@ -4,6 +4,7 @@ import { shadowGull, shadowRat } from '../data/enemies/tier1';
 import { strings } from '../shared/strings';
 import { useGameStore } from '../shared/store';
 import { CombatScreen } from './combat/CombatScreen';
+import { InventoryPanel } from './inventory/InventoryPanel';
 
 /** React overlay root — menus, combat UI and inventory mount here. */
 export function App() {
@@ -31,6 +32,7 @@ export function App() {
       >
         {strings.ui.startTestCombat}
       </button>
+      <InventoryPanel />
     </>
   );
 }

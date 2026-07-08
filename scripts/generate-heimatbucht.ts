@@ -83,7 +83,7 @@ tiles.forEach(([baseHex, accentHex], t) => {
       const blob = t >= 4 && Math.hypot(x - 7.5, y - (t === 5 ? 6.5 : 8.5)) < (t === 5 ? 6 : 5);
       const speckle = (x * 7 + y * 13 + t * 5) % 11 === 0;
       const [r, g, b] = blob || speckle ? accent : base;
-      const o = ((t * TILE + x) + y * tilesetW) * 4;
+      const o = (t * TILE + x + y * tilesetW) * 4;
       px[o] = r;
       px[o + 1] = g;
       px[o + 2] = b;
@@ -109,10 +109,12 @@ const rocks = new Set(['10,9', '11,9', '25,13', '26,14', '8,16', '31,7']);
 for (let y = 0; y < H; y++) {
   for (let x = 0; x < W; x++) {
     let gid: number;
-    if (y <= 2) gid = TREE; // Waldrand tree wall
-    else if (y <= 4) gid = (x === 0 || x === W - 1) ? TREE : DARK;
+    if (y <= 2)
+      gid = TREE; // Waldrand tree wall
+    else if (y <= 4) gid = x === 0 || x === W - 1 ? TREE : DARK;
     else if (y <= 19) {
-      if (x === 0 || x === W - 1) gid = ROCK; // rocky side frame
+      if (x === 0 || x === W - 1)
+        gid = ROCK; // rocky side frame
       else gid = rocks.has(`${x},${y}`) ? ROCK : GRASS;
     } else if (y <= 24) gid = SAND;
     else gid = WATER;
@@ -176,9 +178,39 @@ const map = {
       opacity: 1,
       visible: true,
       objects: [
-        { id: 1, name: 'waldrand', type: 'zone', x: 0, y: 0, width: W * TILE, height: 5 * TILE, rotation: 0, visible: true },
-        { id: 2, name: 'wiese', type: 'zone', x: 0, y: 5 * TILE, width: W * TILE, height: 15 * TILE, rotation: 0, visible: true },
-        { id: 3, name: 'strand', type: 'zone', x: 0, y: 20 * TILE, width: W * TILE, height: 5 * TILE, rotation: 0, visible: true },
+        {
+          id: 1,
+          name: 'waldrand',
+          type: 'zone',
+          x: 0,
+          y: 0,
+          width: W * TILE,
+          height: 5 * TILE,
+          rotation: 0,
+          visible: true,
+        },
+        {
+          id: 2,
+          name: 'wiese',
+          type: 'zone',
+          x: 0,
+          y: 5 * TILE,
+          width: W * TILE,
+          height: 15 * TILE,
+          rotation: 0,
+          visible: true,
+        },
+        {
+          id: 3,
+          name: 'strand',
+          type: 'zone',
+          x: 0,
+          y: 20 * TILE,
+          width: W * TILE,
+          height: 5 * TILE,
+          rotation: 0,
+          visible: true,
+        },
       ],
     },
   ],
@@ -189,5 +221,8 @@ const map = {
 mkdirSync(join(root, 'public/assets/tilesets'), { recursive: true });
 mkdirSync(join(root, 'public/assets/maps'), { recursive: true });
 writeFileSync(join(root, 'public/assets/tilesets/heimatbucht.png'), encodePng(tilesetW, TILE, px));
-writeFileSync(join(root, 'public/assets/maps/heimatbucht.json'), JSON.stringify(map, null, 2) + '\n');
+writeFileSync(
+  join(root, 'public/assets/maps/heimatbucht.json'),
+  JSON.stringify(map, null, 2) + '\n',
+);
 console.log('Heimatbucht assets written to public/assets/.');

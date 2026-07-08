@@ -57,7 +57,24 @@ export const strings = {
       description: 'Angreifer erleiden Schaden in Höhe der Stapel.',
     },
   },
+  world: {
+    harvestNodes: {
+      tree: 'Baum',
+      rock: 'Fels',
+      copper_vein: 'Kupferader',
+      berry_bush: 'Beerenstrauch',
+    },
+    harvestPrompt: '[E] {node} ernten',
+    harvestGain: '+{amount} {item}',
+  },
+  inventory: {
+    title: 'Inventar',
+    toggleHint: '[I] Inventar',
+    empty: 'Noch nichts gesammelt.',
+  },
   items: {
+    wood: 'Holz',
+    stone: 'Stein',
     shadow_fiber: 'Schattenfaser',
     shadow_dust: 'Schattenstaub',
     berry: 'Beere',
