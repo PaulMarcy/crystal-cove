@@ -25,7 +25,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Playtest-Kriterium: 3 Kämpfe in Folge fühlen sich unterschiedlich an
 
 ## M2 — Insel-Slice (Heimatbucht minimal)
-- [ ] Tilemap Heimatbucht (Strand + Wiese + Waldrand), Bewegung, Kollision (Tiled-Import)
+- [x] Tilemap Heimatbucht (Strand + Wiese + Waldrand), Bewegung, Kollision (Tiled-Import)
 - [ ] Ernten: Holz, Stein, Kupfer, Beeren + Inventar-UI
 - [ ] Kreaturen auf Karte, Begegnungs-Trigger → Kampf → Rückkehr mit Beute
 - [ ] Begegnungstabellen nach Gebiet (docs/07)

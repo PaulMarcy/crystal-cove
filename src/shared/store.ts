@@ -3,6 +3,7 @@ import { useStore } from 'zustand';
 import { combatReducer, createCombatState } from '../core/combat/reducer';
 import { createRng, type Rng } from '../core/combat/rng';
 import type { CombatEvent, CombatSetup, CombatState } from '../core/combat/types';
+import type { ZoneId } from '../core/world/zones';
 
 /**
  * Shared game store — the single bridge between Phaser (world) and React (ui).
@@ -14,6 +15,12 @@ import type { CombatEvent, CombatSetup, CombatState } from '../core/combat/types
 export interface GameState {
   worldReady: boolean;
   setWorldReady: (ready: boolean) => void;
+
+  /** Zone the player currently stands in (null = no zone, e.g. over water). */
+  playerZone: ZoneId | null;
+  /** Player world position in pixels — updated on tile change, not per frame. */
+  playerPosition: { x: number; y: number } | null;
+  setPlayerLocation: (position: { x: number; y: number }, zone: ZoneId | null) => void;
 
   combat: CombatState | null;
   /** Seed used for the current combat (deterministic replays, debugging). */
@@ -29,6 +36,10 @@ let combatRng: Rng | null = null;
 export const gameStore = createStore<GameState>()((set, get) => ({
   worldReady: false,
   setWorldReady: (ready) => set({ worldReady: ready }),
+
+  playerZone: null,
+  playerPosition: null,
+  setPlayerLocation: (position, zone) => set({ playerPosition: position, playerZone: zone }),
 
   combat: null,
   combatSeed: null,

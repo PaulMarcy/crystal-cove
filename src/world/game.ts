@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BootScene } from './scenes/BootScene';
+import { HeimatbuchtScene } from './scenes/HeimatbuchtScene';
 
 export function createGame(parent: HTMLElement): Phaser.Game {
   return new Phaser.Game({
@@ -9,6 +9,10 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     height: 540,
     backgroundColor: '#1a3c4d',
     pixelArt: true,
-    scene: [BootScene],
+    physics: {
+      default: 'arcade',
+      arcade: { gravity: { x: 0, y: 0 }, debug: false },
+    },
+    scene: [HeimatbuchtScene],
   });
 }
