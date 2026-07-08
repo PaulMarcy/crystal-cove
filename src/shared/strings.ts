@@ -52,7 +52,10 @@ export const strings = {
     vulnerable: { name: 'Verwundbar', description: 'Erleidet 50 % mehr Angriffsschaden.' },
     weak: { name: 'Schwäche', description: 'Verursacht 25 % weniger Angriffsschaden.' },
     poison: { name: 'Gift', description: 'Verliert am Zugende HP in Höhe der Stapel, dann −1.' },
-    retaliate: { name: 'Vergeltung', description: 'Angreifer erleiden Schaden in Höhe der Stapel.' },
+    retaliate: {
+      name: 'Vergeltung',
+      description: 'Angreifer erleiden Schaden in Höhe der Stapel.',
+    },
   },
   items: {
     shadow_fiber: 'Schattenfaser',

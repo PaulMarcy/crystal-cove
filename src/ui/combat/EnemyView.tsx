@@ -79,11 +79,7 @@ export function EnemyView(props: EnemyViewProps) {
       </div>
       {!dead && (
         <>
-          <HpBar
-            hp={enemy.hp}
-            maxHp={enemy.maxHp}
-            poisoned={(enemy.statuses.poison ?? 0) > 0}
-          />
+          <HpBar hp={enemy.hp} maxHp={enemy.maxHp} poisoned={(enemy.statuses.poison ?? 0) > 0} />
           <div className="enemy-substatus">
             {enemy.block > 0 && <BlockChip block={enemy.block} />}
             <StatusRow statuses={enemy.statuses} />

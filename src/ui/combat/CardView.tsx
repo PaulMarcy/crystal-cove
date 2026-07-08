@@ -25,13 +25,8 @@ export interface CardViewProps {
 export function CardView(props: CardViewProps) {
   const { card, cost, uiState, rotation, drawIndex, onClick, attachEl } = props;
   const def = card.def;
-  const description =
-    strings.cards[def.id as keyof typeof strings.cards]?.description ?? '';
-  const classes = [
-    'card',
-    `card--${uiState}`,
-    props.wiggle ? 'card--wiggle' : '',
-  ]
+  const description = strings.cards[def.id as keyof typeof strings.cards]?.description ?? '';
+  const classes = ['card', `card--${uiState}`, props.wiggle ? 'card--wiggle' : '']
     .filter(Boolean)
     .join(' ');
 
@@ -50,9 +45,7 @@ export function CardView(props: CardViewProps) {
         onClick();
       }}
     >
-      <span className={`cost-gem${uiState === 'unplayable' ? ' cost-gem--grey' : ''}`}>
-        {cost}
-      </span>
+      <span className={`cost-gem${uiState === 'unplayable' ? ' cost-gem--grey' : ''}`}>{cost}</span>
       <span className="card-name">{def.name}</span>
       <span className="card-art" aria-hidden>
         {cardTypeIcons[def.type]}

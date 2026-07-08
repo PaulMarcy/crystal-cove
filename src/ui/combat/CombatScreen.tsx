@@ -58,8 +58,7 @@ function OutcomePanel({ state, onClose }: { state: CombatState; onClose: () => v
   }
   const title =
     state.phase === 'defeat' ? strings.combat.defeatTitle : strings.combat.retreatedTitle;
-  const body =
-    state.phase === 'defeat' ? strings.combat.defeatBody : strings.combat.retreatedBody;
+  const body = state.phase === 'defeat' ? strings.combat.defeatBody : strings.combat.retreatedBody;
   return (
     <div className={`outcome-backdrop${state.phase === 'defeat' ? ' outcome-backdrop--fade' : ''}`}>
       <div className="outcome-panel">
@@ -126,7 +125,10 @@ export function CombatScreen() {
 
   const wiggle = (cardId: string) => {
     setWigglingCardId(cardId);
-    window.setTimeout(() => setWigglingCardId((id) => (id === cardId ? null : id)), WIGGLE_DURATION_MS);
+    window.setTimeout(
+      () => setWigglingCardId((id) => (id === cardId ? null : id)),
+      WIGGLE_DURATION_MS,
+    );
   };
 
   /** Confirmed play: card flies to its destination, then the event fires. */
@@ -161,9 +163,7 @@ export function CombatScreen() {
         ? (state.hand.find((c) => c.instanceId === instanceId)?.def ?? null)
         : null;
     const needsTarget = def !== null && cardNeedsTarget(def);
-    setArrowOrigin(
-      needsTarget && instanceId ? centerOf(cardRefs.current.get(instanceId)) : null,
-    );
+    setArrowOrigin(needsTarget && instanceId ? centerOf(cardRefs.current.get(instanceId)) : null);
     if (!needsTarget) setRingCenter(null);
   };
 

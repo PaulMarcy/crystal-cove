@@ -17,14 +17,7 @@ export function TargetingLayer({ origin, cursor, targetRing }: TargetingLayerPro
   return (
     <svg className="targeting-layer" aria-hidden>
       <defs>
-        <marker
-          id="arrow-head"
-          markerWidth="10"
-          markerHeight="10"
-          refX="7"
-          refY="4"
-          orient="auto"
-        >
+        <marker id="arrow-head" markerWidth="10" markerHeight="10" refX="7" refY="4" orient="auto">
           <path d="M0,0 L8,4 L0,8 z" fill="var(--color-action)" />
         </marker>
       </defs>
