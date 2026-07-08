@@ -133,6 +133,11 @@ export const strings = {
     shadow_gull: { name: 'Schattenmöwe' },
     thorn_terror: { name: 'Dornenschreck' },
   },
+  affixes: {
+    armored: { name: 'Gepanzert' },
+    thorned: { name: 'Dornig' },
+    draining: { name: 'Zehrend' },
+  },
 } as const;
 
 export type Strings = typeof strings;

@@ -28,7 +28,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Tilemap Heimatbucht (Strand + Wiese + Waldrand), Bewegung, Kollision (Tiled-Import)
 - [x] Ernten: Holz, Stein, Kupfer, Beeren + Inventar-UI
 - [ ] Kreaturen auf Karte, Begegnungs-Trigger → Kampf → Rückkehr mit Beute
-- [ ] Begegnungstabellen nach Gebiet (docs/07)
+- [x] Begegnungstabellen nach Gebiet (docs/07)
 - [ ] Save V1: localStorage, versioniert, Backup-Slot, Korruptions-Recovery
 
 ## M3 — Crafting-Loop
