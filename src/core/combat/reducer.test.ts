@@ -439,3 +439,38 @@ describe('determinism', () => {
     expect(state).toEqual(snapshot);
   });
 });
+
+describe('combat start extensions (M2 encounter wiring)', () => {
+  it('applies startStatuses from the enemy definition at combat start', () => {
+    const thorned: EnemyDef = { ...shadowRat, startStatuses: { retaliate: 2 } };
+    const rng = createRng(1);
+    const state = createCombatState(
+      { playerHp: 50, deck: deckOf(axeStrike, 5), enemies: [thorned] },
+      rng,
+    );
+    expect(state.enemies[0]!.statuses.retaliate).toBe(2);
+    // Retaliation actually triggers: playing an attack hurts the player.
+    const next = combatReducer(
+      state,
+      { type: 'PLAY_CARD', cardInstanceId: state.hand[0]!.instanceId, targetEnemyId: state.enemies[0]!.instanceId },
+      rng,
+    );
+    expect(next.player.hp).toBe(48);
+  });
+
+  it('seeds the discard pile from setup.startDiscard with unique instance ids', () => {
+    const rng = createRng(1);
+    const state = createCombatState(
+      {
+        playerHp: 50,
+        deck: deckOf(axeStrike, 5),
+        enemies: [shadowRat],
+        startDiscard: [exhaustion, exhaustion],
+      },
+      rng,
+    );
+    expect(state.discardPile.map((c) => c.def.id)).toEqual(['exhaustion', 'exhaustion']);
+    const ids = new Set([...state.discardPile, ...state.hand].map((c) => c.instanceId));
+    expect(ids.size).toBe(7);
+  });
+});

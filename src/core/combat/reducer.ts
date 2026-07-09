@@ -98,9 +98,10 @@ function createEnemyState(def: EnemyDef, index: number): EnemyState {
     def,
     hp: def.hp,
     maxHp: def.hp,
-    // combatStart: apply start block (docs/03 step 1).
+    // combatStart: apply start block + start statuses (docs/03 step 1;
+    // start statuses carry elite affixes like "Dornig" → retaliate).
     block: def.startBlock ?? 0,
-    statuses: {},
+    statuses: { ...def.startStatuses },
     phaseIndex: initialPhaseIndex(def.pattern),
     patternIndex: 0,
     intent: { intent: 'attack', effects: [] },
@@ -128,7 +129,12 @@ export function createCombatState(setup: CombatSetup, rng: Rng): CombatState {
     enemies: setup.enemies.map(createEnemyState),
     drawPile: shuffle(deck, rng),
     hand: [],
-    discardPile: [],
+    // combatStart: affix "Zehrend" seeds the discard pile (docs/02); the 's'
+    // in the instance id avoids collisions with deck instance ids.
+    discardPile: (setup.startDiscard ?? []).map((def, i) => ({
+      instanceId: `${def.id}#s${i}`,
+      def,
+    })),
     consumed: [],
     retreatChance: setup.retreatChance ?? combatConfig.retreatBaseChance,
     toolTier: setup.toolTier ?? combatConfig.baseToolTier,

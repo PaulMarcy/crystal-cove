@@ -4,8 +4,14 @@ import { combatReducer, createCombatState } from '../core/combat/reducer';
 import { createRng, type Rng } from '../core/combat/rng';
 import type { CombatEvent, CombatSetup, CombatState } from '../core/combat/types';
 import { harvestNode } from '../core/economy/harvest';
-import { emptyInventory, type Inventory } from '../core/economy/inventory';
+import { addItem, emptyInventory, type Inventory } from '../core/economy/inventory';
+import { rollEncounter, type ShadowDensity } from '../core/world/encounters';
+import { buildEncounterCombatSetup } from '../core/world/encounterCombat';
+import { rollLoot, type LootResult } from '../core/world/loot';
 import type { ZoneId } from '../core/world/zones';
+import { starterDeck } from '../data/cards/tier1';
+import { combatConfig } from '../data/combat';
+import { encounterTables, initialShadowDensity } from '../data/encounters/tier1';
 import { harvestNodeTypes, heimatbuchtHarvestNodes } from '../data/resources';
 
 /**
@@ -38,6 +44,21 @@ export interface GameState {
   startCombat: (setup: CombatSetup, seed?: number) => void;
   dispatchCombat: (event: CombatEvent) => void;
   endCombat: () => void;
+
+  /** Shadow density of the island (docs/02; rises with exploration, M4+). */
+  shadowDensity: ShadowDensity;
+  /**
+   * Rolls an encounter for the zone and starts the combat (M2 loop
+   * island → combat → island). Returns false if a combat is already running.
+   */
+  startEncounter: (zone: ZoneId, seed?: number) => boolean;
+  /** Loot rolled at the moment of victory (shown in the victory panel). */
+  combatLoot: LootResult | null;
+  /** Outcome of the last finished combat — world layer reacts (despawn etc.). */
+  lastCombatOutcome: CombatState['phase'] | null;
+  /** Loot of the last won combat — brief island feedback, then cleared. */
+  lastLoot: LootResult | null;
+  clearLastLoot: () => void;
 }
 
 /** RNG of the running combat — module-scoped, injected into every reducer call. */
@@ -72,14 +93,64 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     set({ combat: createCombatState(setup, combatRng), combatSeed: usedSeed });
   },
   dispatchCombat: (event) => {
-    const { combat } = get();
+    const { combat, shadowDensity } = get();
     if (!combat || !combatRng) return;
-    set({ combat: combatReducer(combat, event, combatRng) });
+    const next = combatReducer(combat, event, combatRng);
+    // Loot is rolled exactly once, at the victory transition, with the
+    // combat RNG — a seeded combat replays to identical loot.
+    const justWon = combat.phase !== 'victory' && next.phase === 'victory';
+    const loot = justWon
+      ? rollLoot(
+          next.enemies.map((enemy) => enemy.def),
+          shadowDensity,
+          combatRng,
+        )
+      : get().combatLoot;
+    set({ combat: next, combatLoot: loot });
   },
   endCombat: () => {
+    const { combat, combatLoot, inventory } = get();
     combatRng = null;
-    set({ combat: null, combatSeed: null });
+    const won = combat?.phase === 'victory';
+    let nextInventory = inventory;
+    if (won && combatLoot) {
+      for (const [item, amount] of Object.entries(combatLoot)) {
+        nextInventory = addItem(nextInventory, item, amount);
+      }
+    }
+    // TODO(M4): defeat flow — for now the player just returns to the island
+    // with full HP and no penalty (docs/12: Niederlage-Fluss ist M4).
+    set({
+      combat: null,
+      combatSeed: null,
+      combatLoot: null,
+      inventory: nextInventory,
+      lastCombatOutcome: combat?.phase ?? null,
+      lastLoot: won ? combatLoot : null,
+    });
   },
+
+  shadowDensity: initialShadowDensity,
+  startEncounter: (zone, seed) => {
+    const { combat, shadowDensity, startCombat } = get();
+    if (combat) return false;
+    const encounterSeed = seed ?? Math.floor(Math.random() * 0xffffffff);
+    const encounter = rollEncounter(
+      encounterTables[zone],
+      shadowDensity,
+      createRng(encounterSeed),
+    );
+    const setup = buildEncounterCombatSetup(encounter, shadowDensity, {
+      playerHp: combatConfig.basePlayerHp,
+      deck: starterDeck,
+    });
+    startCombat(setup, seed);
+    return true;
+  },
+  combatLoot: null,
+  lastCombatOutcome: null,
+  lastLoot: null,
+  clearLastLoot: () => set({ lastLoot: null }),
 }));
 
 export function useGameStore<T>(selector: (state: GameState) => T): T {

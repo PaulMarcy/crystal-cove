@@ -19,21 +19,14 @@ interface Point {
   y: number;
 }
 
-/** Loot panel content: guaranteed drops of all defeated enemies (display only). */
-function LootList({ state }: { state: CombatState }) {
-  const lines = state.enemies.flatMap(
-    (enemy) =>
-      enemy.def.loot?.guaranteed.map((entry) => ({
-        key: `${enemy.instanceId}-${entry.item}`,
-        name: strings.items[entry.item as keyof typeof strings.items] ?? entry.item,
-        amount: entry.min === entry.max ? `${entry.min}` : `${entry.min}–${entry.max}`,
-      })) ?? [],
-  );
+/** Loot panel content: the actually rolled drops (store rolls them on victory). */
+function LootList() {
+  const loot = useGameStore((s) => s.combatLoot);
   return (
     <ul className="loot-list">
-      {lines.map((line) => (
-        <li key={line.key}>
-          {line.name} ×{line.amount}
+      {Object.entries(loot ?? {}).map(([item, amount]) => (
+        <li key={item}>
+          {strings.items[item as keyof typeof strings.items] ?? item} ×{amount}
         </li>
       ))}
     </ul>
@@ -48,7 +41,7 @@ function OutcomePanel({ state, onClose }: { state: CombatState; onClose: () => v
         <div className="outcome-panel outcome-panel--victory">
           <h2>{strings.combat.victoryTitle}</h2>
           <h3>{strings.combat.lootHeading}</h3>
-          <LootList state={state} />
+          <LootList />
           <button className="end-turn-button" onClick={onClose}>
             {strings.combat.backToIsland}
           </button>
@@ -81,6 +74,7 @@ export function CombatScreen() {
   const state = useGameStore((s) => s.combat);
   const dispatch = useGameStore((s) => s.dispatchCombat);
   const endCombat = useGameStore((s) => s.endCombat);
+  const density = useGameStore((s) => s.shadowDensity);
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [hoveredEnemyId, setHoveredEnemyId] = useState<string | null>(null);
@@ -198,7 +192,9 @@ export function CombatScreen() {
       onClick={() => selectCard(null)}
     >
       <div className="combat-stage">
-        <div className="location-chip">{strings.combat.locationChip}</div>
+        <div className="location-chip">
+          {strings.combat.locationChip.replace('{density}', String(density))}
+        </div>
         <RetreatButton
           chance={state.retreatChance}
           disabled={busy}

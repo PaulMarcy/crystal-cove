@@ -22,7 +22,7 @@ export const strings = {
     block: 'Block',
     hp: 'Lebenspunkte',
     turn: 'Runde',
-    locationChip: 'Heimatbucht · Dichte 1',
+    locationChip: 'Heimatbucht · Dichte {density}',
     victoryTitle: 'Sieg!',
     lootHeading: 'Beute',
     defeatTitle: 'Erschöpft …',
@@ -66,6 +66,7 @@ export const strings = {
     },
     harvestPrompt: '[E] {node} ernten',
     harvestGain: '+{amount} {item}',
+    lootToastHeading: 'Beute erhalten',
   },
   inventory: {
     title: 'Inventar',

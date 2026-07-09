@@ -6,6 +6,15 @@ import {
   heimatbuchtHarvestNodes,
   type HarvestNodeType,
 } from '../../data/resources';
+import {
+  creatureContactRange,
+  creatureIdleMs,
+  creatureWanderRadius,
+  creatureWanderSpeed,
+  encounterGraceMs,
+  heimatbuchtCreatureSpawns,
+  type CreatureSpawn,
+} from '../../data/creatures';
 
 const PLAYER_SPEED = 140;
 const TILE = 16;
@@ -13,6 +22,13 @@ const TILE = 16;
 const HARVEST_RANGE = 26;
 /** Orange = actionable (docs/04 color rule) — highlight + prompt border. */
 const ACTION_TINT = 0xff9a4a;
+
+interface WorldCreature {
+  spawn: CreatureSpawn;
+  sprite: Phaser.GameObjects.Sprite;
+  moveTween: Phaser.Tweens.Tween | null;
+  idleTimer: Phaser.Time.TimerEvent | null;
+}
 
 interface WorldHarvestNode {
   id: string;
@@ -39,6 +55,12 @@ export class HeimatbuchtScene extends Phaser.Scene {
   private interactKey!: Phaser.Input.Keyboard.Key;
   private harvestPrompt!: Phaser.GameObjects.Text;
   private focusedNode: WorldHarvestNode | null = null;
+  private creatures: WorldCreature[] = [];
+  /** Creature that triggered the running combat — despawned on victory. */
+  private engagedCreature: WorldCreature | null = null;
+  /** Timestamp until which creature contact is ignored (post-combat grace). */
+  private contactGraceUntil = 0;
+  private unsubscribeStore: (() => void) | null = null;
 
   constructor() {
     super('heimatbucht');
@@ -49,6 +71,9 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.lastTile = { x: -1, y: -1 };
     this.harvestNodes = [];
     this.focusedNode = null;
+    this.creatures = [];
+    this.engagedCreature = null;
+    this.contactGraceUntil = 0;
   }
 
   preload(): void {
@@ -67,6 +92,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.zones = this.readZones(map);
 
     this.spawnHarvestNodes();
+    this.spawnCreatures();
 
     this.player = this.createPlayer(map.widthInPixels / 2, map.heightInPixels / 2);
     this.physics.add.collider(this.player, ground);
@@ -103,6 +129,20 @@ export class HeimatbuchtScene extends Phaser.Scene {
       .setDepth(20)
       .setVisible(false);
 
+    // Combat lifecycle: the React overlay owns the fight; this scene pauses
+    // on start and resumes on end (loop island → combat → island, docs/12 M2).
+    this.unsubscribeStore = gameStore.subscribe((state, prev) => {
+      if (prev.combat === null && state.combat !== null) {
+        this.scene.pause();
+      } else if (prev.combat !== null && state.combat === null) {
+        this.onCombatEnded(state.lastCombatOutcome);
+      }
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.unsubscribeStore?.();
+      this.unsubscribeStore = null;
+    });
+
     this.publishLocation(); // initial zone before first movement
     gameStore.getState().setWorldReady(true);
   }
@@ -133,6 +173,110 @@ export class HeimatbuchtScene extends Phaser.Scene {
     if (this.focusedNode && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
       this.tryHarvest(this.focusedNode);
     }
+
+    this.checkCreatureContact();
+  }
+
+  // ── Creatures (M2 encounter triggers) ───────────────────────────────────
+
+  /** Spawns shadow-creature sprites from data placements and starts wandering. */
+  private spawnCreatures(): void {
+    this.createCreatureTexture();
+    for (const spawn of heimatbuchtCreatureSpawns) {
+      const x = spawn.tileX * TILE + TILE / 2;
+      const y = spawn.tileY * TILE + TILE / 2;
+      const sprite = this.add.sprite(x, y, 'creature-shadow').setDepth(6);
+      const creature: WorldCreature = { spawn, sprite, moveTween: null, idleTimer: null };
+      this.creatures.push(creature);
+      this.scheduleWander(creature);
+    }
+  }
+
+  /**
+   * Simple idle/wander: pause, then drift to a random point around the spawn
+   * (no pathfinding — creatures are ambience + trigger, docs/02: avoidable).
+   */
+  private scheduleWander(creature: WorldCreature): void {
+    const delay = Phaser.Math.Between(creatureIdleMs.min, creatureIdleMs.max);
+    creature.idleTimer = this.time.delayedCall(delay, () => {
+      const homeX = creature.spawn.tileX * TILE + TILE / 2;
+      const homeY = creature.spawn.tileY * TILE + TILE / 2;
+      const targetX = homeX + Phaser.Math.Between(-creatureWanderRadius, creatureWanderRadius);
+      const targetY = homeY + Phaser.Math.Between(-creatureWanderRadius, creatureWanderRadius);
+      const dist = Phaser.Math.Distance.Between(
+        creature.sprite.x,
+        creature.sprite.y,
+        targetX,
+        targetY,
+      );
+      creature.moveTween = this.tweens.add({
+        targets: creature.sprite,
+        x: targetX,
+        y: targetY,
+        duration: (dist / creatureWanderSpeed) * 1000,
+        ease: 'Sine.easeInOut',
+        onComplete: () => this.scheduleWander(creature),
+      });
+    });
+  }
+
+  /** Player touches a creature → encounter roll for the current zone (store). */
+  private checkCreatureContact(): void {
+    if (this.time.now < this.contactGraceUntil) return;
+    const store = gameStore.getState();
+    if (store.combat) return;
+    for (const creature of this.creatures) {
+      const dist = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        creature.sprite.x,
+        creature.sprite.y,
+      );
+      if (dist > creatureContactRange) continue;
+      // Zone of the player decides the table (docs/07); creature zone is the
+      // fallback if the player stands outside all zone rects.
+      const zone = store.playerZone ?? creature.spawn.zone;
+      if (store.startEncounter(zone)) {
+        this.engagedCreature = creature;
+      }
+      return;
+    }
+  }
+
+  /** Back from combat: despawn on victory, otherwise grant a contact grace. */
+  private onCombatEnded(outcome: string | null): void {
+    const creature = this.engagedCreature;
+    this.engagedCreature = null;
+    if (outcome === 'victory' && creature) {
+      creature.idleTimer?.remove();
+      creature.moveTween?.stop();
+      creature.sprite.destroy();
+      this.creatures = this.creatures.filter((c) => c !== creature);
+    } else {
+      // Defeat/retreat: creature stays; grace so it does not instantly re-trigger.
+      // TODO(M4): richtiger Niederlage-Fluss (Aufwachen im Bett, Malus).
+      this.contactGraceUntil = this.time.now + encounterGraceMs;
+    }
+    this.scene.resume();
+  }
+
+  /**
+   * Placeholder shadow creature (grade 1 "Funktional", docs/04): dark body
+   * on the corruption palette with a crystal outgrowth in #9668D8 — violet
+   * marks corruption/magic only (docs/04 color rule).
+   */
+  private createCreatureTexture(): void {
+    if (this.textures.exists('creature-shadow')) return;
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.fillStyle(0x2b2338); // shadow body (dark corruption tone)
+    g.fillCircle(7, 9, 6);
+    g.fillStyle(0x9668d8); // crystal outgrowth (docs/04 corruption violet)
+    g.fillTriangle(9, 5, 12, 0, 13, 6);
+    g.fillStyle(0xcdb7f0); // eyes — light, readable silhouette
+    g.fillRect(4, 8, 2, 2);
+    g.fillRect(8, 8, 2, 2);
+    g.generateTexture('creature-shadow', 14, 16);
+    g.destroy();
   }
 
   /** Spawns harvest-node sprites from data placements; depleted state comes from the store. */

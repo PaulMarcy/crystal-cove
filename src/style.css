@@ -53,6 +53,24 @@ body {
   border-radius: 4px;
 }
 
+/* Kurzes Beute-Feedback nach Kampf-Sieg (M2). Text + Zahlen, nie nur Farbe. */
+.loot-toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #e8f4f8;
+  font-family: monospace;
+  font-size: 14px;
+  background: rgba(13, 31, 40, 0.85);
+  border: 1px solid rgba(232, 244, 248, 0.25);
+  padding: 8px 14px;
+  border-radius: 6px;
+}
+.loot-toast .loot-list {
+  margin: 4px 0 0;
+}
+
 .dev-combat-button {
   position: absolute;
   bottom: 24px;

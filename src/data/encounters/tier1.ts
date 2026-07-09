@@ -25,6 +25,11 @@ export const densityThresholds = [0.25, 0.5, 0.75] as const;
 /** Enemies get +10 % HP & damage per density level, multiplicative on top. */
 export const densityHpAndDamagePerLevel = 0.1;
 
+/** Density 3: loot amounts ×2 (docs/07 "Dichte 3 … Beutemengen ×2"). */
+export const density3LootMultiplier = 2;
+/** Density 3: chance drops +20 percentage points (docs/07). */
+export const density3ChanceBonus = 0.2;
+
 // ── Elite affixes (docs/02, density >= 2) ────────────────────────────────
 
 export type EliteAffixId = 'armored' | 'thorned' | 'draining';

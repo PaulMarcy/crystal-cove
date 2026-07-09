@@ -240,3 +240,8 @@ export const allEnemies: readonly EnemyDef[] = [
   shadowRatTutorial,
   shadowMouse,
 ];
+
+/** Lookup by id — used by the encounter → combat wiring (core/world). */
+export const enemiesById: Readonly<Record<string, EnemyDef>> = Object.fromEntries(
+  allEnemies.map((enemy) => [enemy.id, enemy]),
+);

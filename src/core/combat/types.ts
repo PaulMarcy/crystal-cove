@@ -110,6 +110,11 @@ export interface EnemyDef {
   tier: number;
   hp: number;
   startBlock?: number;
+  /**
+   * Statuses applied at combat start (e.g. elite affix "Dornig" → retaliate).
+   * Uses the existing status mechanics — no new interpreter code.
+   */
+  startStatuses?: StatusMap;
   pattern: EnemyPattern;
   loot?: {
     guaranteed: LootEntry[];
@@ -194,4 +199,9 @@ export interface CombatSetup {
   retreatChance?: number;
   /** Equipped tool tier for 'toolTier'-scaled amounts (default in src/data). */
   toolTier?: number;
+  /**
+   * Cards placed in the discard pile at combat start (elite affix "Zehrend":
+   * Erschöpfung in der Ablage, docs/02). They join the deck cycle on reshuffle.
+   */
+  startDiscard?: CardDef[];
 }
