@@ -29,7 +29,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Ernten: Holz, Stein, Kupfer, Beeren + Inventar-UI
 - [x] Kreaturen auf Karte, Begegnungs-Trigger → Kampf → Rückkehr mit Beute
 - [x] Begegnungstabellen nach Gebiet (docs/07)
-- [ ] Save V1: localStorage, versioniert, Backup-Slot, Korruptions-Recovery
+- [x] Save V1: localStorage, versioniert, Backup-Slot, Korruptions-Recovery
 
 ## M3 — Crafting-Loop
 - [ ] Schmiede + Küche St. 1 (Rezepte aus docs/10), Werkstatt-UI

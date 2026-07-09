@@ -35,6 +35,19 @@ function LootToast() {
   );
 }
 
+/** One-time notice when the corrupt primary save was restored from backup. */
+function SaveRecoveryNotice() {
+  const recovered = useGameStore((s) => s.saveRecovered);
+  const dismiss = useGameStore((s) => s.clearSaveRecovered);
+  if (!recovered) return null;
+  return (
+    <div className="save-recovery-notice" role="alert">
+      <span>{strings.save.recoveryNotice}</span>
+      <button onClick={dismiss}>{strings.save.recoveryDismiss}</button>
+    </div>
+  );
+}
+
 /** React overlay root — menus, combat UI and inventory mount here. */
 export function App() {
   const worldReady = useGameStore((s) => s.worldReady);
@@ -63,6 +76,7 @@ export function App() {
       </button>
       <LootToast />
       <InventoryPanel />
+      <SaveRecoveryNotice />
     </>
   );
 }

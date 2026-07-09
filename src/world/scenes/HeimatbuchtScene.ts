@@ -94,7 +94,12 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.spawnHarvestNodes();
     this.spawnCreatures();
 
-    this.player = this.createPlayer(map.widthInPixels / 2, map.heightInPixels / 2);
+    // Saved position wins (save V1); fresh games start at the map center.
+    const savedPosition = gameStore.getState().playerPosition;
+    this.player = this.createPlayer(
+      savedPosition?.x ?? map.widthInPixels / 2,
+      savedPosition?.y ?? map.heightInPixels / 2,
+    );
     this.physics.add.collider(this.player, ground);
 
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);

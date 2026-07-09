@@ -1,0 +1,109 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { deserialize, serialize, type SaveData } from '../core/save/save';
+import { PRIMARY_KEY, saveGame, type SaveStorage } from '../core/save/storage';
+import { initPersistence, snapshotFromState } from './persistence';
+import { gameStore } from './store';
+import { emptyInventory } from '../core/economy/inventory';
+import { initialShadowDensity } from '../data/encounters/tier1';
+import { starterDeck } from '../data/cards/tier1';
+import { shadowRat } from '../data/enemies/tier1';
+
+function memoryStorage(): SaveStorage & { map: Map<string, string> } {
+  const map = new Map<string, string>();
+  return {
+    map,
+    getItem: (key) => map.get(key) ?? null,
+    setItem: (key, value) => void map.set(key, value),
+    removeItem: (key) => void map.delete(key),
+  };
+}
+
+const savedGame: SaveData = {
+  inventory: { wood: 4 },
+  harvestedNodeIds: ['tree-1'],
+  shadowDensity: 1,
+  playerPosition: { x: 100, y: 200 },
+  playerZone: 'strand',
+};
+
+/** Reset the singleton store's persisted slice between tests. */
+beforeEach(() => {
+  gameStore.setState({
+    inventory: emptyInventory,
+    harvestedNodeIds: [],
+    shadowDensity: initialShadowDensity,
+    playerPosition: null,
+    playerZone: null,
+    combat: null,
+    saveRecovered: false,
+  });
+});
+
+describe('persistence wiring', () => {
+  it('hydrates the store from an existing save', () => {
+    const storage = memoryStorage();
+    saveGame(storage, savedGame);
+    const result = initPersistence(storage);
+    expect(result.source).toBe('primary');
+    const state = gameStore.getState();
+    expect(state.inventory).toEqual(savedGame.inventory);
+    expect(state.harvestedNodeIds).toEqual(savedGame.harvestedNodeIds);
+    expect(state.playerPosition).toEqual(savedGame.playerPosition);
+    expect(state.playerZone).toBe('strand');
+    expect(state.saveRecovered).toBe(false);
+  });
+
+  it('sets the recovery flag when the backup restored the game', () => {
+    const storage = memoryStorage();
+    saveGame(storage, savedGame);
+    saveGame(storage, { ...savedGame, inventory: { wood: 5 } });
+    storage.map.set(PRIMARY_KEY, 'corrupted!!');
+    initPersistence(storage);
+    expect(gameStore.getState().saveRecovered).toBe(true);
+    expect(gameStore.getState().inventory).toEqual({ wood: 4 });
+  });
+
+  it('starts fresh (no hydration) when storage is empty', () => {
+    initPersistence(memoryStorage());
+    expect(gameStore.getState().inventory).toEqual({});
+    expect(gameStore.getState().saveRecovered).toBe(false);
+  });
+
+  it('autosaves when the inventory changes (harvest trigger)', () => {
+    const storage = memoryStorage();
+    initPersistence(storage);
+    gameStore.setState({ inventory: { stone: 2 } });
+    const raw = storage.map.get(PRIMARY_KEY);
+    expect(raw).toBeDefined();
+    const loaded = deserialize(raw!);
+    expect(loaded.ok && loaded.data.inventory).toEqual({ stone: 2 });
+  });
+
+  it('does not autosave while a combat is running', () => {
+    const storage = memoryStorage();
+    initPersistence(storage);
+    gameStore.getState().startCombat(
+      {
+        playerHp: 30,
+        deck: [...starterDeck],
+        enemies: [shadowRat],
+      },
+      42,
+    );
+    expect(storage.map.has(PRIMARY_KEY)).toBe(false);
+    gameStore.getState().endCombat();
+    // Combat end is an autosave trigger.
+    expect(storage.map.has(PRIMARY_KEY)).toBe(true);
+  });
+
+  it('snapshotFromState mirrors serialize round-trip', () => {
+    gameStore.setState({
+      inventory: { berry: 1 },
+      harvestedNodeIds: ['rock-3'],
+      playerPosition: { x: 5, y: 6 },
+      playerZone: 'wiese',
+    });
+    const snap = snapshotFromState(gameStore.getState());
+    expect(deserialize(serialize(snap))).toEqual({ ok: true, data: snap });
+  });
+});

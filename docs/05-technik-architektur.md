@@ -83,6 +83,34 @@ aktives Deck, Inventar, Insel-Zustände (Erkundung %, Dichte, gereinigt,
 Resonanz-Bestwerte), Quest-Flags. `save/`-Modul kapselt Migrationen zwischen
 Versionen von Tag 1 an.
 
+**Format (Save V1, M2):** Envelope `{ v, checksum, payload }` — `payload` ist
+der JSON-String der Spieldaten, `checksum` ein FNV-1a-Hash darüber (reiner
+Korruptionsdetektor), `v` die Save-Version. V1 persistiert Inventar, geerntete
+Nodes, Schattendichte und Spielerposition/-zone; Deck/Sammlung kommen in M3
+als V2 mit Migration. Migrationen sind eine Kette `v → v+1` in
+`core/save/save.ts`; Saves mit unbekannter (neuerer) Version werden nie
+geraten, sondern abgelehnt.
+
+**Backup-Slot (Doppel-Write):** Zwei localStorage-Keys
+(`crystal-cove.save` + `.backup`). Beim Speichern rotiert der bisherige
+Primär-Inhalt in den Backup-Slot, dann wird neu in den Primär-Slot
+geschrieben — das Backup ist immer der letzte vollständig geschriebene Stand.
+
+**Recovery-Verhalten:** Beim Laden wird der Primär-Slot vollständig geprüft
+(JSON, Envelope, Checksumme, Version, Schema). Schlägt irgendeine Prüfung
+fehl, wird das Backup geladen, der Primär-Slot damit geheilt und dem Spieler
+ein Wiederherstellungs-Hinweis gezeigt. Sind beide Slots defekt, startet ein
+frisches Spiel. Storage ist als Interface injiziert — die gesamte Logik in
+`core/save/` ist DOM-frei und getestet (inkl. Korruptions-Szenarien).
+
+**Autosave-Trigger (konservativ, M2):** nach Kampf-Ende, nach jeder
+Ernte-/Inventar-/Dichte-Änderung sowie beim Verlassen der Seite
+(`beforeunload`, sichert die Spielerposition). Nie während eines laufenden
+Kampfs — Kämpfe sind nicht resumierbar. Kreaturen-Despawns nach Siegen werden
+bewusst NICHT persistiert (szenen-lokal): solange es keine Respawn-Mechanik
+gibt, wäre ein persistierter Despawn dauerhafter Weltverlust; nach einem
+Reload erscheinen Kreaturen wieder, die Beute bleibt erhalten.
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 - Touch-/Mobile-Steuerung (nach M3 evaluieren)

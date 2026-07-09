@@ -8,6 +8,7 @@ import { addItem, emptyInventory, type Inventory } from '../core/economy/invento
 import { rollEncounter, type ShadowDensity } from '../core/world/encounters';
 import { buildEncounterCombatSetup } from '../core/world/encounterCombat';
 import { rollLoot, type LootResult } from '../core/world/loot';
+import type { SaveData } from '../core/save/save';
 import type { ZoneId } from '../core/world/zones';
 import { starterDeck } from '../data/cards/tier1';
 import { combatConfig } from '../data/combat';
@@ -59,6 +60,12 @@ export interface GameState {
   /** Loot of the last won combat — brief island feedback, then cleared. */
   lastLoot: LootResult | null;
   clearLastLoot: () => void;
+
+  /** Replaces the persisted slice with a loaded save (boot, before Phaser). */
+  hydrateFromSave: (data: SaveData, recovered: boolean) => void;
+  /** True when the primary save slot was corrupt and the backup restored it. */
+  saveRecovered: boolean;
+  clearSaveRecovered: () => void;
 }
 
 /** RNG of the running combat — module-scoped, injected into every reducer call. */
@@ -151,6 +158,18 @@ export const gameStore = createStore<GameState>()((set, get) => ({
   lastCombatOutcome: null,
   lastLoot: null,
   clearLastLoot: () => set({ lastLoot: null }),
+
+  hydrateFromSave: (data, recovered) =>
+    set({
+      inventory: data.inventory,
+      harvestedNodeIds: data.harvestedNodeIds,
+      shadowDensity: data.shadowDensity,
+      playerPosition: data.playerPosition,
+      playerZone: data.playerZone,
+      saveRecovered: recovered,
+    }),
+  saveRecovered: false,
+  clearSaveRecovered: () => set({ saveRecovered: false }),
 }));
 
 export function useGameStore<T>(selector: (state: GameState) => T): T {

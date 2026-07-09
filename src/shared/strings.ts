@@ -68,6 +68,11 @@ export const strings = {
     harvestGain: '+{amount} {item}',
     lootToastHeading: 'Beute erhalten',
   },
+  save: {
+    recoveryNotice:
+      'Spielstand wiederhergestellt: Der letzte Speicherstand war beschädigt, die Sicherungskopie wurde geladen.',
+    recoveryDismiss: 'OK',
+  },
   inventory: {
     title: 'Inventar',
     toggleHint: '[I] Inventar',
