@@ -7,7 +7,11 @@
 2. **Flussrate (wichtigste Stellschraube):** 1 Tier-1-Begegnung ≈ Material im
    Wert von 1/3 gewöhnlicher Karte → **~3 Begegnungen pro neuer Karte**.
    Alle Preise sind aus dieser Rate rückgerechnet.
-3. **Zerlegen:** 50 % Erstattung, abgerundet. Spezialmaterial wird nie erstattet.
+3. **Zerlegen:** 50 % Erstattung, pro Materialposten abgerundet
+   (Beispiel Schwerer Hieb: floor(3/2)=1 Kupfer + floor(1/2)=0 Stein).
+   Spezialmaterial wird nie erstattet; Spezialmaterial = alle Kampf-Drops
+   (Zeile „Kampf-Drops" im Ressourcenkatalog). Basis sind stets die
+   Prägekosten der Grundkarte — Upgrade-Kosten (Karte+) verfallen.
 
 ## Ressourcenkatalog Tier 1
 

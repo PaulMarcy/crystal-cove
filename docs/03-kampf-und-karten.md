@@ -13,6 +13,11 @@
   **Vergeltung X** (wer diese Einheit mit einem Angriff trifft, erleidet
   X Schaden — normaler Schaden, wird von Block des Angreifers abgefangen;
   stapelbar, hält den ganzen Kampf)
+- **Konditional „geblockt diese Runde"** (z. B. Riposte „+6 falls diese Runde
+  geblockt"): erfüllt, wenn der Spieler im aktuellen Spielerzug mindestens
+  1 Block durch einen Karteneffekt erhalten hat. Reihenfolge zählt: erst
+  Block-Quelle spielen, dann die Konditional-Karte. Block aus Vorrunden
+  zählt nicht (verfällt ohnehin zu Zugbeginn).
 - Kartentypen: **Angriff**, **Fertigkeit**, **Kraft** (dauerhaft im Kampf),
   **Gericht** (Verbrauchskarte, verlässt nach Nutzung das Deck bis zum Nachkochen),
   **Zustand** (negativ: Erschöpfung, Benommen)
