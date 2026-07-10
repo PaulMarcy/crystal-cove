@@ -49,6 +49,22 @@ describe('save slots (double write + recovery)', () => {
     expect(storage.map.get(BACKUP_KEY)).toBe(serialize(saveA));
   });
 
+  it('corrupt primary is NOT rotated into the backup on the next save', () => {
+    const storage = memoryStorage();
+    saveGame(storage, saveA); // good primary
+    storage.map.set(PRIMARY_KEY, '{oops'); // primary corrupts on disk
+    saveGame(storage, saveB); // must not push the corrupt blob into backup
+    expect(storage.map.get(PRIMARY_KEY)).toBe(serialize(saveB));
+    expect(storage.map.get(BACKUP_KEY)).toBe(undefined);
+    // A good previous backup also survives a corrupt-primary rotation:
+    const storage2 = memoryStorage();
+    saveGame(storage2, saveA);
+    saveGame(storage2, saveB); // backup = saveA
+    storage2.map.set(PRIMARY_KEY, 'garbage');
+    saveGame(storage2, saveB);
+    expect(storage2.map.get(BACKUP_KEY)).toBe(serialize(saveA));
+  });
+
   it('corrupt primary (broken JSON) → backup loads, recovery reported', () => {
     const storage = memoryStorage();
     saveGame(storage, saveA);

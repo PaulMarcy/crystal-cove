@@ -36,7 +36,12 @@ export interface LoadResult {
 
 export function saveGame(storage: SaveStorage, data: SaveData): void {
   const previous = storage.getItem(PRIMARY_KEY);
-  if (previous !== null) storage.setItem(BACKUP_KEY, previous);
+  // Rotate the old primary into the backup slot ONLY if it still validates —
+  // a corrupt primary must never overwrite a good backup (that backup is
+  // exactly what the recovery path in loadGame needs).
+  if (previous !== null && deserialize(previous).ok) {
+    storage.setItem(BACKUP_KEY, previous);
+  }
   storage.setItem(PRIMARY_KEY, serialize(data));
 }
 
