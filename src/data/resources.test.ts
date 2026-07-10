@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  harvestNodeTypes,
-  heimatbuchtHarvestNodes,
-  HARVEST_NODE_TYPES,
-} from './resources';
+import { harvestNodeTypes, heimatbuchtHarvestNodes, HARVEST_NODE_TYPES } from './resources';
 
 describe('resource data', () => {
   it('every node type has a positive yield', () => {

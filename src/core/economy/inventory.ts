@@ -22,11 +22,7 @@ export function addItem(inventory: Inventory, itemId: string, amount: number): I
  * inventory does not hold enough (callers decide how to surface that).
  * Stacks that reach 0 are dropped from the map.
  */
-export function removeItem(
-  inventory: Inventory,
-  itemId: string,
-  amount: number,
-): Inventory | null {
+export function removeItem(inventory: Inventory, itemId: string, amount: number): Inventory | null {
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new Error(`removeItem: amount must be a positive integer, got ${amount}`);
   }

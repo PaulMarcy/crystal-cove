@@ -2,10 +2,7 @@ import Phaser from 'phaser';
 import { gameStore } from '../../shared/store';
 import { strings } from '../../shared/strings';
 import { isZoneId, zoneAt, type ZoneRect } from '../../core/world/zones';
-import {
-  heimatbuchtHarvestNodes,
-  type HarvestNodeType,
-} from '../../data/resources';
+import { heimatbuchtHarvestNodes, type HarvestNodeType } from '../../data/resources';
 import {
   creatureContactRange,
   creatureIdleMs,
@@ -60,6 +57,13 @@ export class HeimatbuchtScene extends Phaser.Scene {
   private engagedCreature: WorldCreature | null = null;
   /** Timestamp until which creature contact is ignored (post-combat grace). */
   private contactGraceUntil = 0;
+  /**
+   * Grace must be stamped on the first update AFTER resume: while the scene
+   * is paused, this.time.now is frozen at combat start, so stamping it in
+   * onCombatEnded would already be expired for any combat longer than the
+   * grace period (bug M2-1).
+   */
+  private gracePending = false;
   private unsubscribeStore: (() => void) | null = null;
 
   constructor() {
@@ -74,6 +78,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.creatures = [];
     this.engagedCreature = null;
     this.contactGraceUntil = 0;
+    this.gracePending = false;
   }
 
   preload(): void {
@@ -227,6 +232,10 @@ export class HeimatbuchtScene extends Phaser.Scene {
 
   /** Player touches a creature → encounter roll for the current zone (store). */
   private checkCreatureContact(): void {
+    if (this.gracePending) {
+      this.gracePending = false;
+      this.contactGraceUntil = this.time.now + encounterGraceMs;
+    }
     if (this.time.now < this.contactGraceUntil) return;
     const store = gameStore.getState();
     if (store.combat) return;
@@ -260,7 +269,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     } else {
       // Defeat/retreat: creature stays; grace so it does not instantly re-trigger.
       // TODO(M4): richtiger Niederlage-Fluss (Aufwachen im Bett, Malus).
-      this.contactGraceUntil = this.time.now + encounterGraceMs;
+      this.gracePending = true;
     }
     this.scene.resume();
   }
@@ -331,7 +340,9 @@ export class HeimatbuchtScene extends Phaser.Scene {
     }
     nearest.sprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
     this.harvestPrompt
-      .setText(strings.world.harvestPrompt.replace('{node}', strings.world.harvestNodes[nearest.type]))
+      .setText(
+        strings.world.harvestPrompt.replace('{node}', strings.world.harvestNodes[nearest.type]),
+      )
       .setPosition(nearest.sprite.x, nearest.sprite.y - 12)
       .setVisible(true);
   }

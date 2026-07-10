@@ -30,15 +30,9 @@ export interface SaveDataV1 {
 export type SaveData = SaveDataV1;
 
 export type SaveError =
-  | 'corrupt_json'
-  | 'invalid_envelope'
-  | 'checksum_mismatch'
-  | 'unknown_version'
-  | 'invalid_payload';
+  'corrupt_json' | 'invalid_envelope' | 'checksum_mismatch' | 'unknown_version' | 'invalid_payload';
 
-export type DeserializeResult =
-  | { ok: true; data: SaveData }
-  | { ok: false; error: SaveError };
+export type DeserializeResult = { ok: true; data: SaveData } | { ok: false; error: SaveError };
 
 /** FNV-1a 32-bit — cheap corruption detector, not a security feature. */
 export function checksum(text: string): string {
@@ -78,7 +72,11 @@ export function deserialize(raw: string): DeserializeResult {
   ) {
     return { ok: false, error: 'invalid_envelope' };
   }
-  const { v, checksum: sum, payload } = envelope as { v: number; checksum: string; payload: string };
+  const {
+    v,
+    checksum: sum,
+    payload,
+  } = envelope as { v: number; checksum: string; payload: string };
   if (checksum(payload) !== sum) return { ok: false, error: 'checksum_mismatch' };
   if (!Number.isInteger(v) || v < 1 || v > SAVE_VERSION) {
     // Saves from a NEWER build (or nonsense versions) are never guessed at.

@@ -142,11 +142,7 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     const { combat, shadowDensity, startCombat } = get();
     if (combat) return false;
     const encounterSeed = seed ?? Math.floor(Math.random() * 0xffffffff);
-    const encounter = rollEncounter(
-      encounterTables[zone],
-      shadowDensity,
-      createRng(encounterSeed),
-    );
+    const encounter = rollEncounter(encounterTables[zone], shadowDensity, createRng(encounterSeed));
     const setup = buildEncounterCombatSetup(encounter, shadowDensity, {
       playerHp: combatConfig.basePlayerHp,
       deck: starterDeck,

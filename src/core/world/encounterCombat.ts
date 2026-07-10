@@ -77,8 +77,7 @@ interface AffixApplication {
  */
 function applyEliteAffix(enemies: EnemyDef[], affixId: string): AffixApplication {
   const affix = eliteAffixes[affixId as EliteAffixId] as
-    | (typeof eliteAffixes)[EliteAffixId]
-    | undefined;
+    (typeof eliteAffixes)[EliteAffixId] | undefined;
   if (!affix) return { enemies, startDiscard: [] };
 
   const applied = enemies.map((def) => {

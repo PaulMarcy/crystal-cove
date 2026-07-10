@@ -46,14 +46,48 @@ Legende: [ ] offen · [x] geprüft & OK — Datum/Commit im Abschnitt unten eint
 - [ ] `npm run sim -- --deck starter --all --n 1000 --seed 1000`:
   Tier-1-Normalgegner ≥ 95 %, Elite (thorn_terror) 55–95 %.
 
-## Ab M2 (Vorbereitung)
+## Ab M2 (Insel-Slice & Save)
 
-- [ ] Save überlebt Browser-Neustart.
-- [ ] Save-Korruption → Recovery ohne Datenverlust-Softlock.
-- [ ] Insel→Kampf→Insel ohne Reload.
+- [ ] Save überlebt Browser-Neustart/Reload (Inventar, geerntete Nodes,
+  Position, Zone; geernteter Baum bleibt nach Reload despawnt).
+- [ ] Save-Korruption Primärslot (at rest, z. B. Checksumme manipulieren) →
+  Reload → Backup lädt, Recovery-Notice („Spielstand wiederhergestellt")
+  erscheint, Primärslot wird geheilt, OK-Button schließt die Notice.
+- [ ] Beide Slots korrupt → Fresh Start ohne Konsolen-Fehler, Welt spielbar.
+- [ ] Insel→Kampf→Insel ohne Reload (Kreaturen-Kontakt UND Dev-Testkampf).
+- [ ] Sieg: Beute im Inventar, Loot-Toast auf der Insel, Kreatur despawnt.
+- [ ] Rückzug/Niederlage: Kreatur bleibt, Grace-Periode (~1,5 s) verhindert
+  Sofort-Retrigger bei Kontakt; Spieler kann sich in der Grace lösen.
+  Regression zu Issue M2-1: explizit mit Kampfdauer > 1,5 s testen.
+- [ ] Ernten: Prompt bei Node-Nähe, E erntet (Holz/Stein/Kupfer/Beeren),
+  Node despawnt, Inventar-Zähler stimmt; I öffnet/schließt Inventar-Panel.
+- [ ] Begegnungen zonen-korrekt: Spielerzone bestimmt Tabelle (docs/07);
+  Dichte 0–1 nie Elite; Elite nur thorn_terror + genau 1 Affix
+  (Stichprobe: Sampler über `rollEncounter`, feste Seeds).
+
+## Offene Issues
+
+- **M2-1 (gefixt 2026-07-10, working tree): Grace-Periode nach Kampf
+  wirkungslos bei Kämpfen > 1,5 s.**
+  Fix: `gracePending`-Flag in `HeimatbuchtScene`; Grace wird im ersten
+  Update-Frame NACH `scene.resume()` gestempelt statt mit der eingefrorenen
+  Pause-Uhr. Re-Test grün: Rückzug- und Niederlage-Pfad halten ~1,5 s Grace
+  (kein Sofort-Retrigger), Lösen während der Grace verhindert Re-Encounter,
+  bei anhaltendem Kontakt Retrigger erst nach Ablauf. Ursprungsbefund:
+  `HeimatbuchtScene` pausiert im Kampf; `contactGraceUntil = this.time.now +
+  1500` wird mit der beim Pausieren EINGEFRORENEN Scene-Uhr berechnet, nach
+  `scene.resume()` springt `time.now` auf die Echtzeit → Grace ist bereits
+  abgelaufen. Folge: Nach Rückzug/Niederlage bei Kontakt sofortiger
+  Re-Encounter ohne einen Frame Spielerkontrolle (Encounter-Falle).
+  Repro: Kreatur berühren → Kampf > 1,5 s laufen lassen → Rückzug →
+  „Zurück zur Insel" → nächster Frame startet sofort neuen Kampf.
+  Messwerte (Dev, Seed egal): pauseTime=frozenNow=41372,2;
+  graceUntil=42872,2; Echtzeit bei Kampfende=43858,3 > graceUntil.
 
 ## Durchläufe
 
 | Datum | Commit | Ergebnis | Anmerkungen |
 |---|---|---|---|
 | 2026-07-08 | 959ea0a (+ working tree UI) | grün | M1-Abnahme, alle Punkte oben verifiziert; Sim: Normal 100 %, Elite 89 % |
+| 2026-07-09 | 3689162 (+ working tree) | rot (1 Bug) | M2-Abnahme: Save/Recovery, Loop, Ernten, Zonen-Tabellen, Sim (Normal 100 %, Elite 89 %) grün; Veto wegen Issue M2-1 (Grace-Periode wirkungslos) |
+| 2026-07-10 | ba51d0c (+ working tree Fix) | grün | Re-Test M2-1: Grace hält nach Rückzug UND Niederlage (Kampf > 1,5 s), Lösen möglich, Retrigger erst nach Ablauf; verify grün (150 Tests); Veto aufgehoben — M2 abgenommen |
