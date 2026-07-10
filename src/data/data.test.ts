@@ -10,6 +10,8 @@ import { createRng } from '../core/combat/rng';
 import type { CombatState, Effect } from '../core/combat/types';
 import { allCards, starterDeck } from './cards/tier1';
 import { allEnemies, shadowRat } from './enemies/tier1';
+import { allRecipes, kitchenRecipes, smithyRecipes } from './recipes';
+import { RESOURCE_IDS, resources } from './resources';
 
 const KNOWN_EFFECT_KINDS: readonly Effect['kind'][] = [
   'damage',
@@ -106,6 +108,74 @@ describe('enemy data (docs/07)', () => {
 
   it('does not include the M4 boss', () => {
     expect(allEnemies.some((e) => e.id === 'root_warden')).toBe(false);
+  });
+});
+
+describe('recipe data (docs/10 Schmiede/Küche/Werkzeugstufen)', () => {
+  it('has unique English snake_case IDs', () => {
+    const ids = allRecipes.map((r) => r.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const id of ids) expect(id).toMatch(/^[a-z][a-z0-9_]*$/);
+  });
+
+  it('every card output references an existing card', () => {
+    const cardIds = new Set(allCards.map((c) => c.id));
+    for (const recipe of allRecipes) {
+      if (recipe.output.kind === 'card') {
+        expect(cardIds.has(recipe.output.cardId), `${recipe.id} → ${recipe.output.cardId}`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it('every ingredient references a defined resource with a positive amount', () => {
+    for (const recipe of allRecipes) {
+      expect(recipe.ingredients.length, recipe.id).toBeGreaterThan(0);
+      for (const ing of recipe.ingredients) {
+        expect(RESOURCE_IDS, `${recipe.id}: ${ing.resource}`).toContain(ing.resource);
+        expect(ing.amount, `${recipe.id}: ${ing.resource}`).toBeGreaterThan(0);
+        expect(Number.isInteger(ing.amount), `${recipe.id}: ${ing.resource}`).toBe(true);
+      }
+    }
+  });
+
+  it('recipes sit on the right station with valid tiers', () => {
+    for (const recipe of smithyRecipes) expect(recipe.station).toBe('smithy');
+    for (const recipe of kitchenRecipes) expect(recipe.station).toBe('kitchen');
+    for (const recipe of allRecipes) {
+      expect([1, 2], recipe.id).toContain(recipe.stationTier);
+    }
+  });
+
+  it('exactly one tool upgrade exists: Verstärkt (tier 2, 3 Kupfer + 2 Leder)', () => {
+    const upgrades = allRecipes.filter((r) => r.output.kind === 'toolUpgrade');
+    expect(upgrades).toHaveLength(1);
+    const upgrade = upgrades[0]!;
+    expect(upgrade.output).toEqual({ kind: 'toolUpgrade', toolTier: 2 });
+    expect(upgrade.ingredients).toEqual([
+      { resource: 'copper_ore', amount: 3 },
+      { resource: 'tough_leather', amount: 2 },
+    ]);
+  });
+
+  it('marks all combat drops as special material (docs/10: never refunded)', () => {
+    const combatDrops = [
+      'shadow_fiber',
+      'tough_leather',
+      'meat',
+      'vine',
+      'resin',
+      'beetle_shell',
+      'feather',
+      'shiny_trinket',
+      'heart_thorn',
+      'shadow_dust',
+    ] as const;
+    for (const id of combatDrops) expect(resources[id].specialMaterial, id).toBe(true);
+    for (const id of ['wood', 'stone', 'copper_ore', 'berry', 'pumpkin', 'chili', 'fish', 'honey'] as const) {
+      expect(resources[id].specialMaterial, id).toBe(false);
+    }
   });
 });
 

@@ -12,6 +12,58 @@
 export const GATHERABLE_RESOURCE_IDS = ['wood', 'stone', 'copper_ore', 'berry'] as const;
 export type GatherableResourceId = (typeof GATHERABLE_RESOURCE_IDS)[number];
 
+// ── Full tier-1 resource catalog (docs/10 Ressourcenkatalog) ─────────────
+// `specialMaterial: true` = combat drop; per docs/10 disenchant rule these
+// are NEVER refunded. Gathering/farming/fishing resources are refundable.
+
+export const RESOURCE_IDS = [
+  // Sammeln / Farming (docs/10)
+  'wood',
+  'stone',
+  'copper_ore',
+  'berry',
+  'pumpkin',
+  'chili',
+  'honey',
+  // Angeln (Steg)
+  'fish',
+  // Kampf-Drops (= Spezialmaterial, nie erstattet)
+  'shadow_fiber',
+  'tough_leather',
+  'meat',
+  'vine',
+  'resin',
+  'beetle_shell',
+  'feather',
+  'shiny_trinket',
+  'heart_thorn',
+  'shadow_dust',
+] as const;
+export type ResourceId = (typeof RESOURCE_IDS)[number];
+
+export interface ResourceDef {
+  id: ResourceId;
+  /** Combat drop per docs/10 — never refunded on disenchant. */
+  specialMaterial: boolean;
+}
+
+const COMBAT_DROP_IDS: readonly ResourceId[] = [
+  'shadow_fiber',
+  'tough_leather',
+  'meat',
+  'vine',
+  'resin',
+  'beetle_shell',
+  'feather',
+  'shiny_trinket',
+  'heart_thorn',
+  'shadow_dust',
+];
+
+export const resources: Readonly<Record<ResourceId, ResourceDef>> = Object.fromEntries(
+  RESOURCE_IDS.map((id) => [id, { id, specialMaterial: COMBAT_DROP_IDS.includes(id) }]),
+) as Record<ResourceId, ResourceDef>;
+
 export const HARVEST_NODE_TYPES = ['tree', 'rock', 'copper_vein', 'berry_bush'] as const;
 export type HarvestNodeType = (typeof HARVEST_NODE_TYPES)[number];
 

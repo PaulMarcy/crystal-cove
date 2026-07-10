@@ -94,6 +94,20 @@ export const strings = {
     shiny_trinket: 'Glitzerkram',
     heart_thorn: 'Herzdorn',
     thorn_ring: 'Dornenring',
+    pumpkin: 'Kürbis',
+    chili: 'Chili',
+    fish: 'Fisch',
+    honey: 'Honig',
+  },
+  stations: {
+    smithy: 'Schmiede',
+    kitchen: 'Küche',
+  },
+  recipes: {
+    tool_reinforced: {
+      name: 'Verstärktes Werkzeug',
+      description: 'Werkzeugstufe 2: Axtschlag 8 Schaden, Ernten +1 Ertrag.',
+    },
   },
   cards: {
     axe_strike: { name: 'Axtschlag', description: '6 Schaden (skaliert mit Werkzeugstufe).' },
