@@ -6,8 +6,6 @@
  * Build purpose of each card is noted inline (docs/10 economy rules).
  *
  * Open points (deliberately NOT hacked into the DSL, see CLAUDE.md rule 4):
- * - Riposte: "+6 falls diese Runde geblockt" needs a conditional effect kind
- *   → core-engineer task; shipped here with its base effect (6 damage) only.
  * - Card upgrades (Karte+, docs/10 shrine): no upgrade field exists on
  *   CardDef → not representable as pure data today; shrine is M3 anyway.
  */
@@ -143,17 +141,16 @@ export const counterStance: CardDef = {
   ],
 };
 
-/**
- * Bruna chain 2 — counter-attack payoff. Base effect only:
- * the "+6 falls diese Runde geblockt" condition is an open DSL gap.
- */
+/** Bruna chain 2 — counter-attack payoff: 6, +6 falls diese Runde geblockt (docs/03/10). */
 export const riposte: CardDef = {
   id: 'riposte',
   name: strings.cards.riposte.name,
   type: 'attack',
   cost: 1,
   school: 'counter',
-  effects: [{ kind: 'damage', amount: 6, target: 'target' }],
+  effects: [
+    { kind: 'conditionalDamage', amount: 6, bonus: 6, condition: 'blockedThisTurn', target: 'target' },
+  ],
 };
 
 // ── Kitchen dishes (docs/10 Küche — consumables) ─────────────────────────

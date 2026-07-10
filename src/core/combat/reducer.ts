@@ -140,6 +140,7 @@ export function createCombatState(setup: CombatSetup, rng: Rng): CombatState {
     toolTier: setup.toolTier ?? combatConfig.baseToolTier,
     nextCardCostDelta: 0,
     addedCardCounter: 0,
+    blockGainedThisTurn: false,
   };
   startPlayerTurn(state, rng);
   return state;
@@ -153,8 +154,10 @@ function reshuffler(rng: Rng) {
 
 function startPlayerTurn(state: CombatState, rng: Rng): void {
   state.turn += 1;
-  // turnStart (docs/03 step 2): player block decays, draw 5, energy to 3.
+  // turnStart (docs/03 step 2): player block decays, draw 5, energy to 3;
+  // the "blocked this turn" conditional resets with the block decay.
   state.player.block = 0;
+  state.blockGainedThisTurn = false;
   drawCards(state, combatConfig.handSize, reshuffler(rng));
   state.player.energy = combatConfig.energyPerTurn;
 }

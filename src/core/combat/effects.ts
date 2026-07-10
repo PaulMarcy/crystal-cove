@@ -231,8 +231,26 @@ export function applyEffects(
       case 'block':
         for (const unit of resolveTargets(state, actor, effect.target, chosenEnemyId)) {
           unit.block += resolveAmount(effect.amount, state);
+          // Konditional „geblockt diese Runde" (docs/03): the player gaining
+          // block from a card effect arms conditional cards for this turn.
+          if (actor.side === 'player' && unit === state.player) {
+            state.blockGainedThisTurn = true;
+          }
         }
         break;
+      case 'conditionalDamage': {
+        // Riposte (docs/03/docs/10): base + bonus when the condition holds;
+        // the sum runs through the normal attack formula, so strength/weak/
+        // vulnerable modify the bonus like regular damage.
+        const conditionMet = effect.condition === 'blockedThisTurn' && state.blockGainedThisTurn;
+        const base =
+          resolveAmount(effect.amount, state) +
+          (conditionMet ? resolveAmount(effect.bonus, state) : 0);
+        for (const unit of resolveTargets(state, actor, effect.target, chosenEnemyId)) {
+          performAttack(state, actor, unit, base);
+        }
+        break;
+      }
       case 'draw':
         drawCards(state, effect.amount, shuffleFn);
         break;

@@ -20,6 +20,7 @@ const KNOWN_EFFECT_KINDS: readonly Effect['kind'][] = [
   'gainEnergy',
   'addCard',
   'modifyNextCardCost',
+  'conditionalDamage',
 ];
 
 describe('card data (docs/03 + docs/10)', () => {

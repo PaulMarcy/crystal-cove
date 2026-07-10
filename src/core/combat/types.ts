@@ -41,7 +41,14 @@ export type EffectAmount = number | { base: number; scaling: ScalingSource };
  *   and triggered inside the damage interpreter.
  * - 'modifyNextCardCost' shifts the energy cost of the next card played
  *   (Kristallschild: amount −1); cost never drops below 0.
+ * - 'conditionalDamage' (Riposte, docs/03 „Konditional geblockt diese Runde"):
+ *   attacks for `amount`, plus `bonus` when the condition holds. The bonus is
+ *   part of the base damage, so strength/weak/vulnerable modify it like any
+ *   attack. Conditions are a closed set (currently only 'blockedThisTurn':
+ *   the player gained ≥1 block from a card effect this player turn).
  */
+export type EffectCondition = 'blockedThisTurn';
+
 export type Effect =
   | {
       kind: 'damage';
@@ -56,7 +63,14 @@ export type Effect =
   | { kind: 'applyStatus'; status: StatusId; amount: number; target: EffectTarget }
   | { kind: 'gainEnergy'; amount: number }
   | { kind: 'addCard'; card: CardDef; zone: CardZone; amount?: number }
-  | { kind: 'modifyNextCardCost'; amount: number };
+  | { kind: 'modifyNextCardCost'; amount: number }
+  | {
+      kind: 'conditionalDamage';
+      amount: EffectAmount;
+      bonus: EffectAmount;
+      condition: EffectCondition;
+      target: EffectTarget;
+    };
 
 // ── Card definitions ─────────────────────────────────────────────────────
 
@@ -181,6 +195,14 @@ export interface CombatState {
   nextCardCostDelta: number;
   /** Monotonic counter for unique instance ids of cards added mid-combat. */
   addedCardCounter: number;
+  /**
+   * True once the player gained block from a card effect in the CURRENT
+   * player turn (docs/03 Konditional „geblockt diese Runde"). Order matters:
+   * the flag is set when the block effect resolves, so a conditional card
+   * played earlier in the same turn does not see it. Reset at player turn
+   * start — block from previous turns never counts.
+   */
+  blockGainedThisTurn: boolean;
 }
 
 // ── Events ───────────────────────────────────────────────────────────────

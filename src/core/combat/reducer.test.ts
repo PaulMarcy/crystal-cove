@@ -3,7 +3,9 @@ import { combatConfig } from '../../data/combat';
 import {
   axeStrike,
   berrySnack,
+  chiliSkewer,
   exhaustion,
+  riposte,
   woodenShield,
   stoneThrow,
   catchBreath,
@@ -267,6 +269,58 @@ describe('retaliation (Vergeltung)', () => {
     s = play(s, rng, 'axe_strike');
     expect(s.player.hp).toBe(hpBefore);
     expect(s.player.block).toBe(3);
+  });
+});
+
+describe("conditional damage (Riposte, docs/03 Konditional 'geblockt diese Runde')", () => {
+  // 5-card decks = the whole deck is the opening hand (handSize 5),
+  // so every test controls exactly which cards are available.
+  it('deals only the base damage when no block was gained this turn', () => {
+    const { state, rng } = newCombat({ deck: [...deckOf(riposte, 3), ...deckOf(woodenShield, 2)] });
+    const next = play(state, rng, 'riposte');
+    expect(next.enemies[0]!.hp).toBe(shadowRat.hp - 6);
+  });
+
+  it('adds the bonus when a block card was played earlier this turn', () => {
+    const { state, rng } = newCombat({ deck: [...deckOf(riposte, 3), ...deckOf(woodenShield, 2)] });
+    let s = play(state, rng, 'wooden_shield');
+    s = play(s, rng, 'riposte');
+    expect(s.enemies[0]!.hp).toBe(shadowRat.hp - 12);
+  });
+
+  it('ignores block gained in the same turn but AFTER the conditional card (order matters)', () => {
+    const { state, rng } = newCombat({ deck: [...deckOf(riposte, 3), ...deckOf(woodenShield, 2)] });
+    let s = play(state, rng, 'riposte');
+    s = play(s, rng, 'wooden_shield');
+    expect(s.enemies[0]!.hp).toBe(shadowRat.hp - 6);
+  });
+
+  it('resets across the turn boundary: block in turn 1 does not arm riposte in turn 2', () => {
+    const { state, rng } = newCombat({ deck: [...deckOf(woodenShield, 3), ...deckOf(riposte, 2)] });
+    let s = play(state, rng, 'wooden_shield');
+    s = combatReducer(s, { type: 'END_TURN' }, rng);
+    expect(s.turn).toBe(2);
+    s = play(s, rng, 'riposte');
+    expect(s.enemies[0]!.hp).toBe(shadowRat.hp - 6);
+  });
+
+  it('strength modifies base + bonus like a normal attack', () => {
+    const deck = [chiliSkewer, woodenShield, ...deckOf(riposte, 3)];
+    const { state, rng } = newCombat({ deck });
+    let s = play(state, rng, 'chili_skewer'); // +2 strength
+    s = play(s, rng, 'wooden_shield');
+    s = play(s, rng, 'riposte');
+    expect(s.enemies[0]!.hp).toBe(shadowRat.hp - (6 + 6 + 2));
+  });
+
+  it('weak reduces base + bonus like a normal attack', () => {
+    const { state, rng } = newCombat({ deck: [...deckOf(riposte, 3), ...deckOf(woodenShield, 2)] });
+    const weakened = structuredClone(state);
+    weakened.player.statuses.weak = 1;
+    let s = play(weakened, rng, 'wooden_shield');
+    s = play(s, rng, 'riposte');
+    // (6 + 6) × 0.75 = 9
+    expect(s.enemies[0]!.hp).toBe(shadowRat.hp - 9);
   });
 });
 
