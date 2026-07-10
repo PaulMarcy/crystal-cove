@@ -24,6 +24,15 @@ export interface SaveDataV1 {
   shadowDensity: ShadowDensity;
   playerPosition: { x: number; y: number } | null;
   playerZone: ZoneId | null;
+  /**
+   * M3 additive fields — OPTIONAL on purpose: pre-M3 saves lack them, and
+   * additive-optional fields need no version bump (the bump to V2 comes with
+   * the Deck-Truhe task, docs/12). Absent = starter defaults.
+   */
+  /** Crafted card ids (duplicates allowed — the collection is a multiset). */
+  collection?: readonly string[];
+  /** Equipped tool tier (docs/10 Werkzeugstufen), default baseToolTier. */
+  toolTier?: number;
 }
 
 /** Current save shape — alias moves forward with each new version. */
@@ -113,6 +122,13 @@ function isValidSaveData(value: unknown): value is SaveData {
     if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return false;
   }
   if (v.playerZone !== null && (typeof v.playerZone !== 'string' || !isZoneId(v.playerZone))) {
+    return false;
+  }
+  if (v.collection !== undefined) {
+    if (!Array.isArray(v.collection)) return false;
+    if (!v.collection.every((id) => typeof id === 'string')) return false;
+  }
+  if (v.toolTier !== undefined && (!Number.isInteger(v.toolTier) || (v.toolTier as number) < 1)) {
     return false;
   }
   return true;

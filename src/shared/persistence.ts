@@ -24,6 +24,8 @@ export function snapshotFromState(state: GameState): SaveData {
     shadowDensity: state.shadowDensity,
     playerPosition: state.playerPosition,
     playerZone: state.playerZone,
+    collection: state.collection,
+    toolTier: state.toolTier,
   };
 }
 
@@ -45,7 +47,9 @@ export function initPersistence(storage: SaveStorage): LoadResult {
     const persistedSliceChanged =
       state.inventory !== prev.inventory ||
       state.harvestedNodeIds !== prev.harvestedNodeIds ||
-      state.shadowDensity !== prev.shadowDensity;
+      state.shadowDensity !== prev.shadowDensity ||
+      state.collection !== prev.collection ||
+      state.toolTier !== prev.toolTier;
     if (combatJustEnded || persistedSliceChanged) {
       saveGame(storage, snapshotFromState(state));
     }

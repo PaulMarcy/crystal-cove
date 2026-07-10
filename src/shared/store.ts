@@ -3,6 +3,7 @@ import { useStore } from 'zustand';
 import { combatReducer, createCombatState } from '../core/combat/reducer';
 import { createRng, type Rng } from '../core/combat/rng';
 import type { CombatEvent, CombatSetup, CombatState } from '../core/combat/types';
+import { canCraft, craft, isRecipeUnlocked, isRecipeVisible } from '../core/economy/crafting';
 import { harvestNode } from '../core/economy/harvest';
 import { addItem, emptyInventory, type Inventory } from '../core/economy/inventory';
 import { rollEncounter, type ShadowDensity } from '../core/world/encounters';
@@ -13,7 +14,9 @@ import type { ZoneId } from '../core/world/zones';
 import { starterDeck } from '../data/cards/tier1';
 import { combatConfig } from '../data/combat';
 import { encounterTables, initialShadowDensity } from '../data/encounters/tier1';
+import { allRecipes, type StationId } from '../data/recipes';
 import { harvestNodeTypes, heimatbuchtHarvestNodes } from '../data/resources';
+import { initialStationTiers } from '../data/stations';
 
 /**
  * Shared game store — the single bridge between Phaser (world) and React (ui).
@@ -38,6 +41,22 @@ export interface GameState {
   harvestedNodeIds: readonly string[];
   /** Harvests a placed node; returns false if unknown or already depleted. */
   harvestNode: (nodeId: string) => boolean;
+
+  /** Crafted card ids (multiset) — deck assignment comes with the Deck-Truhe (M3). */
+  collection: readonly string[];
+  /** Equipped tool tier (docs/10 Werkzeugstufen) — feeds 'toolTier' scaling in combat. */
+  toolTier: number;
+  /** Station whose workshop UI is open (null = closed). */
+  activeStation: StationId | null;
+  openStation: (station: StationId) => void;
+  closeStation: () => void;
+  /**
+   * Crafts a recipe at the open station: checks visibility, station tier and
+   * material (all pure core logic), then deducts material and applies the
+   * output (card → collection, toolUpgrade → toolTier). Returns false when
+   * anything blocks the craft.
+   */
+  craftRecipe: (recipeId: string) => boolean;
 
   combat: CombatState | null;
   /** Seed used for the current combat (deterministic replays, debugging). */
@@ -89,6 +108,31 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     const outcome = harvestNode(inventory, harvestedNodeIds, nodeId, def.resource, def.yield);
     if (!outcome) return false;
     set({ inventory: outcome.inventory, harvestedNodeIds: outcome.harvestedNodeIds });
+    return true;
+  },
+
+  collection: [],
+  toolTier: combatConfig.baseToolTier,
+  activeStation: null,
+  openStation: (station) => {
+    if (get().combat) return; // no workshop mid-combat
+    set({ activeStation: station });
+  },
+  closeStation: () => set({ activeStation: null }),
+  craftRecipe: (recipeId) => {
+    const { activeStation, inventory, toolTier, collection } = get();
+    const recipe = allRecipes.find((r) => r.id === recipeId);
+    if (!recipe || recipe.station !== activeStation) return false;
+    if (!isRecipeVisible(recipe, toolTier)) return false;
+    if (!isRecipeUnlocked(recipe, initialStationTiers[recipe.station])) return false;
+    if (!canCraft(inventory, recipe)) return false;
+    const result = craft(inventory, recipe);
+    if (!result) return false;
+    if (result.output.kind === 'card') {
+      set({ inventory: result.inventory, collection: [...collection, result.output.cardId] });
+    } else {
+      set({ inventory: result.inventory, toolTier: Math.max(toolTier, result.output.toolTier) });
+    }
     return true;
   },
 
@@ -147,6 +191,7 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       playerHp: combatConfig.basePlayerHp,
       deck: starterDeck,
     });
+    setup.toolTier = get().toolTier; // Axtschlag scaling (docs/10 Werkzeugstufen)
     startCombat(setup, seed);
     return true;
   },
@@ -162,6 +207,8 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       shadowDensity: data.shadowDensity,
       playerPosition: data.playerPosition,
       playerZone: data.playerZone,
+      collection: data.collection ?? [],
+      toolTier: data.toolTier ?? combatConfig.baseToolTier,
       saveRecovered: recovered,
     }),
   saveRecovered: false,

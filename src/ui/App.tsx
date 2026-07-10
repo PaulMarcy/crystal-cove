@@ -6,6 +6,7 @@ import { strings } from '../shared/strings';
 import { useGameStore } from '../shared/store';
 import { CombatScreen } from './combat/CombatScreen';
 import { InventoryPanel } from './inventory/InventoryPanel';
+import { WorkshopPanel } from './workshop/WorkshopPanel';
 
 const LOOT_TOAST_MS = 4000;
 
@@ -75,6 +76,7 @@ export function App() {
         {strings.ui.startTestCombat}
       </button>
       <LootToast />
+      <WorkshopPanel />
       <InventoryPanel />
       <SaveRecoveryNotice />
     </>

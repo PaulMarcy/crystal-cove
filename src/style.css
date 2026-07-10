@@ -172,6 +172,137 @@ body {
   color: var(--color-sand);
 }
 
+/* ── Werkstatt (M3): Rezeptliste Schmiede/Küche ───────────────────────── */
+
+.workshop-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(440px, 92vw);
+  max-height: 82vh;
+  overflow-y: auto;
+  background: var(--color-ui-ground);
+  border: 2px solid var(--color-sand);
+  border-radius: 10px;
+  padding: 14px 18px;
+  pointer-events: auto;
+}
+
+.workshop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.workshop-title {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--color-sand);
+}
+
+.workshop-close {
+  background: none;
+  border: 1px solid var(--color-sand);
+  border-radius: 6px;
+  color: var(--color-text);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.workshop-collection {
+  margin: 6px 0 10px;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.workshop-recipes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.workshop-recipe {
+  border: 1px solid rgba(236, 217, 163, 0.35);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.workshop-recipe--locked {
+  opacity: 0.6;
+}
+
+.workshop-recipe-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.workshop-recipe-name {
+  font-weight: bold;
+  color: var(--color-sand);
+}
+
+.workshop-recipe-kind {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.workshop-recipe-desc {
+  margin: 4px 0 6px;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.workshop-ingredients {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fehlendes Material: rot + Text-Tag „(fehlt)" — nie nur Farbe (docs/11). */
+.workshop-ingredient--missing {
+  color: #ff8a7a;
+}
+
+.workshop-missing-tag {
+  font-size: 0.8rem;
+}
+
+/* Orange nur für Handlungsfähiges (docs/04): aktiver Craft-Button. */
+.workshop-craft-button {
+  background: var(--color-action);
+  border: none;
+  border-radius: 6px;
+  color: var(--color-ui-ground);
+  font-weight: bold;
+  padding: 5px 14px;
+  cursor: pointer;
+}
+
+.workshop-craft-button:disabled {
+  background: rgba(236, 217, 163, 0.25);
+  color: var(--color-text);
+  opacity: 0.6;
+  cursor: default;
+}
+
+.workshop-locked-hint {
+  font-size: 0.85rem;
+  font-style: italic;
+  opacity: 0.9;
+}
+
 /* ── Combat screen (docs/11 Zonen-Layout) ─────────────────────────────── */
 
 .combat-screen {

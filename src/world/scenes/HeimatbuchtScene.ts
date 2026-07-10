@@ -3,6 +3,8 @@ import { gameStore } from '../../shared/store';
 import { strings } from '../../shared/strings';
 import { isZoneId, zoneAt, type ZoneRect } from '../../core/world/zones';
 import { heimatbuchtHarvestNodes, type HarvestNodeType } from '../../data/resources';
+import { heimatbuchtStations, stationInteractRange } from '../../data/stations';
+import type { StationId } from '../../data/recipes';
 import {
   creatureContactRange,
   creatureIdleMs,
@@ -25,6 +27,11 @@ interface WorldCreature {
   sprite: Phaser.GameObjects.Sprite;
   moveTween: Phaser.Tweens.Tween | null;
   idleTimer: Phaser.Time.TimerEvent | null;
+}
+
+interface WorldStation {
+  station: StationId;
+  sprite: Phaser.GameObjects.Sprite;
 }
 
 interface WorldHarvestNode {
@@ -52,6 +59,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
   private interactKey!: Phaser.Input.Keyboard.Key;
   private harvestPrompt!: Phaser.GameObjects.Text;
   private focusedNode: WorldHarvestNode | null = null;
+  private stations: WorldStation[] = [];
+  private focusedStation: WorldStation | null = null;
   private creatures: WorldCreature[] = [];
   /** Creature that triggered the running combat — despawned on victory. */
   private engagedCreature: WorldCreature | null = null;
@@ -75,6 +84,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.lastTile = { x: -1, y: -1 };
     this.harvestNodes = [];
     this.focusedNode = null;
+    this.stations = [];
+    this.focusedStation = null;
     this.creatures = [];
     this.engagedCreature = null;
     this.contactGraceUntil = 0;
@@ -97,6 +108,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.zones = this.readZones(map);
 
     this.spawnHarvestNodes();
+    this.spawnStations();
     this.spawnCreatures();
 
     // Saved position wins (save V1); fresh games start at the map center.
@@ -146,6 +158,11 @@ export class HeimatbuchtScene extends Phaser.Scene {
         this.scene.pause();
       } else if (prev.combat !== null && state.combat === null) {
         this.onCombatEnded(state.lastCombatOutcome);
+      } else if (prev.activeStation === null && state.activeStation !== null) {
+        // Workshop UI open (React overlay) → freeze the world, like combat.
+        this.scene.pause();
+      } else if (prev.activeStation !== null && state.activeStation === null) {
+        this.scene.resume();
       }
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -179,9 +196,15 @@ export class HeimatbuchtScene extends Phaser.Scene {
       this.publishLocation();
     }
 
+    this.updateStationFocus();
     this.updateHarvestFocus();
-    if (this.focusedNode && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
-      this.tryHarvest(this.focusedNode);
+    if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+      // Station wins over harvest node when both are in range.
+      if (this.focusedStation) {
+        gameStore.getState().openStation(this.focusedStation.station);
+      } else if (this.focusedNode) {
+        this.tryHarvest(this.focusedNode);
+      }
     }
 
     this.checkCreatureContact();
@@ -313,8 +336,93 @@ export class HeimatbuchtScene extends Phaser.Scene {
     }
   }
 
+  // ── Workshop stations (M3) ──────────────────────────────────────────────
+
+  /** Spawns smithy/kitchen sprites from data placements (src/data/stations). */
+  private spawnStations(): void {
+    this.createStationTextures();
+    for (const placement of heimatbuchtStations) {
+      const x = placement.tileX * TILE + TILE / 2;
+      const y = placement.tileY * TILE + TILE / 2;
+      const sprite = this.add.sprite(x, y, `station-${placement.station}`).setDepth(5);
+      this.stations.push({ station: placement.station, sprite });
+    }
+  }
+
+  /** Nearest station in range gets highlight + prompt; wins over harvest nodes. */
+  private updateStationFocus(): void {
+    let nearest: WorldStation | null = null;
+    let nearestDist = stationInteractRange;
+    for (const station of this.stations) {
+      const dist = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        station.sprite.x,
+        station.sprite.y,
+      );
+      if (dist <= nearestDist) {
+        nearest = station;
+        nearestDist = dist;
+      }
+    }
+    if (nearest === this.focusedStation) return;
+
+    this.focusedStation?.sprite.clearTint();
+    this.focusedStation = nearest;
+    if (!nearest) {
+      if (!this.focusedNode) this.harvestPrompt.setVisible(false);
+      return;
+    }
+    nearest.sprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
+    this.harvestPrompt
+      .setText(
+        strings.workshop.openPrompt.replace('{station}', strings.stations[nearest.station]),
+      )
+      .setPosition(nearest.sprite.x, nearest.sprite.y - 14)
+      .setVisible(true);
+  }
+
+  /**
+   * Placeholder station sprites (grade 1 "Funktional", docs/04): neutral
+   * material tones — orange appears only as focus tint.
+   */
+  private createStationTextures(): void {
+    const make = (key: string, draw: (g: Phaser.GameObjects.Graphics) => void): void => {
+      if (this.textures.exists(key)) return;
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      draw(g);
+      g.generateTexture(key, 18, 18);
+      g.destroy();
+    };
+    make('station-smithy', (g) => {
+      g.fillStyle(0x8d8d94); // stone base
+      g.fillRect(2, 12, 14, 5);
+      g.fillStyle(0x4a4a52); // anvil
+      g.fillRect(4, 7, 10, 4);
+      g.fillRect(7, 10, 4, 3);
+      g.fillStyle(0xb87333); // copper glow on the horn (material tone)
+      g.fillRect(13, 7, 2, 2);
+    });
+    make('station-kitchen', (g) => {
+      g.fillStyle(0x6b4a2f); // fire pit logs
+      g.fillRect(3, 13, 12, 4);
+      g.fillStyle(0x4a4a52); // cook pot
+      g.fillCircle(9, 9, 5);
+      g.fillStyle(0x8fbf6f); // stew (herb green)
+      g.fillCircle(9, 8, 3);
+    });
+  }
+
   /** Finds the nearest harvestable node in range and moves highlight + prompt onto it. */
   private updateHarvestFocus(): void {
+    if (this.focusedStation) {
+      // Station prompt has priority — drop any node focus while it is shown.
+      if (this.focusedNode) {
+        this.focusedNode.sprite.clearTint();
+        this.focusedNode = null;
+      }
+      return;
+    }
     let nearest: WorldHarvestNode | null = null;
     let nearestDist = HARVEST_RANGE;
     for (const node of this.harvestNodes) {

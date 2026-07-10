@@ -32,7 +32,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Save V1: localStorage, versioniert, Backup-Slot, Korruptions-Recovery
 
 ## M3 — Crafting-Loop
-- [ ] Schmiede + Küche St. 1 (Rezepte aus docs/10), Werkstatt-UI
+- [x] Schmiede + Küche St. 1 (Rezepte aus docs/10), Werkstatt-UI
 - [ ] Deck-Truhe (Kampfdeck 12 aus Sammlung), Karten zerlegen (50 %)
 - [ ] Gerichte als Verbrauchskarten inkl. Nachkochen
 - [ ] Werkzeugstufe 2 („Verstärkt") hebt Axtschlag 6→8

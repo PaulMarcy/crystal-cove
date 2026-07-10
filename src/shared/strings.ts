@@ -103,6 +103,18 @@ export const strings = {
     smithy: 'Schmiede',
     kitchen: 'Küche',
   },
+  workshop: {
+    openPrompt: '[E] {station} öffnen',
+    close: 'Schließen [Esc]',
+    craft: 'Herstellen',
+    lockedHint: 'Benötigt Ausbaustufe {tier}',
+    missingMaterial: 'fehlt',
+    outputCard: 'Karte',
+    outputDish: 'Gericht (Verbrauchskarte)',
+    outputTool: 'Werkzeug',
+    collectionCount: 'Sammlung: {count} Karten',
+    crafted: '{name} hergestellt',
+  },
   recipes: {
     tool_reinforced: {
       name: 'Verstärktes Werkzeug',
