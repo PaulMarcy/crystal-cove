@@ -65,6 +65,34 @@ Legende: [ ] offen · [x] geprüft & OK — Datum/Commit im Abschnitt unten eint
   Dichte 0–1 nie Elite; Elite nur thorn_terror + genau 1 Affix
   (Stichprobe: Sampler über `rollEncounter`, feste Seeds).
 
+## Ab M3 (Crafting-Loop)
+
+- [ ] **Kern-Hook:** Erz/Stein sammeln → Schmiede: „Schwerer Hieb" prägen
+  (3 Kupfer + 1 Stein abgezogen) → Deck-Truhe: Karte ins Deck (12er-Regel,
+  Besitz-Zähler) → Encounter: geprägte Karte ist im Kampf-Deck, wird gezogen
+  und ist spielbar.
+- [ ] **Zerlegen (docs/10):** Schwerer Hieb zerlegen → +1 Kupfer, +0 Stein
+  (50 % pro Posten, floor); Karte verlässt Sammlung UND Deck; Deck < 12
+  blockiert Kampfstart (kein Softlock — Deck-Truhe zum Auffüllen erreichbar);
+  Starterkarten nicht zerlegbar; Spezialmaterial (Kampf-Drops, z. B. Feder
+  im Wurfbeil) wird nie erstattet.
+- [ ] **Werkzeugstufe:** Upgrade „Verstärkt" (3 Kupfer + 2 Leder, Schmiede 1)
+  → toolTier 2; Axtschlag-Schaden im Kampf 6 → 8; Ernte-Ertrag +1
+  (Nodes und Farm-Beete).
+- [ ] **Gerichte:** Beerensnack im Kampf spielen → nach Kampfende (egal ob
+  Sieg/Rückzug/Niederlage) aus Deck + Besitz entfernt; „Ins Deck" blockiert;
+  Nachkochen in der Küche (3 Beeren) stellt die Starter-Kopie wieder her
+  (Marker geklärt, keine zerlegbare Crafted-Kopie).
+- [ ] **Werkstatt-UI:** Schmiede/Küche/Deck-Truhe öffnen; fehlende Materialien
+  als „(fehlt)" markiert; Tier-2-Rezepte „Benötigt Ausbaustufe 2" gesperrt;
+  Esc schließt.
+- [ ] **Farming:** Pflanzen auf Beet → Ernten vor Reife blockiert → Schlafen
+  bis growthSleeps (Kürbis 2) → Ernte liefert yield (+Werkzeugbonus), Beet
+  wieder leer; Schlaf respawnt Harvest-Nodes.
+- [ ] **Save V2:** Roundtrip (Reload) erhält Sammlung, Deck, toolTier,
+  consumedStarterDishes, farmPlots, sleepCount; Korruptions-/Backup-Pfad
+  wie ab M2 weiterhin grün.
+
 ## Offene Issues
 
 - **M2-1 (gefixt 2026-07-10, working tree): Grace-Periode nach Kampf
@@ -91,3 +119,4 @@ Legende: [ ] offen · [x] geprüft & OK — Datum/Commit im Abschnitt unten eint
 | 2026-07-08 | 959ea0a (+ working tree UI) | grün | M1-Abnahme, alle Punkte oben verifiziert; Sim: Normal 100 %, Elite 89 % |
 | 2026-07-09 | 3689162 (+ working tree) | rot (1 Bug) | M2-Abnahme: Save/Recovery, Loop, Ernten, Zonen-Tabellen, Sim (Normal 100 %, Elite 89 %) grün; Veto wegen Issue M2-1 (Grace-Periode wirkungslos) |
 | 2026-07-10 | ba51d0c (+ working tree Fix) | grün | Re-Test M2-1: Grace hält nach Rückzug UND Niederlage (Kampf > 1,5 s), Lösen möglich, Retrigger erst nach Ablauf; verify grün (150 Tests); Veto aufgehoben — M2 abgenommen |
+| 2026-07-11 | 4405f63 (+ working tree) | grün | M3-Abnahme: verify grün (231 Tests); Sim Normal 100 %, Elite 89 % (Seed 1000); E2E per Store-Treiber: Kern-Hook (Prägen→Deck→Ziehen/Spielen im Kampf), Zerlegen (1 Kupfer + 0 Stein, Feder nie erstattet, Deck < 12 blockiert Kampf), Werkzeug 6→8 + Ernte +1, Gericht verbrauchen/Nachkochen, Farming (Kürbis 2 Schlaf), Save-V2-Roundtrip, Korruption primär→Backup-Recovery+Heilung, beide Slots korrupt→Fresh Start ohne Konsolenfehler — M3 abgenommen |
