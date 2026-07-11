@@ -35,7 +35,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Schmiede + Küche St. 1 (Rezepte aus docs/10), Werkstatt-UI
 - [x] Deck-Truhe (Kampfdeck 12 aus Sammlung), Karten zerlegen (50 %)
 - [x] Gerichte als Verbrauchskarten inkl. Nachkochen
-- [ ] Werkzeugstufe 2 („Verstärkt") hebt Axtschlag 6→8
+- [x] Werkzeugstufe 2 („Verstärkt") hebt Axtschlag 6→8
 - [ ] Farming: Beete, Wachstum pro Schlafphase (docs/10)
 
 ## M4 — Progression
