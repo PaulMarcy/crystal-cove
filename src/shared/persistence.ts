@@ -26,6 +26,7 @@ export function snapshotFromState(state: GameState): SaveData {
     playerZone: state.playerZone,
     collection: state.collection,
     deck: state.deck,
+    consumedStarterDishes: state.consumedStarterDishes,
     toolTier: state.toolTier,
   };
 }
@@ -51,6 +52,7 @@ export function initPersistence(storage: SaveStorage): LoadResult {
       state.shadowDensity !== prev.shadowDensity ||
       state.collection !== prev.collection ||
       state.deck !== prev.deck ||
+      state.consumedStarterDishes !== prev.consumedStarterDishes ||
       state.toolTier !== prev.toolTier;
     if (combatJustEnded || persistedSliceChanged) {
       saveGame(storage, snapshotFromState(state));

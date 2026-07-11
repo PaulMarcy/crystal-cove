@@ -33,6 +33,13 @@ describe('save codec', () => {
     expect(deserialize(serialize(fresh))).toEqual({ ok: true, data: fresh });
   });
 
+  it('round-trips the optional consumedStarterDishes field (late-V2, no bump)', () => {
+    const withDishes: SaveData = { ...sample, consumedStarterDishes: ['berry_snack'] };
+    expect(deserialize(serialize(withDishes))).toEqual({ ok: true, data: withDishes });
+    // Older V2 saves without the field stay valid (additive-optional).
+    expect(deserialize(serialize(sample))).toEqual({ ok: true, data: sample });
+  });
+
   it('embeds the current save version', () => {
     const envelope = JSON.parse(serialize(sample)) as { v: number };
     expect(envelope.v).toBe(SAVE_VERSION);
@@ -84,6 +91,8 @@ describe('save codec', () => {
       { ...sample, shadowDensity: 7 },
       { ...sample, playerPosition: { x: 'a', y: 1 } },
       { ...sample, playerZone: 'atlantis' },
+      { ...sample, consumedStarterDishes: 'berry_snack' },
+      { ...sample, consumedStarterDishes: [1] },
     ];
     for (const broken of cases) {
       const payload = JSON.stringify(broken);

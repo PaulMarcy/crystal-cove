@@ -34,7 +34,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 ## M3 — Crafting-Loop
 - [x] Schmiede + Küche St. 1 (Rezepte aus docs/10), Werkstatt-UI
 - [x] Deck-Truhe (Kampfdeck 12 aus Sammlung), Karten zerlegen (50 %)
-- [ ] Gerichte als Verbrauchskarten inkl. Nachkochen
+- [x] Gerichte als Verbrauchskarten inkl. Nachkochen
 - [ ] Werkzeugstufe 2 („Verstärkt") hebt Axtschlag 6→8
 - [ ] Farming: Beete, Wachstum pro Schlafphase (docs/10)
 

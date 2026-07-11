@@ -3,7 +3,12 @@ import { useStore } from 'zustand';
 import { combatReducer, createCombatState } from '../core/combat/reducer';
 import { createRng, type Rng } from '../core/combat/rng';
 import type { CombatEvent, CombatSetup, CombatState } from '../core/combat/types';
-import { addToDeck, buildCombatDeck, ownedCounts, removeFromDeck } from '../core/deck/deck';
+import {
+  applyDishConsumption,
+  clearsStarterMarker,
+  ownedCountsAfterConsumption,
+} from '../core/deck/consumption';
+import { addToDeck, buildCombatDeck, removeFromDeck } from '../core/deck/deck';
 import { canCraft, craft, isRecipeUnlocked, isRecipeVisible } from '../core/economy/crafting';
 import { disenchantCard } from '../core/economy/disenchant';
 import { harvestNode } from '../core/economy/harvest';
@@ -52,6 +57,13 @@ export interface GameState {
    * combat start then refuses until the player refills it.
    */
   deck: readonly string[];
+  /**
+   * Consumed-but-not-yet-recooked STARTER dish markers (core/deck/consumption).
+   * Crafted dishes leave the collection directly; starter copies live in the
+   * immutable starterDeckIds constant, so their consumption is tracked here.
+   * Re-cooking the recipe clears a marker before growing the collection.
+   */
+  consumedStarterDishes: readonly string[];
   /** Adds one owned copy to the deck (core/deck rules). False when blocked. */
   addCardToDeck: (cardId: string) => boolean;
   /** Removes one copy from the deck. False when the deck holds none. */
@@ -130,9 +142,11 @@ export const gameStore = createStore<GameState>()((set, get) => ({
 
   collection: [],
   deck: [...starterDeckIds],
+  consumedStarterDishes: [],
   addCardToDeck: (cardId) => {
-    const { deck, collection } = get();
-    const next = addToDeck(deck, cardId, ownedCounts(starterDeckIds, collection), cardsById);
+    const { deck, collection, consumedStarterDishes } = get();
+    const owned = ownedCountsAfterConsumption(starterDeckIds, collection, consumedStarterDishes);
+    const next = addToDeck(deck, cardId, owned, cardsById);
     if (!next) return false;
     set({ deck: next });
     return true;
@@ -167,7 +181,22 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     const result = craft(inventory, recipe);
     if (!result) return false;
     if (result.output.kind === 'card') {
-      set({ inventory: result.inventory, collection: [...collection, result.output.cardId] });
+      // Re-cooking a consumed starter dish restores the starter copy
+      // (marker cleared) instead of adding a crafted, disenchantable copy.
+      const { consumedStarterDishes } = get();
+      if (clearsStarterMarker(result.output.cardId, consumedStarterDishes)) {
+        const cardId = result.output.cardId;
+        const index = consumedStarterDishes.indexOf(cardId);
+        set({
+          inventory: result.inventory,
+          consumedStarterDishes: [
+            ...consumedStarterDishes.slice(0, index),
+            ...consumedStarterDishes.slice(index + 1),
+          ],
+        });
+      } else {
+        set({ inventory: result.inventory, collection: [...collection, result.output.cardId] });
+      }
     } else {
       set({ inventory: result.inventory, toolTier: Math.max(toolTier, result.output.toolTier) });
     }
@@ -198,7 +227,7 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     set({ combat: next, combatLoot: loot });
   },
   endCombat: () => {
-    const { combat, combatLoot, inventory } = get();
+    const { combat, combatLoot, inventory, collection, deck, consumedStarterDishes } = get();
     combatRng = null;
     const won = combat?.phase === 'victory';
     let nextInventory = inventory;
@@ -207,9 +236,22 @@ export const gameStore = createStore<GameState>()((set, get) => ({
         nextInventory = addItem(nextInventory, item, amount);
       }
     }
+    // Dishes consumed in combat leave collection + deck permanently until
+    // re-cooked (docs/03, docs/10). Consumption happens on play — it sticks
+    // regardless of outcome (victory, defeat, retreat).
+    const consumption = applyDishConsumption(
+      combat?.consumed.map((card) => card.def.id) ?? [],
+      collection,
+      deck,
+      consumedStarterDishes,
+      starterDeckIds,
+    );
     // TODO(M4): defeat flow — for now the player just returns to the island
     // with full HP and no penalty (docs/12: Niederlage-Fluss ist M4).
     set({
+      collection: consumption.collection,
+      deck: consumption.deck,
+      consumedStarterDishes: consumption.consumedStarterDishes,
       combat: null,
       combatSeed: null,
       combatLoot: null,
@@ -221,11 +263,16 @@ export const gameStore = createStore<GameState>()((set, get) => ({
 
   shadowDensity: initialShadowDensity,
   startEncounter: (zone, seed) => {
-    const { combat, shadowDensity, startCombat, deck, collection } = get();
+    const { combat, shadowDensity, startCombat, deck, collection, consumedStarterDishes } = get();
     if (combat) return false;
     // Combat uses the deck assembled at the Deck-Truhe; an invalid deck
-    // (e.g. < 12 after a disenchant) blocks the encounter (docs/03).
-    const combatDeck = buildCombatDeck(deck, ownedCounts(starterDeckIds, collection), cardsById);
+    // (e.g. < 12 after a disenchant or dish consumption) blocks the
+    // encounter (docs/03).
+    const combatDeck = buildCombatDeck(
+      deck,
+      ownedCountsAfterConsumption(starterDeckIds, collection, consumedStarterDishes),
+      cardsById,
+    );
     if (!combatDeck) return false;
     const encounterSeed = seed ?? Math.floor(Math.random() * 0xffffffff);
     const encounter = rollEncounter(encounterTables[zone], shadowDensity, createRng(encounterSeed));
@@ -251,6 +298,7 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       playerZone: data.playerZone,
       collection: data.collection,
       deck: data.deck,
+      consumedStarterDishes: data.consumedStarterDishes ?? [],
       toolTier: data.toolTier,
       saveRecovered: recovered,
     }),

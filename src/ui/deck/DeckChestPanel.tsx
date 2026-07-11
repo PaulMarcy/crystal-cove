@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { countCards, ownedCounts } from '../../core/deck/deck';
+import { ownedCountsAfterConsumption } from '../../core/deck/consumption';
+import { countCards } from '../../core/deck/deck';
 import { disenchantRefund } from '../../core/economy/disenchant';
 import { starterDeckIds } from '../../data/cards/tier1';
 import { deckConfig } from '../../data/deck';
@@ -90,6 +91,7 @@ export function DeckChestPanel() {
   const closeStation = useGameStore((s) => s.closeStation);
   const collection = useGameStore((s) => s.collection);
   const deck = useGameStore((s) => s.deck);
+  const consumedStarterDishes = useGameStore((s) => s.consumedStarterDishes);
   const removeCardFromDeck = useGameStore((s) => s.removeCardFromDeck);
 
   const open = activeStation === 'deck_chest';
@@ -104,7 +106,7 @@ export function DeckChestPanel() {
 
   if (!open) return null;
 
-  const owned = ownedCounts(starterDeckIds, collection);
+  const owned = ownedCountsAfterConsumption(starterDeckIds, collection, consumedStarterDishes);
   const deckCounts = countCards(deck);
   const craftedCounts = countCards(collection);
   const ownedIds = Object.keys(owned).sort((a, b) => cardName(a).localeCompare(cardName(b)));

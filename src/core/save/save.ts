@@ -44,6 +44,12 @@ export interface SaveDataV2 extends Omit<SaveDataV1, 'collection' | 'toolTier'> 
   toolTier: number;
   /** Assembled combat deck as card ids (rules in core/deck, size in data/deck). */
   deck: readonly string[];
+  /**
+   * M3 dish consumption — additive-OPTIONAL late-V2 field (no version bump
+   * needed: absent = [] on older V2 saves). Consumed-but-not-recooked
+   * STARTER dish markers (core/deck/consumption).
+   */
+  consumedStarterDishes?: readonly string[];
 }
 
 /** Current save shape — alias moves forward with each new version. */
@@ -152,5 +158,9 @@ function isValidSaveData(value: unknown): value is SaveData {
   if (!Number.isInteger(v.toolTier) || (v.toolTier as number) < 1) return false;
   if (!Array.isArray(v.deck)) return false;
   if (!v.deck.every((id) => typeof id === 'string')) return false;
+  if (v.consumedStarterDishes !== undefined) {
+    if (!Array.isArray(v.consumedStarterDishes)) return false;
+    if (!v.consumedStarterDishes.every((id) => typeof id === 'string')) return false;
+  }
   return true;
 }
