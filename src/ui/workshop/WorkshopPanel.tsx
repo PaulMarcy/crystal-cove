@@ -11,7 +11,9 @@ import { strings } from '../../shared/strings';
 import { useGameStore } from '../../shared/store';
 
 const itemNames = strings.items as Readonly<Record<string, string>>;
-const cardStrings = strings.cards as Readonly<Record<string, { name: string; description: string }>>;
+const cardStrings = strings.cards as Readonly<
+  Record<string, { name: string; description: string }>
+>;
 
 /** What the recipe produces, as text (information never color-only, docs/11). */
 function outputLabel(recipe: RecipeDef): string {

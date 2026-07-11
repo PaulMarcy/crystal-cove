@@ -506,7 +506,11 @@ describe('combat start extensions (M2 encounter wiring)', () => {
     // Retaliation actually triggers: playing an attack hurts the player.
     const next = combatReducer(
       state,
-      { type: 'PLAY_CARD', cardInstanceId: state.hand[0]!.instanceId, targetEnemyId: state.enemies[0]!.instanceId },
+      {
+        type: 'PLAY_CARD',
+        cardInstanceId: state.hand[0]!.instanceId,
+        targetEnemyId: state.enemies[0]!.instanceId,
+      },
       rng,
     );
     expect(next.player.hp).toBe(48);

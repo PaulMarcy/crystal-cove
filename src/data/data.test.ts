@@ -173,7 +173,16 @@ describe('recipe data (docs/10 Schmiede/Küche/Werkzeugstufen)', () => {
       'shadow_dust',
     ] as const;
     for (const id of combatDrops) expect(resources[id].specialMaterial, id).toBe(true);
-    for (const id of ['wood', 'stone', 'copper_ore', 'berry', 'pumpkin', 'chili', 'fish', 'honey'] as const) {
+    for (const id of [
+      'wood',
+      'stone',
+      'copper_ore',
+      'berry',
+      'pumpkin',
+      'chili',
+      'fish',
+      'honey',
+    ] as const) {
       expect(resources[id].specialMaterial, id).toBe(false);
     }
   });

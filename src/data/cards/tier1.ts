@@ -149,7 +149,13 @@ export const riposte: CardDef = {
   cost: 1,
   school: 'counter',
   effects: [
-    { kind: 'conditionalDamage', amount: 6, bonus: 6, condition: 'blockedThisTurn', target: 'target' },
+    {
+      kind: 'conditionalDamage',
+      amount: 6,
+      bonus: 6,
+      condition: 'blockedThisTurn',
+      target: 'target',
+    },
   ],
 };
 

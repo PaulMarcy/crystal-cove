@@ -28,9 +28,7 @@ export interface RefundLine {
 
 /** Base minting recipe of a card (first card-output match), or null. */
 export function baseRecipeFor(cardId: string, recipes: readonly RecipeDef[]): RecipeDef | null {
-  return (
-    recipes.find((r) => r.output.kind === 'card' && r.output.cardId === cardId) ?? null
-  );
+  return recipes.find((r) => r.output.kind === 'card' && r.output.cardId === cardId) ?? null;
 }
 
 /**
@@ -46,9 +44,7 @@ export function disenchantRefund(
   if (!recipe) return null;
   return recipe.ingredients.map((ing) => ({
     resource: ing.resource,
-    amount: resources[ing.resource].specialMaterial
-      ? 0
-      : Math.floor(ing.amount / REFUND_DIVISOR),
+    amount: resources[ing.resource].specialMaterial ? 0 : Math.floor(ing.amount / REFUND_DIVISOR),
   }));
 }
 

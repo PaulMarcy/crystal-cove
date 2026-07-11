@@ -80,10 +80,7 @@ export function addToDeck(
 }
 
 /** Removes one copy of a card; null when the deck holds none. */
-export function removeFromDeck(
-  deck: readonly string[],
-  cardId: string,
-): readonly string[] | null {
+export function removeFromDeck(deck: readonly string[], cardId: string): readonly string[] | null {
   const index = deck.indexOf(cardId);
   if (index === -1) return null;
   return [...deck.slice(0, index), ...deck.slice(index + 1)];

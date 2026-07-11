@@ -41,13 +41,7 @@ describe('applyDishConsumption', () => {
   });
 
   it('never marks more starter copies than the starter set holds', () => {
-    const result = applyDishConsumption(
-      ['berry_snack', 'berry_snack'],
-      [],
-      [],
-      [],
-      starter,
-    );
+    const result = applyDishConsumption(['berry_snack', 'berry_snack'], [], [], [], starter);
     expect(result.consumedStarterDishes).toEqual(['berry_snack']);
   });
 

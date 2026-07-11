@@ -421,9 +421,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     }
     nearest.sprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
     this.harvestPrompt
-      .setText(
-        strings.workshop.openPrompt.replace('{station}', strings.stations[nearest.station]),
-      )
+      .setText(strings.workshop.openPrompt.replace('{station}', strings.stations[nearest.station]))
       .setPosition(nearest.sprite.x, nearest.sprite.y - 14)
       .setVisible(true);
   }
@@ -480,7 +478,11 @@ export class HeimatbuchtScene extends Phaser.Scene {
     }
     this.refreshFarmSprites();
     this.tentSprite = this.add
-      .sprite(heimatbuchtTent.tileX * TILE + TILE / 2, heimatbuchtTent.tileY * TILE + TILE / 2, 'tent')
+      .sprite(
+        heimatbuchtTent.tileX * TILE + TILE / 2,
+        heimatbuchtTent.tileY * TILE + TILE / 2,
+        'tent',
+      )
       .setDepth(5);
   }
 
@@ -506,7 +508,12 @@ export class HeimatbuchtScene extends Phaser.Scene {
     }
     // Tent first — it sits apart from the plots, so overlap is rare.
     const tentDist = this.tentSprite
-      ? Phaser.Math.Distance.Between(this.player.x, this.player.y, this.tentSprite.x, this.tentSprite.y)
+      ? Phaser.Math.Distance.Between(
+          this.player.x,
+          this.player.y,
+          this.tentSprite.x,
+          this.tentSprite.y,
+        )
       : Infinity;
     const tentFocused = tentDist <= farmInteractRange;
 
@@ -514,7 +521,12 @@ export class HeimatbuchtScene extends Phaser.Scene {
     let nearestDist = farmInteractRange;
     if (!tentFocused) {
       for (const plot of this.farmPlots) {
-        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, plot.sprite.x, plot.sprite.y);
+        const dist = Phaser.Math.Distance.Between(
+          this.player.x,
+          this.player.y,
+          plot.sprite.x,
+          plot.sprite.y,
+        );
         if (dist <= nearestDist) {
           nearest = plot;
           nearestDist = dist;
@@ -565,7 +577,10 @@ export class HeimatbuchtScene extends Phaser.Scene {
         : strings.world.growingPrompt
             .replace('{crop}', strings.world.cropNames[planted.crop])
             .replace('{left}', String(crops[planted.crop].growthSleeps - planted.sleeps));
-    this.harvestPrompt.setText(text).setPosition(plot.sprite.x, plot.sprite.y - 12).setVisible(true);
+    this.harvestPrompt
+      .setText(text)
+      .setPosition(plot.sprite.x, plot.sprite.y - 12)
+      .setVisible(true);
   }
 
   private tryPlant(plot: WorldFarmPlot, crop: CropId): void {

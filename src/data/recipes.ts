@@ -24,8 +24,7 @@ export interface RecipeIngredient {
 }
 
 export type RecipeOutput =
-  | { kind: 'card'; cardId: string }
-  | { kind: 'toolUpgrade'; toolTier: number };
+  { kind: 'card'; cardId: string } | { kind: 'toolUpgrade'; toolTier: number };
 
 export interface RecipeDef {
   id: string;

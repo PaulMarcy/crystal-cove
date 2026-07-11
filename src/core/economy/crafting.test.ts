@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RecipeDef } from '../../data/recipes';
 import { allRecipes } from '../../data/recipes';
-import {
-  canCraft,
-  craft,
-  ingredientStatus,
-  isRecipeUnlocked,
-  isRecipeVisible,
-} from './crafting';
+import { canCraft, craft, ingredientStatus, isRecipeUnlocked, isRecipeVisible } from './crafting';
 import type { Inventory } from './inventory';
 
 const cardRecipe: RecipeDef = {
