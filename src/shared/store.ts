@@ -11,6 +11,14 @@ import {
 import { addToDeck, buildCombatDeck, removeFromDeck } from '../core/deck/deck';
 import { canCraft, craft, isRecipeUnlocked, isRecipeVisible } from '../core/economy/crafting';
 import { disenchantCard } from '../core/economy/disenchant';
+import {
+  advanceSleep,
+  emptyFarmPlots,
+  harvestPlot,
+  plantCrop,
+  toolYieldBonus,
+  type FarmPlots,
+} from '../core/economy/farming';
 import { harvestNode } from '../core/economy/harvest';
 import { addItem, emptyInventory, type Inventory } from '../core/economy/inventory';
 import { rollEncounter, type ShadowDensity } from '../core/world/encounters';
@@ -21,6 +29,7 @@ import type { ZoneId } from '../core/world/zones';
 import { cardsById, starterDeckIds } from '../data/cards/tier1';
 import { combatConfig } from '../data/combat';
 import { encounterTables, initialShadowDensity } from '../data/encounters/tier1';
+import { crops, harvestToolBonus, heimatbuchtFarmPlots, type CropId } from '../data/farming';
 import { allRecipes } from '../data/recipes';
 import { harvestNodeTypes, heimatbuchtHarvestNodes } from '../data/resources';
 import { initialStationTiers, type WorldStationId } from '../data/stations';
@@ -48,6 +57,21 @@ export interface GameState {
   harvestedNodeIds: readonly string[];
   /** Harvests a placed node; returns false if unknown or already depleted. */
   harvestNode: (nodeId: string) => boolean;
+
+  /** Farm plots (M3) — plot id → planted state; empty plots are absent. */
+  farmPlots: FarmPlots;
+  /** Completed sleep cycles — crop growth is bound to these (docs/10). */
+  sleepCount: number;
+  /** Plants a crop on an empty placed plot. False when unknown or occupied. */
+  plantCrop: (plotId: string, crop: CropId) => boolean;
+  /** Harvests a ripe plot into the inventory (tool bonus applies). */
+  harvestFarmPlot: (plotId: string) => boolean;
+  /**
+   * Sleep (tent/bed, docs/10): crops advance one cycle, harvest nodes
+   * respawn. Full heal is a no-op until M4 — HP is not persisted between
+   * combats yet (every combat starts at basePlayerHp).
+   */
+  sleep: () => void;
 
   /** Crafted card ids (multiset) — the Deck-Truhe assembles the deck from these + starter set. */
   collection: readonly string[];
@@ -133,11 +157,42 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     const placement = heimatbuchtHarvestNodes.find((n) => n.id === nodeId);
     if (!placement) return false;
     const def = harvestNodeTypes[placement.type];
-    const { inventory, harvestedNodeIds } = get();
-    const outcome = harvestNode(inventory, harvestedNodeIds, nodeId, def.resource, def.yield);
+    const { inventory, harvestedNodeIds, toolTier } = get();
+    // Tool tier 2 adds +1 yield (docs/10 Werkzeugstufen "Ernten +1 Ertrag").
+    const amount = def.yield + toolYieldBonus(toolTier, harvestToolBonus);
+    const outcome = harvestNode(inventory, harvestedNodeIds, nodeId, def.resource, amount);
     if (!outcome) return false;
     set({ inventory: outcome.inventory, harvestedNodeIds: outcome.harvestedNodeIds });
     return true;
+  },
+
+  farmPlots: emptyFarmPlots,
+  sleepCount: 0,
+  plantCrop: (plotId, crop) => {
+    if (!heimatbuchtFarmPlots.some((p) => p.id === plotId)) return false;
+    const next = plantCrop(get().farmPlots, plotId, crop);
+    if (!next) return false;
+    set({ farmPlots: next });
+    return true;
+  },
+  harvestFarmPlot: (plotId) => {
+    const { inventory, farmPlots, toolTier } = get();
+    const outcome = harvestPlot(inventory, farmPlots, plotId, crops, toolTier, harvestToolBonus);
+    if (!outcome) return false;
+    set({ inventory: outcome.inventory, farmPlots: outcome.plots });
+    return true;
+  },
+  sleep: () => {
+    const { farmPlots, sleepCount } = get();
+    // Full heal is intentionally absent: HP is not persisted outside combat
+    // until M4 (every combat starts at basePlayerHp) — nothing to heal here.
+    set({
+      farmPlots: advanceSleep(farmPlots),
+      sleepCount: sleepCount + 1,
+      // Harvest nodes respawn on sleep (docs/10 — closes the M2 "no respawn
+      // until sleep exists" gap in data/resources.ts / core/economy/harvest).
+      harvestedNodeIds: [],
+    });
   },
 
   collection: [],
@@ -299,6 +354,8 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       collection: data.collection,
       deck: data.deck,
       consumedStarterDishes: data.consumedStarterDishes ?? [],
+      farmPlots: data.farmPlots ?? emptyFarmPlots,
+      sleepCount: data.sleepCount ?? 0,
       toolTier: data.toolTier,
       saveRecovered: recovered,
     }),

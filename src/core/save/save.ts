@@ -15,6 +15,8 @@
 
 import { starterDeckIds } from '../../data/cards/tier1';
 import { combatConfig } from '../../data/combat';
+import { isCropId } from '../../data/farming';
+import type { FarmPlots } from '../economy/farming';
 import type { Inventory } from '../economy/inventory';
 import type { ShadowDensity } from '../world/encounters';
 import { isZoneId, type ZoneId } from '../world/zones';
@@ -50,6 +52,13 @@ export interface SaveDataV2 extends Omit<SaveDataV1, 'collection' | 'toolTier'> 
    * STARTER dish markers (core/deck/consumption).
    */
   consumedStarterDishes?: readonly string[];
+  /**
+   * M3 farming — additive-OPTIONAL late-V2 fields (no version bump needed:
+   * absent = nothing planted / zero sleeps on older V2 saves).
+   */
+  farmPlots?: FarmPlots;
+  /** Completed sleep cycles (tent/bed) — drives crop growth (docs/10). */
+  sleepCount?: number;
 }
 
 /** Current save shape — alias moves forward with each new version. */
@@ -161,6 +170,20 @@ function isValidSaveData(value: unknown): value is SaveData {
   if (v.consumedStarterDishes !== undefined) {
     if (!Array.isArray(v.consumedStarterDishes)) return false;
     if (!v.consumedStarterDishes.every((id) => typeof id === 'string')) return false;
+  }
+  if (v.farmPlots !== undefined) {
+    if (typeof v.farmPlots !== 'object' || v.farmPlots === null || Array.isArray(v.farmPlots)) {
+      return false;
+    }
+    for (const plot of Object.values(v.farmPlots)) {
+      if (typeof plot !== 'object' || plot === null) return false;
+      const p = plot as Record<string, unknown>;
+      if (!isCropId(p.crop)) return false;
+      if (!Number.isInteger(p.sleeps) || (p.sleeps as number) < 0) return false;
+    }
+  }
+  if (v.sleepCount !== undefined) {
+    if (!Number.isInteger(v.sleepCount) || (v.sleepCount as number) < 0) return false;
   }
   return true;
 }

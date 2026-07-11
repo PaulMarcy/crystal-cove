@@ -4,6 +4,16 @@ import { strings } from '../../shared/strings';
 import { isZoneId, zoneAt, type ZoneRect } from '../../core/world/zones';
 import { heimatbuchtHarvestNodes, type HarvestNodeType } from '../../data/resources';
 import { heimatbuchtStations, stationInteractRange } from '../../data/stations';
+import {
+  crops,
+  farmInteractRange,
+  FARM_CROP_IDS,
+  heimatbuchtFarmPlots,
+  heimatbuchtTent,
+  isCropId,
+  type CropId,
+} from '../../data/farming';
+import { isRipe } from '../../core/economy/farming';
 import type { WorldStationId } from '../../data/stations';
 import {
   creatureContactRange,
@@ -34,6 +44,11 @@ interface WorldStation {
   sprite: Phaser.GameObjects.Sprite;
 }
 
+interface WorldFarmPlot {
+  id: string;
+  sprite: Phaser.GameObjects.Sprite;
+}
+
 interface WorldHarvestNode {
   id: string;
   type: HarvestNodeType;
@@ -61,6 +76,11 @@ export class HeimatbuchtScene extends Phaser.Scene {
   private focusedNode: WorldHarvestNode | null = null;
   private stations: WorldStation[] = [];
   private focusedStation: WorldStation | null = null;
+  private farmPlots: WorldFarmPlot[] = [];
+  private focusedPlot: WorldFarmPlot | null = null;
+  private tentSprite: Phaser.GameObjects.Sprite | null = null;
+  private tentFocused = false;
+  private plantKeys: Phaser.Input.Keyboard.Key[] = [];
   private creatures: WorldCreature[] = [];
   /** Creature that triggered the running combat — despawned on victory. */
   private engagedCreature: WorldCreature | null = null;
@@ -86,6 +106,11 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.focusedNode = null;
     this.stations = [];
     this.focusedStation = null;
+    this.farmPlots = [];
+    this.focusedPlot = null;
+    this.tentSprite = null;
+    this.tentFocused = false;
+    this.plantKeys = [];
     this.creatures = [];
     this.engagedCreature = null;
     this.contactGraceUntil = 0;
@@ -109,6 +134,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
 
     this.spawnHarvestNodes();
     this.spawnStations();
+    this.spawnFarm();
     this.spawnCreatures();
 
     // Saved position wins (save V1); fresh games start at the map center.
@@ -136,6 +162,12 @@ export class HeimatbuchtScene extends Phaser.Scene {
       right: Phaser.Input.Keyboard.KeyCodes.D,
     }) as typeof this.wasd;
     this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+    // 1/2/3 pick the crop while an empty plot is focused (order = FARM_CROP_IDS).
+    this.plantKeys = [
+      Phaser.Input.Keyboard.KeyCodes.ONE,
+      Phaser.Input.Keyboard.KeyCodes.TWO,
+      Phaser.Input.Keyboard.KeyCodes.THREE,
+    ].map((code) => this.input.keyboard!.addKey(code));
 
     // Prompt text follows the focused node; key label in text — information
     // is never color-only (docs/11 accessibility rule).
@@ -197,14 +229,28 @@ export class HeimatbuchtScene extends Phaser.Scene {
     }
 
     this.updateStationFocus();
+    this.updateFarmFocus();
     this.updateHarvestFocus();
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
-      // Station wins over harvest node when both are in range.
+      // Priority when several are in range: station > tent > plot > node.
       if (this.focusedStation) {
         gameStore.getState().openStation(this.focusedStation.station);
+      } else if (this.tentFocused) {
+        this.doSleep();
+      } else if (this.focusedPlot) {
+        this.tryHarvestPlot(this.focusedPlot);
       } else if (this.focusedNode) {
         this.tryHarvest(this.focusedNode);
       }
+    }
+    if (this.focusedPlot && !gameStore.getState().farmPlots[this.focusedPlot.id]) {
+      // Empty plot focused: 1/2/3 plant a crop (see plantPrompt string).
+      this.plantKeys.forEach((key, index) => {
+        const crop = FARM_CROP_IDS[index];
+        if (isCropId(crop) && Phaser.Input.Keyboard.JustDown(key)) {
+          this.tryPlant(this.focusedPlot!, crop);
+        }
+      });
     }
 
     this.checkCreatureContact();
@@ -421,10 +467,197 @@ export class HeimatbuchtScene extends Phaser.Scene {
     });
   }
 
+  // ── Farming (M3, docs/10 Farming & Zeit) ────────────────────────────────
+
+  /** Spawns farm-plot sprites (state from the store) and the tent. */
+  private spawnFarm(): void {
+    this.createFarmTextures();
+    for (const placement of heimatbuchtFarmPlots) {
+      const x = placement.tileX * TILE + TILE / 2;
+      const y = placement.tileY * TILE + TILE / 2;
+      const sprite = this.add.sprite(x, y, 'plot-empty').setDepth(4);
+      this.farmPlots.push({ id: placement.id, sprite });
+    }
+    this.refreshFarmSprites();
+    this.tentSprite = this.add
+      .sprite(heimatbuchtTent.tileX * TILE + TILE / 2, heimatbuchtTent.tileY * TILE + TILE / 2, 'tent')
+      .setDepth(5);
+  }
+
+  /** Mirrors store farm state onto plot textures (empty/sprout/ripe). */
+  private refreshFarmSprites(): void {
+    const plots = gameStore.getState().farmPlots;
+    for (const plot of this.farmPlots) {
+      const planted = plots[plot.id];
+      const key = !planted
+        ? 'plot-empty'
+        : isRipe(planted, crops)
+          ? `plot-ripe-${planted.crop}`
+          : 'plot-sprout';
+      plot.sprite.setTexture(key);
+    }
+  }
+
+  /** Tent or nearest plot in range gets focus; stations keep priority. */
+  private updateFarmFocus(): void {
+    if (this.focusedStation) {
+      this.clearFarmFocus();
+      return;
+    }
+    // Tent first — it sits apart from the plots, so overlap is rare.
+    const tentDist = this.tentSprite
+      ? Phaser.Math.Distance.Between(this.player.x, this.player.y, this.tentSprite.x, this.tentSprite.y)
+      : Infinity;
+    const tentFocused = tentDist <= farmInteractRange;
+
+    let nearest: WorldFarmPlot | null = null;
+    let nearestDist = farmInteractRange;
+    if (!tentFocused) {
+      for (const plot of this.farmPlots) {
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, plot.sprite.x, plot.sprite.y);
+        if (dist <= nearestDist) {
+          nearest = plot;
+          nearestDist = dist;
+        }
+      }
+    }
+
+    if (tentFocused === this.tentFocused && nearest === this.focusedPlot) {
+      if (this.focusedPlot) this.refreshFarmPrompt(); // growth state may have changed
+      return;
+    }
+    this.clearFarmFocus();
+    this.tentFocused = tentFocused;
+    this.focusedPlot = nearest;
+    if (tentFocused && this.tentSprite) {
+      this.tentSprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
+      this.harvestPrompt
+        .setText(strings.world.sleepPrompt)
+        .setPosition(this.tentSprite.x, this.tentSprite.y - 14)
+        .setVisible(true);
+    } else if (nearest) {
+      nearest.sprite.setTint(ACTION_TINT);
+      this.refreshFarmPrompt();
+    }
+  }
+
+  private clearFarmFocus(): void {
+    if (this.tentFocused) {
+      this.tentSprite?.clearTint();
+      this.tentFocused = false;
+    }
+    if (this.focusedPlot) {
+      this.focusedPlot.sprite.clearTint();
+      this.focusedPlot = null;
+      this.harvestPrompt.setVisible(false);
+    }
+  }
+
+  /** Prompt for the focused plot: plant options, growth progress or harvest. */
+  private refreshFarmPrompt(): void {
+    const plot = this.focusedPlot;
+    if (!plot) return;
+    const planted = gameStore.getState().farmPlots[plot.id];
+    const text = !planted
+      ? strings.world.plantPrompt
+      : isRipe(planted, crops)
+        ? strings.world.ripePrompt.replace('{crop}', strings.world.cropNames[planted.crop])
+        : strings.world.growingPrompt
+            .replace('{crop}', strings.world.cropNames[planted.crop])
+            .replace('{left}', String(crops[planted.crop].growthSleeps - planted.sleeps));
+    this.harvestPrompt.setText(text).setPosition(plot.sprite.x, plot.sprite.y - 12).setVisible(true);
+  }
+
+  private tryPlant(plot: WorldFarmPlot, crop: CropId): void {
+    if (!gameStore.getState().plantCrop(plot.id, crop)) return;
+    this.refreshFarmSprites();
+    this.refreshFarmPrompt();
+  }
+
+  private tryHarvestPlot(plot: WorldFarmPlot): void {
+    if (!gameStore.getState().harvestFarmPlot(plot.id)) return;
+    this.refreshFarmSprites();
+    this.refreshFarmPrompt();
+  }
+
+  /** Sleep at the tent: growth ticks, harvest nodes respawn (docs/10). */
+  private doSleep(): void {
+    gameStore.getState().sleep();
+    this.refreshFarmSprites();
+    // Harvest nodes respawned in the store — mirror onto the world sprites.
+    for (const node of this.harvestNodes) {
+      node.harvested = false;
+      node.sprite.setTexture(this.nodeTextureKey(node.type, false));
+    }
+    // Brief feedback: fade to black and back (cozy sleep transition).
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.cameras.main.fadeIn(400, 0, 0, 0);
+    });
+  }
+
+  /**
+   * Placeholder farm textures (grade 1 "Funktional", docs/04): soil browns,
+   * crop colors as material tones — orange appears only as focus tint.
+   */
+  private createFarmTextures(): void {
+    const make = (key: string, draw: (g: Phaser.GameObjects.Graphics) => void): void => {
+      if (this.textures.exists(key)) return;
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      draw(g);
+      g.generateTexture(key, 16, 16);
+      g.destroy();
+    };
+    const soil = (g: Phaser.GameObjects.Graphics): void => {
+      g.fillStyle(0x5c4433); // tilled soil
+      g.fillRect(1, 3, 14, 11);
+      g.fillStyle(0x4a3628); // furrows
+      g.fillRect(2, 6, 12, 1);
+      g.fillRect(2, 10, 12, 1);
+    };
+    make('plot-empty', soil);
+    make('plot-sprout', (g) => {
+      soil(g);
+      g.fillStyle(0x8fbf6f); // young sprout green
+      g.fillRect(7, 5, 2, 4);
+      g.fillRect(5, 5, 2, 2);
+      g.fillRect(9, 6, 2, 2);
+    });
+    make('plot-ripe-berry', (g) => {
+      soil(g);
+      g.fillStyle(0x5a8f46);
+      g.fillCircle(8, 7, 4);
+      g.fillStyle(0xc4534f); // warm red berries (violet stays corruption-only)
+      g.fillCircle(6, 6, 1.5);
+      g.fillCircle(10, 7, 1.5);
+    });
+    make('plot-ripe-pumpkin', (g) => {
+      soil(g);
+      g.fillStyle(0xc47a2e); // pumpkin (material tone, not action-orange)
+      g.fillCircle(8, 8, 4);
+      g.fillStyle(0x4f7d3a); // stem
+      g.fillRect(7, 3, 2, 2);
+    });
+    make('plot-ripe-chili', (g) => {
+      soil(g);
+      g.fillStyle(0x5a8f46);
+      g.fillRect(7, 4, 2, 4);
+      g.fillStyle(0xb03a30); // chili red
+      g.fillRect(5, 7, 2, 5);
+      g.fillRect(9, 7, 2, 5);
+    });
+    make('tent', (g) => {
+      g.fillStyle(0x7a6047); // canvas
+      g.fillTriangle(1, 14, 8, 2, 15, 14);
+      g.fillStyle(0x3a2e28); // entrance
+      g.fillTriangle(5, 14, 8, 7, 11, 14);
+    });
+  }
+
   /** Finds the nearest harvestable node in range and moves highlight + prompt onto it. */
   private updateHarvestFocus(): void {
-    if (this.focusedStation) {
-      // Station prompt has priority — drop any node focus while it is shown.
+    if (this.focusedStation || this.focusedPlot || this.tentFocused) {
+      // Station/farm prompt has priority — drop any node focus while it is shown.
       if (this.focusedNode) {
         this.focusedNode.sprite.clearTint();
         this.focusedNode = null;

@@ -36,7 +36,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Deck-Truhe (Kampfdeck 12 aus Sammlung), Karten zerlegen (50 %)
 - [x] Gerichte als Verbrauchskarten inkl. Nachkochen
 - [x] Werkzeugstufe 2 („Verstärkt") hebt Axtschlag 6→8
-- [ ] Farming: Beete, Wachstum pro Schlafphase (docs/10)
+- [x] Farming: Beete, Wachstum pro Schlafphase (docs/10)
 
 ## M4 — Progression
 - [ ] XP/Level 1–10 + Meilensteine (Deck 15, Talisman-Slot 1), Talentbaum 3×3

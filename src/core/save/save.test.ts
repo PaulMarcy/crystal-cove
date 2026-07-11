@@ -40,6 +40,17 @@ describe('save codec', () => {
     expect(deserialize(serialize(sample))).toEqual({ ok: true, data: sample });
   });
 
+  it('round-trips the optional farming fields (late-V2, no bump)', () => {
+    const withFarm: SaveData = {
+      ...sample,
+      farmPlots: { 'hb-plot-1': { crop: 'pumpkin', sleeps: 1 } },
+      sleepCount: 4,
+    };
+    expect(deserialize(serialize(withFarm))).toEqual({ ok: true, data: withFarm });
+    // Older V2 saves without the fields stay valid (additive-optional).
+    expect(deserialize(serialize(sample))).toEqual({ ok: true, data: sample });
+  });
+
   it('embeds the current save version', () => {
     const envelope = JSON.parse(serialize(sample)) as { v: number };
     expect(envelope.v).toBe(SAVE_VERSION);
@@ -93,6 +104,12 @@ describe('save codec', () => {
       { ...sample, playerZone: 'atlantis' },
       { ...sample, consumedStarterDishes: 'berry_snack' },
       { ...sample, consumedStarterDishes: [1] },
+      { ...sample, farmPlots: [] },
+      { ...sample, farmPlots: { p1: { crop: 'wheat', sleeps: 0 } } },
+      { ...sample, farmPlots: { p1: { crop: 'berry', sleeps: -1 } } },
+      { ...sample, farmPlots: { p1: { crop: 'berry', sleeps: 1.5 } } },
+      { ...sample, sleepCount: -1 },
+      { ...sample, sleepCount: 'many' },
     ];
     for (const broken of cases) {
       const payload = JSON.stringify(broken);
