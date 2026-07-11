@@ -4,7 +4,7 @@ import { strings } from '../../shared/strings';
 import { isZoneId, zoneAt, type ZoneRect } from '../../core/world/zones';
 import { heimatbuchtHarvestNodes, type HarvestNodeType } from '../../data/resources';
 import { heimatbuchtStations, stationInteractRange } from '../../data/stations';
-import type { StationId } from '../../data/recipes';
+import type { WorldStationId } from '../../data/stations';
 import {
   creatureContactRange,
   creatureIdleMs,
@@ -30,7 +30,7 @@ interface WorldCreature {
 }
 
 interface WorldStation {
-  station: StationId;
+  station: WorldStationId;
   sprite: Phaser.GameObjects.Sprite;
 }
 
@@ -402,6 +402,14 @@ export class HeimatbuchtScene extends Phaser.Scene {
       g.fillRect(7, 10, 4, 3);
       g.fillStyle(0xb87333); // copper glow on the horn (material tone)
       g.fillRect(13, 7, 2, 2);
+    });
+    make('station-deck_chest', (g) => {
+      g.fillStyle(0x6b4a2f); // wooden chest body
+      g.fillRect(3, 8, 12, 8);
+      g.fillStyle(0x8d6a45); // lid
+      g.fillRect(3, 6, 12, 3);
+      g.fillStyle(0xb87333); // copper clasp (material tone)
+      g.fillRect(8, 9, 2, 3);
     });
     make('station-kitchen', (g) => {
       g.fillStyle(0x6b4a2f); // fire pit logs

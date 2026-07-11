@@ -271,3 +271,12 @@ export const starterDeck: readonly CardDef[] = [
   catchBreath,
   berrySnack,
 ];
+
+/** All cards by id — deck assembly and save hydration resolve ids through this. */
+export const cardsById: ReadonlyMap<string, CardDef> = new Map(allCards.map((c) => [c.id, c]));
+
+/**
+ * Starter card ownership as ids (multiset) — the fixed base every player
+ * owns; the Deck-Truhe combines it with the crafted collection.
+ */
+export const starterDeckIds: readonly string[] = starterDeck.map((c) => c.id);

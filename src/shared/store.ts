@@ -3,7 +3,9 @@ import { useStore } from 'zustand';
 import { combatReducer, createCombatState } from '../core/combat/reducer';
 import { createRng, type Rng } from '../core/combat/rng';
 import type { CombatEvent, CombatSetup, CombatState } from '../core/combat/types';
+import { addToDeck, buildCombatDeck, ownedCounts, removeFromDeck } from '../core/deck/deck';
 import { canCraft, craft, isRecipeUnlocked, isRecipeVisible } from '../core/economy/crafting';
+import { disenchantCard } from '../core/economy/disenchant';
 import { harvestNode } from '../core/economy/harvest';
 import { addItem, emptyInventory, type Inventory } from '../core/economy/inventory';
 import { rollEncounter, type ShadowDensity } from '../core/world/encounters';
@@ -11,12 +13,12 @@ import { buildEncounterCombatSetup } from '../core/world/encounterCombat';
 import { rollLoot, type LootResult } from '../core/world/loot';
 import type { SaveData } from '../core/save/save';
 import type { ZoneId } from '../core/world/zones';
-import { starterDeck } from '../data/cards/tier1';
+import { cardsById, starterDeckIds } from '../data/cards/tier1';
 import { combatConfig } from '../data/combat';
 import { encounterTables, initialShadowDensity } from '../data/encounters/tier1';
-import { allRecipes, type StationId } from '../data/recipes';
+import { allRecipes } from '../data/recipes';
 import { harvestNodeTypes, heimatbuchtHarvestNodes } from '../data/resources';
-import { initialStationTiers } from '../data/stations';
+import { initialStationTiers, type WorldStationId } from '../data/stations';
 
 /**
  * Shared game store — the single bridge between Phaser (world) and React (ui).
@@ -42,13 +44,28 @@ export interface GameState {
   /** Harvests a placed node; returns false if unknown or already depleted. */
   harvestNode: (nodeId: string) => boolean;
 
-  /** Crafted card ids (multiset) — deck assignment comes with the Deck-Truhe (M3). */
+  /** Crafted card ids (multiset) — the Deck-Truhe assembles the deck from these + starter set. */
   collection: readonly string[];
+  /**
+   * Assembled combat deck as card ids (rules in core/deck: size 12, max 1
+   * dish, only owned copies). May drop below size after a disenchant —
+   * combat start then refuses until the player refills it.
+   */
+  deck: readonly string[];
+  /** Adds one owned copy to the deck (core/deck rules). False when blocked. */
+  addCardToDeck: (cardId: string) => boolean;
+  /** Removes one copy from the deck. False when the deck holds none. */
+  removeCardFromDeck: (cardId: string) => boolean;
+  /**
+   * Disenchants one crafted copy (docs/10: 50 % refund, floored per line,
+   * special material never refunded). Removes it from collection and deck.
+   */
+  disenchant: (cardId: string) => boolean;
   /** Equipped tool tier (docs/10 Werkzeugstufen) — feeds 'toolTier' scaling in combat. */
   toolTier: number;
-  /** Station whose workshop UI is open (null = closed). */
-  activeStation: StationId | null;
-  openStation: (station: StationId) => void;
+  /** Station whose overlay UI is open (null = closed). */
+  activeStation: WorldStationId | null;
+  openStation: (station: WorldStationId) => void;
   closeStation: () => void;
   /**
    * Crafts a recipe at the open station: checks visibility, station tier and
@@ -112,6 +129,27 @@ export const gameStore = createStore<GameState>()((set, get) => ({
   },
 
   collection: [],
+  deck: [...starterDeckIds],
+  addCardToDeck: (cardId) => {
+    const { deck, collection } = get();
+    const next = addToDeck(deck, cardId, ownedCounts(starterDeckIds, collection), cardsById);
+    if (!next) return false;
+    set({ deck: next });
+    return true;
+  },
+  removeCardFromDeck: (cardId) => {
+    const next = removeFromDeck(get().deck, cardId);
+    if (!next) return false;
+    set({ deck: next });
+    return true;
+  },
+  disenchant: (cardId) => {
+    const { inventory, collection, deck } = get();
+    const result = disenchantCard(inventory, collection, deck, cardId, allRecipes);
+    if (!result) return false;
+    set({ inventory: result.inventory, collection: result.collection, deck: result.deck });
+    return true;
+  },
   toolTier: combatConfig.baseToolTier,
   activeStation: null,
   openStation: (station) => {
@@ -183,13 +221,17 @@ export const gameStore = createStore<GameState>()((set, get) => ({
 
   shadowDensity: initialShadowDensity,
   startEncounter: (zone, seed) => {
-    const { combat, shadowDensity, startCombat } = get();
+    const { combat, shadowDensity, startCombat, deck, collection } = get();
     if (combat) return false;
+    // Combat uses the deck assembled at the Deck-Truhe; an invalid deck
+    // (e.g. < 12 after a disenchant) blocks the encounter (docs/03).
+    const combatDeck = buildCombatDeck(deck, ownedCounts(starterDeckIds, collection), cardsById);
+    if (!combatDeck) return false;
     const encounterSeed = seed ?? Math.floor(Math.random() * 0xffffffff);
     const encounter = rollEncounter(encounterTables[zone], shadowDensity, createRng(encounterSeed));
     const setup = buildEncounterCombatSetup(encounter, shadowDensity, {
       playerHp: combatConfig.basePlayerHp,
-      deck: starterDeck,
+      deck: combatDeck,
     });
     setup.toolTier = get().toolTier; // Axtschlag scaling (docs/10 Werkzeugstufen)
     startCombat(setup, seed);
@@ -207,8 +249,9 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       shadowDensity: data.shadowDensity,
       playerPosition: data.playerPosition,
       playerZone: data.playerZone,
-      collection: data.collection ?? [],
-      toolTier: data.toolTier ?? combatConfig.baseToolTier,
+      collection: data.collection,
+      deck: data.deck,
+      toolTier: data.toolTier,
       saveRecovered: recovered,
     }),
   saveRecovered: false,

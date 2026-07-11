@@ -5,7 +5,7 @@ import { initPersistence, snapshotFromState } from './persistence';
 import { gameStore } from './store';
 import { emptyInventory } from '../core/economy/inventory';
 import { initialShadowDensity } from '../data/encounters/tier1';
-import { starterDeck } from '../data/cards/tier1';
+import { starterDeck, starterDeckIds } from '../data/cards/tier1';
 import { shadowRat } from '../data/enemies/tier1';
 
 function memoryStorage(): SaveStorage & { map: Map<string, string> } {
@@ -24,6 +24,9 @@ const savedGame: SaveData = {
   shadowDensity: 1,
   playerPosition: { x: 100, y: 200 },
   playerZone: 'strand',
+  collection: ['stone_wall'],
+  toolTier: 2,
+  deck: [...starterDeckIds],
 };
 
 /** Reset the singleton store's persisted slice between tests. */

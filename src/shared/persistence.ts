@@ -25,6 +25,7 @@ export function snapshotFromState(state: GameState): SaveData {
     playerPosition: state.playerPosition,
     playerZone: state.playerZone,
     collection: state.collection,
+    deck: state.deck,
     toolTier: state.toolTier,
   };
 }
@@ -49,6 +50,7 @@ export function initPersistence(storage: SaveStorage): LoadResult {
       state.harvestedNodeIds !== prev.harvestedNodeIds ||
       state.shadowDensity !== prev.shadowDensity ||
       state.collection !== prev.collection ||
+      state.deck !== prev.deck ||
       state.toolTier !== prev.toolTier;
     if (combatJustEnded || persistedSliceChanged) {
       saveGame(storage, snapshotFromState(state));

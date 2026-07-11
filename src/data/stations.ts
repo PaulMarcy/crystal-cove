@@ -8,8 +8,14 @@
  */
 import type { StationId } from './recipes';
 
+/**
+ * Interactable world stations: crafting stations (recipes) plus the
+ * Deck-Truhe (deck assembly + disenchant, docs/03 "Deck = Rucksack").
+ */
+export type WorldStationId = StationId | 'deck_chest';
+
 export interface StationPlacement {
-  station: StationId;
+  station: WorldStationId;
   /** Tile coordinates on the Heimatbucht map (16 px tiles). */
   tileX: number;
   tileY: number;
@@ -18,6 +24,7 @@ export interface StationPlacement {
 export const heimatbuchtStations: readonly StationPlacement[] = [
   { station: 'smithy', tileX: 18, tileY: 15 },
   { station: 'kitchen', tileX: 22, tileY: 15 },
+  { station: 'deck_chest', tileX: 20, tileY: 17 },
 ];
 
 /** Max distance (px) at which a station can be interacted with. */

@@ -7,6 +7,7 @@ import { useGameStore } from '../shared/store';
 import { CombatScreen } from './combat/CombatScreen';
 import { InventoryPanel } from './inventory/InventoryPanel';
 import { WorkshopPanel } from './workshop/WorkshopPanel';
+import { DeckChestPanel } from './deck/DeckChestPanel';
 
 const LOOT_TOAST_MS = 4000;
 
@@ -77,6 +78,7 @@ export function App() {
       </button>
       <LootToast />
       <WorkshopPanel />
+      <DeckChestPanel />
       <InventoryPanel />
       <SaveRecoveryNotice />
     </>

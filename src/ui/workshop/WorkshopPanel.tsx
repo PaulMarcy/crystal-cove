@@ -89,7 +89,9 @@ export function WorkshopPanel() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [activeStation, closeStation]);
 
-  if (!activeStation) return null;
+  // The Deck-Truhe has its own overlay (DeckChestPanel) — this panel only
+  // renders crafting stations with recipes.
+  if (!activeStation || activeStation === 'deck_chest') return null;
   const stationTier = initialStationTiers[activeStation];
   const recipes = allRecipes.filter(
     (r) => r.station === activeStation && isRecipeVisible(r, toolTier),

@@ -27,6 +27,9 @@ const saveA: SaveData = {
   shadowDensity: 0,
   playerPosition: { x: 10, y: 20 },
   playerZone: 'strand',
+  collection: [],
+  toolTier: 1,
+  deck: [],
 };
 const saveB: SaveData = { ...saveA, inventory: { wood: 2 }, playerZone: 'wiese' };
 

@@ -8,15 +8,18 @@
  *   { "v": <int>, "checksum": "<fnv1a-hex of payload JSON>", "payload": {...} }
  *
  * V1 payload persists the M2 state: inventory, harvested nodes, shadow
- * density, player position/zone. The deck is still the static starter deck
- * (M3 adds collection + deck as a new version with a migration).
+ * density, player position/zone (collection/toolTier appeared as optional
+ * late-V1 fields). V2 (M3 Deck-Truhe) makes collection/toolTier required
+ * and adds the assembled combat deck.
  */
 
+import { starterDeckIds } from '../../data/cards/tier1';
+import { combatConfig } from '../../data/combat';
 import type { Inventory } from '../economy/inventory';
 import type { ShadowDensity } from '../world/encounters';
 import { isZoneId, type ZoneId } from '../world/zones';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export interface SaveDataV1 {
   inventory: Inventory;
@@ -35,8 +38,16 @@ export interface SaveDataV1 {
   toolTier?: number;
 }
 
+/** V2 (M3 Deck-Truhe): assembled combat deck + required collection/toolTier. */
+export interface SaveDataV2 extends Omit<SaveDataV1, 'collection' | 'toolTier'> {
+  collection: readonly string[];
+  toolTier: number;
+  /** Assembled combat deck as card ids (rules in core/deck, size in data/deck). */
+  deck: readonly string[];
+}
+
 /** Current save shape — alias moves forward with each new version. */
-export type SaveData = SaveDataV1;
+export type SaveData = SaveDataV2;
 
 export type SaveError =
   'corrupt_json' | 'invalid_envelope' | 'checksum_mismatch' | 'unknown_version' | 'invalid_payload';
@@ -60,10 +71,22 @@ export function serialize(data: SaveData): string {
 
 /**
  * Migration scaffold: index = source version, entry migrates to version + 1.
- * M3 (deck/collection) adds `1: (old) => ({ ...old, deck: [...] })` here and
- * bumps SAVE_VERSION (docs/12: version bump on every format change).
+ * Add the next migration here when bumping SAVE_VERSION (docs/12: version
+ * bump on every format change).
  */
-const migrations: Record<number, (payload: unknown) => unknown> = {};
+const migrations: Record<number, (payload: unknown) => unknown> = {
+  // V1 → V2 (M3 Deck-Truhe): old saves get the starter deck; the optional
+  // late-V1 fields collection/toolTier become required with their defaults.
+  1: (payload) => {
+    const old = payload as Partial<SaveDataV1>;
+    return {
+      ...old,
+      collection: old.collection ?? [],
+      toolTier: old.toolTier ?? combatConfig.baseToolTier,
+      deck: [...starterDeckIds],
+    };
+  },
+};
 
 export function deserialize(raw: string): DeserializeResult {
   let envelope: unknown;
@@ -124,12 +147,10 @@ function isValidSaveData(value: unknown): value is SaveData {
   if (v.playerZone !== null && (typeof v.playerZone !== 'string' || !isZoneId(v.playerZone))) {
     return false;
   }
-  if (v.collection !== undefined) {
-    if (!Array.isArray(v.collection)) return false;
-    if (!v.collection.every((id) => typeof id === 'string')) return false;
-  }
-  if (v.toolTier !== undefined && (!Number.isInteger(v.toolTier) || (v.toolTier as number) < 1)) {
-    return false;
-  }
+  if (!Array.isArray(v.collection)) return false;
+  if (!v.collection.every((id) => typeof id === 'string')) return false;
+  if (!Number.isInteger(v.toolTier) || (v.toolTier as number) < 1) return false;
+  if (!Array.isArray(v.deck)) return false;
+  if (!v.deck.every((id) => typeof id === 'string')) return false;
   return true;
 }
