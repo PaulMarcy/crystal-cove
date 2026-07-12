@@ -13,6 +13,8 @@
  *   --all              one single-enemy run per tier-1 enemy incl. elite
  *   --n <count>        runs per matchup (default: 1000)
  *   --seed <number>    base seed; runs use seed..seed+n-1 (default: 1000)
+ *   --density <0..3>   shadow density; scales enemy HP & damage via
+ *                      core/world/encounterCombat (default: 0)
  *   --policy <name>    noise (default, corridor baseline) | greedy (reference)
  *
  * No dependencies — args parsed by hand (CLAUDE.md: no new deps).
@@ -28,6 +30,8 @@ import {
   thornTerror,
 } from '../src/data/enemies/tier1';
 import type { CardDef, EnemyDef } from '../src/core/combat/types';
+import { scaleEnemyForDensity } from '../src/core/world/encounterCombat';
+import type { ShadowDensity } from '../src/core/world/encounters';
 import { greedyPolicy, noisePolicy, runSimulation, type Policy, type SimResult } from './simlib';
 
 const decks: Record<string, readonly CardDef[]> = { starter: starterDeck };
@@ -100,6 +104,13 @@ function main(): void {
     process.exit(1);
   }
 
+  const density = Number(args.get('density') ?? 0);
+  if (![0, 1, 2, 3].includes(density)) {
+    console.error('sim: --density must be 0, 1, 2 or 3.');
+    process.exit(1);
+  }
+  const shadowDensity = density as ShadowDensity;
+
   const matchups: { label: string; enemies: EnemyDef[] }[] = [];
   if (args.has('all')) {
     for (const enemy of m1Enemies) matchups.push({ label: enemy.id, enemies: [enemy] });
@@ -115,10 +126,13 @@ function main(): void {
     matchups.push({ label: id, enemies: [enemyById(id)] });
   }
 
-  console.log(`deck=${deckId}  n=${n}  seeds=${baseSeed}..${baseSeed + n - 1}  policy=${policyName}`);
+  console.log(
+    `deck=${deckId}  n=${n}  seeds=${baseSeed}..${baseSeed + n - 1}  policy=${policyName}  density=${shadowDensity}`,
+  );
   console.log(`${'matchup'.padEnd(28)} winrate  ØTurns  ØHP(win)`);
   for (const matchup of matchups) {
-    const result = runSimulation({ deck, enemies: matchup.enemies, n, baseSeed, policy });
+    const enemies = matchup.enemies.map((e) => scaleEnemyForDensity(e, shadowDensity));
+    const result = runSimulation({ deck, enemies, n, baseSeed, policy });
     console.log(formatRow(matchup.label, result));
   }
 }
