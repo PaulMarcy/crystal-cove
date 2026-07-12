@@ -206,6 +206,18 @@ export const strings = {
     xpMax: 'XP: Maximum erreicht',
     levelUpToast: 'Stufe {level} erreicht!',
     xpGainToast: '+{amount} XP',
+    explorationLabel: 'Erkundet: {percent} %',
+    densityLabel: 'Schattendichte: {density}',
+  },
+  exploration: {
+    zoneNames: {
+      strand: 'Strand',
+      wiese: 'Wiese',
+      waldrand: 'Waldrand',
+    },
+    areaDiscovered: 'Neues Gebiet: {zone} (+{xp} XP)',
+    shrineDiscovered: 'Schrein entdeckt! (+{xp} XP)',
+    secretDiscovered: 'Geheimnis entdeckt! (+{xp} XP)',
   },
   talents: {
     panelTitle: 'Talente',

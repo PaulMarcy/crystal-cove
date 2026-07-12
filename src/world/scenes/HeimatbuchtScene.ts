@@ -16,6 +16,11 @@ import {
 import { isRipe } from '../../core/economy/farming';
 import type { WorldStationId } from '../../data/stations';
 import {
+  heimatbuchtShrines,
+  shrineDiscoverRange,
+  type ShrinePlacement,
+} from '../../data/exploration';
+import {
   creatureContactRange,
   creatureIdleMs,
   creatureWanderRadius,
@@ -46,6 +51,11 @@ interface WorldStation {
 
 interface WorldFarmPlot {
   id: string;
+  sprite: Phaser.GameObjects.Sprite;
+}
+
+interface WorldShrine {
+  placement: ShrinePlacement;
   sprite: Phaser.GameObjects.Sprite;
 }
 
@@ -81,6 +91,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
   private tentSprite: Phaser.GameObjects.Sprite | null = null;
   private tentFocused = false;
   private plantKeys: Phaser.Input.Keyboard.Key[] = [];
+  private shrines: WorldShrine[] = [];
+  private discoveryToast: Phaser.GameObjects.Text | null = null;
   private creatures: WorldCreature[] = [];
   /** Creature that triggered the running combat — despawned on victory. */
   private engagedCreature: WorldCreature | null = null;
@@ -111,6 +123,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.tentSprite = null;
     this.tentFocused = false;
     this.plantKeys = [];
+    this.shrines = [];
+    this.discoveryToast = null;
     this.creatures = [];
     this.engagedCreature = null;
     this.contactGraceUntil = 0;
@@ -135,6 +149,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.spawnHarvestNodes();
     this.spawnStations();
     this.spawnFarm();
+    this.spawnShrines();
     this.spawnCreatures();
 
     // Saved position wins (save V1); fresh games start at the map center.
@@ -186,6 +201,14 @@ export class HeimatbuchtScene extends Phaser.Scene {
     // Combat lifecycle: the React overlay owns the fight; this scene pauses
     // on start and resumes on end (loop island → combat → island, docs/12 M2).
     this.unsubscribeStore = gameStore.subscribe((state, prev) => {
+      // Discovery feedback (M4 Task 2): discoverMarker sets markers + XP in
+      // one atomic transition, so the XP delta belongs to the new marker.
+      if (state.discoveredMarkers !== prev.discoveredMarkers) {
+        const newMarker = state.discoveredMarkers.find(
+          (id) => !prev.discoveredMarkers.includes(id),
+        );
+        if (newMarker) this.onMarkerDiscovered(newMarker, state.xp - prev.xp);
+      }
       if (prev.combat === null && state.combat !== null) {
         this.scene.pause();
       } else if (prev.combat !== null && state.combat === null) {
@@ -253,7 +276,116 @@ export class HeimatbuchtScene extends Phaser.Scene {
       });
     }
 
+    this.checkShrineDiscovery();
     this.checkCreatureContact();
+  }
+
+  // ── Exploration (M4 Task 2, docs/02 Schattendichte) ─────────────────────
+
+  /** Spawns shrine/secret sprites; already discovered ones lose their glow. */
+  private spawnShrines(): void {
+    this.createShrineTextures();
+    const discovered = new Set(gameStore.getState().discoveredMarkers);
+    for (const placement of heimatbuchtShrines) {
+      const x = placement.tileX * TILE + TILE / 2;
+      const y = placement.tileY * TILE + TILE / 2;
+      const key = `shrine-${placement.kind}${discovered.has(placement.markerId) ? '-found' : ''}`;
+      const sprite = this.add.sprite(x, y, key).setDepth(5);
+      this.shrines.push({ placement, sprite });
+    }
+  }
+
+  /**
+   * Approaching a shrine/secret discovers it (docs/02: 40 XP): the store
+   * derives exploration % and shadow density; zone markers are discovered
+   * store-side on first entry (setPlayerLocation). Feedback for BOTH marker
+   * types comes from the store subscription below (onMarkerDiscovered).
+   */
+  private checkShrineDiscovery(): void {
+    const store = gameStore.getState();
+    if (store.combat) return;
+    for (const shrine of this.shrines) {
+      if (store.discoveredMarkers.includes(shrine.placement.markerId)) continue;
+      const dist = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        shrine.sprite.x,
+        shrine.sprite.y,
+      );
+      if (dist > shrineDiscoverRange) continue;
+      if (gameStore.getState().discoverMarker(shrine.placement.markerId)) {
+        shrine.sprite.setTexture(`shrine-${shrine.placement.kind}-found`);
+      }
+    }
+  }
+
+  /** Discovery feedback: floating text over the player (text, never color-only). */
+  private onMarkerDiscovered(markerId: string, xpGained: number): void {
+    const xp = String(xpGained);
+    let text: string;
+    if (markerId.startsWith('zone:')) {
+      const zone = markerId.slice('zone:'.length);
+      const zoneName = isZoneId(zone) ? strings.exploration.zoneNames[zone] : zone;
+      text = strings.exploration.areaDiscovered.replace('{zone}', zoneName).replace('{xp}', xp);
+    } else if (markerId.startsWith('secret:')) {
+      text = strings.exploration.secretDiscovered.replace('{xp}', xp);
+    } else {
+      text = strings.exploration.shrineDiscovered.replace('{xp}', xp);
+    }
+    this.discoveryToast?.destroy();
+    const toast = this.add
+      .text(this.player.x, this.player.y - 18, text, {
+        fontFamily: 'monospace',
+        fontSize: '10px',
+        color: '#3a2e28',
+        backgroundColor: '#ecd9a3',
+        padding: { x: 3, y: 1 },
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(21);
+    this.discoveryToast = toast;
+    this.tweens.add({
+      targets: toast,
+      y: toast.y - 10,
+      alpha: 0,
+      delay: 1600,
+      duration: 500,
+      onComplete: () => {
+        toast.destroy();
+        if (this.discoveryToast === toast) this.discoveryToast = null;
+      },
+    });
+  }
+
+  /**
+   * Placeholder shrine/secret textures (grade 1 "Funktional", docs/04):
+   * crystal violet marks magic (docs/04 color rule); the "found" variant
+   * loses the glow so discovered spots read as resolved.
+   */
+  private createShrineTextures(): void {
+    const make = (key: string, draw: (g: Phaser.GameObjects.Graphics) => void): void => {
+      if (this.textures.exists(key)) return;
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      draw(g);
+      g.generateTexture(key, 16, 18);
+      g.destroy();
+    };
+    const shrineBase = (g: Phaser.GameObjects.Graphics, crystal: number): void => {
+      g.fillStyle(0x8d8d94); // stone plinth
+      g.fillRect(3, 12, 10, 5);
+      g.fillStyle(crystal);
+      g.fillTriangle(8, 1, 4, 12, 12, 12);
+    };
+    make('shrine-shrine', (g) => shrineBase(g, 0x9668d8)); // magic violet (docs/04)
+    make('shrine-shrine-found', (g) => shrineBase(g, 0xcdb7f0)); // calmed, pale
+    const secretBase = (g: Phaser.GameObjects.Graphics, lid: number): void => {
+      g.fillStyle(0x6b4a2f); // washed-up crate
+      g.fillRect(2, 8, 12, 8);
+      g.fillStyle(lid);
+      g.fillRect(2, 6, 12, 3);
+    };
+    make('shrine-secret', (g) => secretBase(g, 0x9668d8)); // faint magic shimmer
+    make('shrine-secret-found', (g) => secretBase(g, 0x8d6a45)); // plain wood
   }
 
   // ── Creatures (M2 encounter triggers) ───────────────────────────────────
