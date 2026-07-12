@@ -899,3 +899,102 @@ body {
     transition: none;
   }
 }
+
+/* ── Progression (M4): HUD-Chip + Talentbaum ─────────────────────────── */
+
+.progression-hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 10px;
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--color-text);
+  background: rgba(58, 46, 40, 0.85);
+  border: 1px solid var(--color-action);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.talent-hint {
+  position: absolute;
+  top: 44px;
+  right: 12px;
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--color-text);
+  background: rgba(58, 46, 40, 0.85);
+  border: 1px solid var(--color-action);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.talent-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(720px, 94vw);
+  max-height: 84vh;
+  overflow-y: auto;
+  background: var(--color-ui-ground);
+  border: 2px solid var(--color-sand);
+  border-radius: 10px;
+  padding: 14px 18px;
+  pointer-events: auto;
+}
+
+.talent-points {
+  margin: 4px 0 10px;
+  font-weight: bold;
+}
+
+.talent-branches {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.talent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.talent-cell {
+  border: 1px solid var(--color-sand);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.talent-cell--owned {
+  border-width: 2px;
+}
+
+.talent-cell-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.talent-name {
+  font-weight: bold;
+}
+
+.talent-desc {
+  margin: 4px 0;
+  font-size: 13px;
+}
+
+.talent-status {
+  font-size: 12px;
+  font-style: italic;
+}
+
+.talent-unlock-button {
+  pointer-events: auto;
+}

@@ -8,6 +8,8 @@ import { CombatScreen } from './combat/CombatScreen';
 import { InventoryPanel } from './inventory/InventoryPanel';
 import { WorkshopPanel } from './workshop/WorkshopPanel';
 import { DeckChestPanel } from './deck/DeckChestPanel';
+import { ProgressionHud } from './progression/ProgressionHud';
+import { TalentPanel } from './progression/TalentPanel';
 
 const LOOT_TOAST_MS = 4000;
 
@@ -77,6 +79,8 @@ export function App() {
         {strings.ui.startTestCombat}
       </button>
       <LootToast />
+      <ProgressionHud />
+      <TalentPanel />
       <WorkshopPanel />
       <DeckChestPanel />
       <InventoryPanel />

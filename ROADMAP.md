@@ -39,7 +39,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Farming: Beete, Wachstum pro Schlafphase (docs/10)
 
 ## M4 — Progression
-- [ ] XP/Level 1–10 + Meilensteine (Deck 15, Talisman-Slot 1), Talentbaum 3×3
+- [x] XP/Level 1–10 + Meilensteine (Deck 15, Talisman-Slot 1), Talentbaum 3×3
 - [ ] Erkundungs-% + Schattendichte 0–3 (Eliten ab 2, Affixe)
 - [ ] Dungeon „Verwachsene Höhle": 3 Kämpfe + Wurzelwächter (phased), Orin-Rettung
 - [ ] Reinigung (Dichte dauerhaft 0), Talismane funktional

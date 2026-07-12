@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import {
   canCraft,
+  discountedRecipe,
   ingredientStatus,
   isRecipeUnlocked,
   isRecipeVisible,
@@ -8,7 +9,7 @@ import {
 import { allRecipes, type RecipeDef } from '../../data/recipes';
 import { initialStationTiers } from '../../data/stations';
 import { strings } from '../../shared/strings';
-import { useGameStore } from '../../shared/store';
+import { modifiersOf, useGameStore } from '../../shared/store';
 
 const itemNames = strings.items as Readonly<Record<string, string>>;
 const cardStrings = strings.cards as Readonly<
@@ -26,9 +27,13 @@ function outputDescription(recipe: RecipeDef): string {
   return cardStrings[recipe.output.cardId]?.description ?? '';
 }
 
-function RecipeRow({ recipe, stationTier }: { recipe: RecipeDef; stationTier: number }) {
+function RecipeRow({ recipe: baseRecipe, stationTier }: { recipe: RecipeDef; stationTier: number }) {
   const inventory = useGameStore((s) => s.inventory);
   const craftRecipe = useGameStore((s) => s.craftRecipe);
+  // Talent "Sparsame Hände" — display the same discounted costs the store
+  // deducts (rule in core/economy/crafting).
+  const craftDiscount = useGameStore((s) => modifiersOf(s).craftBaseMaterialDiscount);
+  const recipe = discountedRecipe(baseRecipe, craftDiscount);
   const unlocked = isRecipeUnlocked(recipe, stationTier);
   const craftable = unlocked && canCraft(inventory, recipe);
 

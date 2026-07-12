@@ -9,7 +9,13 @@ import {
   ownedCountsAfterConsumption,
 } from '../core/deck/consumption';
 import { addToDeck, buildCombatDeck, removeFromDeck } from '../core/deck/deck';
-import { canCraft, craft, isRecipeUnlocked, isRecipeVisible } from '../core/economy/crafting';
+import {
+  canCraft,
+  craft,
+  discountedRecipe,
+  isRecipeUnlocked,
+  isRecipeVisible,
+} from '../core/economy/crafting';
 import { disenchantCard } from '../core/economy/disenchant';
 import {
   advanceSleep,
@@ -21,7 +27,22 @@ import {
 } from '../core/economy/farming';
 import { harvestNode } from '../core/economy/harvest';
 import { addItem, emptyInventory, type Inventory } from '../core/economy/inventory';
-import { rollEncounter, type ShadowDensity } from '../core/world/encounters';
+import {
+  canUnlockTalent,
+  deckLimitForLevel,
+  levelForXp,
+  maxHpForLevel,
+  scaleDishCard,
+  scaleLoot,
+  talentModifiers,
+  xpForEncounter,
+  type TalentModifiers,
+} from '../core/progression/progression';
+import {
+  rollEncounter,
+  type EncounterResult,
+  type ShadowDensity,
+} from '../core/world/encounters';
 import { buildEncounterCombatSetup } from '../core/world/encounterCombat';
 import { rollLoot, type LootResult } from '../core/world/loot';
 import type { SaveData } from '../core/save/save';
@@ -33,6 +54,8 @@ import { crops, harvestToolBonus, heimatbuchtFarmPlots, type CropId } from '../d
 import { allRecipes } from '../data/recipes';
 import { harvestNodeTypes, heimatbuchtHarvestNodes } from '../data/resources';
 import { initialStationTiers, type WorldStationId } from '../data/stations';
+import { talents } from '../data/talents';
+import type { XpSource } from '../data/progression';
 
 /**
  * Shared game store — the single bridge between Phaser (world) and React (ui).
@@ -111,6 +134,22 @@ export interface GameState {
    */
   craftRecipe: (recipeId: string) => boolean;
 
+  /**
+   * Total XP ever earned (docs/02) — the level is always DERIVED via
+   * core/progression.levelForXp. XP beyond the level cap stays banked.
+   */
+  xp: number;
+  /** Unlocked talent ids (docs/02 Talentbaum 3×3; no respec in M4). */
+  unlockedTalents: readonly string[];
+  /**
+   * Grants XP from any source — combat victory (automatic in endCombat),
+   * exploration (M4 Task 2) or scripted grants (docs/06 tutorial, M6).
+   * No special-case code per source; `source` is for logging/telemetry.
+   */
+  grantXp: (amount: number, source: XpSource) => void;
+  /** Spends 1 talent point (rules in core/progression). False when blocked. */
+  unlockTalent: (talentId: string) => boolean;
+
   combat: CombatState | null;
   /** Seed used for the current combat (deterministic replays, debugging). */
   combatSeed: number | null;
@@ -125,6 +164,8 @@ export interface GameState {
    * island → combat → island). Returns false if a combat is already running.
    */
   startEncounter: (zone: ZoneId, seed?: number) => boolean;
+  /** Encounter behind the running combat (XP calculation at victory). */
+  currentEncounter: EncounterResult | null;
   /** Loot rolled at the moment of victory (shown in the victory panel). */
   combatLoot: LootResult | null;
   /** Outcome of the last finished combat — world layer reacts (despawn etc.). */
@@ -143,6 +184,16 @@ export interface GameState {
 /** RNG of the running combat — module-scoped, injected into every reducer call. */
 let combatRng: Rng | null = null;
 
+/** Talent modifiers of the current state (pure derivation, cheap for 9 talents). */
+export function modifiersOf(state: Pick<GameState, 'unlockedTalents'>): TalentModifiers {
+  return talentModifiers(state.unlockedTalents, talents);
+}
+
+/** Current derived level (docs/02 curve, cap in data/progression). */
+export function levelOf(state: Pick<GameState, 'xp'>): number {
+  return levelForXp(state.xp);
+}
+
 export const gameStore = createStore<GameState>()((set, get) => ({
   worldReady: false,
   setWorldReady: (ready) => set({ worldReady: ready }),
@@ -158,8 +209,12 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     if (!placement) return false;
     const def = harvestNodeTypes[placement.type];
     const { inventory, harvestedNodeIds, toolTier } = get();
-    // Tool tier 2 adds +1 yield (docs/10 Werkzeugstufen "Ernten +1 Ertrag").
-    const amount = def.yield + toolYieldBonus(toolTier, harvestToolBonus);
+    // Tool tier 2 adds +1 yield (docs/10 Werkzeugstufen "Ernten +1 Ertrag");
+    // talent "Sammlerglück" adds +1 on top (docs/02).
+    const amount =
+      def.yield +
+      toolYieldBonus(toolTier, harvestToolBonus) +
+      modifiersOf(get()).harvestYieldBonus;
     const outcome = harvestNode(inventory, harvestedNodeIds, nodeId, def.resource, amount);
     if (!outcome) return false;
     set({ inventory: outcome.inventory, harvestedNodeIds: outcome.harvestedNodeIds });
@@ -201,7 +256,8 @@ export const gameStore = createStore<GameState>()((set, get) => ({
   addCardToDeck: (cardId) => {
     const { deck, collection, consumedStarterDishes } = get();
     const owned = ownedCountsAfterConsumption(starterDeckIds, collection, consumedStarterDishes);
-    const next = addToDeck(deck, cardId, owned, cardsById);
+    // Deck max size is level-dependent (docs/02 milestone Lv 4: 12 → 15).
+    const next = addToDeck(deck, cardId, owned, cardsById, deckLimitForLevel(levelOf(get())));
     if (!next) return false;
     set({ deck: next });
     return true;
@@ -214,7 +270,15 @@ export const gameStore = createStore<GameState>()((set, get) => ({
   },
   disenchant: (cardId) => {
     const { inventory, collection, deck } = get();
-    const result = disenchantCard(inventory, collection, deck, cardId, allRecipes);
+    // Talent "Effizientes Zerlegen": refund fraction 0.5 → 0.75 (docs/02).
+    const result = disenchantCard(
+      inventory,
+      collection,
+      deck,
+      cardId,
+      allRecipes,
+      modifiersOf(get()).disenchantRefundFraction,
+    );
     if (!result) return false;
     set({ inventory: result.inventory, collection: result.collection, deck: result.deck });
     return true;
@@ -228,8 +292,11 @@ export const gameStore = createStore<GameState>()((set, get) => ({
   closeStation: () => set({ activeStation: null }),
   craftRecipe: (recipeId) => {
     const { activeStation, inventory, toolTier, collection } = get();
-    const recipe = allRecipes.find((r) => r.id === recipeId);
-    if (!recipe || recipe.station !== activeStation) return false;
+    const baseRecipe = allRecipes.find((r) => r.id === recipeId);
+    if (!baseRecipe || baseRecipe.station !== activeStation) return false;
+    // Talent "Sparsame Hände": card recipes cost 1 base material less
+    // (docs/02; rule in core/economy/crafting.discountedRecipe).
+    const recipe = discountedRecipe(baseRecipe, modifiersOf(get()).craftBaseMaterialDiscount);
     if (!isRecipeVisible(recipe, toolTier)) return false;
     if (!isRecipeUnlocked(recipe, initialStationTiers[recipe.station])) return false;
     if (!canCraft(inventory, recipe)) return false;
@@ -258,6 +325,22 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     return true;
   },
 
+  xp: 0,
+  unlockedTalents: [],
+  // `source` exists for the API contract (scripted grants, docs/06) and
+  // future logging — the XP math is source-agnostic on purpose.
+  grantXp: (amount) => {
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    set({ xp: get().xp + Math.floor(amount) });
+  },
+  unlockTalent: (talentId) => {
+    const { unlockedTalents, xp } = get();
+    const check = canUnlockTalent(talentId, unlockedTalents, levelForXp(xp), talents);
+    if (!check.ok) return false;
+    set({ unlockedTalents: [...unlockedTalents, talentId] });
+    return true;
+  },
+
   combat: null,
   combatSeed: null,
   startCombat: (setup, seed) => {
@@ -272,11 +355,16 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     // Loot is rolled exactly once, at the victory transition, with the
     // combat RNG — a seeded combat replays to identical loot.
     const justWon = combat.phase !== 'victory' && next.phase === 'victory';
+    // Talent "Beutejäger" (docs/02): +25 % loot, rounded up — applied at
+    // roll time so the victory panel shows the final amounts.
     const loot = justWon
-      ? rollLoot(
-          next.enemies.map((enemy) => enemy.def),
-          shadowDensity,
-          combatRng,
+      ? scaleLoot(
+          rollLoot(
+            next.enemies.map((enemy) => enemy.def),
+            shadowDensity,
+            combatRng,
+          ),
+          modifiersOf(get()).lootMultiplier,
         )
       : get().combatLoot;
     set({ combat: next, combatLoot: loot });
@@ -301,9 +389,21 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       consumedStarterDishes,
       starterDeckIds,
     );
+    // XP for a won encounter (docs/07: 15 + 7×Zusatzgegner, Elite 38) —
+    // dev/test combats without an encounter grant nothing.
+    const { currentEncounter, xp } = get();
+    const xpGain =
+      won && currentEncounter
+        ? xpForEncounter({
+            enemyCount: currentEncounter.enemies.length,
+            elite: currentEncounter.elite,
+          })
+        : 0;
     // TODO(M4): defeat flow — for now the player just returns to the island
     // with full HP and no penalty (docs/12: Niederlage-Fluss ist M4).
     set({
+      xp: xp + xpGain,
+      currentEncounter: null,
       collection: consumption.collection,
       deck: consumption.deck,
       consumedStarterDishes: consumption.consumedStarterDishes,
@@ -323,22 +423,39 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     // Combat uses the deck assembled at the Deck-Truhe; an invalid deck
     // (e.g. < 12 after a disenchant or dish consumption) blocks the
     // encounter (docs/03).
+    const level = levelOf(get());
+    const mods = modifiersOf(get());
     const combatDeck = buildCombatDeck(
       deck,
       ownedCountsAfterConsumption(starterDeckIds, collection, consumedStarterDishes),
       cardsById,
+      deckLimitForLevel(level),
     );
     if (!combatDeck) return false;
     const encounterSeed = seed ?? Math.floor(Math.random() * 0xffffffff);
     const encounter = rollEncounter(encounterTables[zone], shadowDensity, createRng(encounterSeed));
+    // Max HP scales with level (+5/level, docs/02) plus talent "Zähigkeit";
+    // combats start at full HP (HP persistence between combats is a later
+    // M4 task — see sleep()).
+    const playerHp = maxHpForLevel(level, mods.maxHpBonus);
     const setup = buildEncounterCombatSetup(encounter, shadowDensity, {
-      playerHp: combatConfig.basePlayerHp,
-      deck: combatDeck,
+      playerHp,
+      deck: combatDeck.map((card) =>
+        // Talent "Guter Koch": dish effects +25 %, rounded up (docs/02).
+        scaleDishCard(card, mods.dishEffectMultiplier),
+      ),
     });
     setup.toolTier = get().toolTier; // Axtschlag scaling (docs/10 Werkzeugstufen)
+    // Talent "Klingenschliff": first attack per combat +2 damage (docs/02).
+    if (mods.firstAttackBonus > 0) setup.firstAttackBonus = mods.firstAttackBonus;
+    // TODO(M4): talent "Bollwerk" (playerStartBlock) applies to DUNGEON
+    // combats only — dungeons arrive in Task 3; open-field encounters never
+    // get the start block.
+    set({ currentEncounter: encounter });
     startCombat(setup, seed);
     return true;
   },
+  currentEncounter: null,
   combatLoot: null,
   lastCombatOutcome: null,
   lastLoot: null,
@@ -357,6 +474,8 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       farmPlots: data.farmPlots ?? emptyFarmPlots,
       sleepCount: data.sleepCount ?? 0,
       toolTier: data.toolTier,
+      xp: data.xp ?? 0,
+      unlockedTalents: data.unlockedTalents ?? [],
       saveRecovered: recovered,
     }),
   saveRecovered: false,

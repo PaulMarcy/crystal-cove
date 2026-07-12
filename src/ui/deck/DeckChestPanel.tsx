@@ -5,8 +5,9 @@ import { disenchantRefund } from '../../core/economy/disenchant';
 import { starterDeckIds } from '../../data/cards/tier1';
 import { deckConfig } from '../../data/deck';
 import { allRecipes } from '../../data/recipes';
+import { deckLimitForLevel } from '../../core/progression/progression';
 import { strings } from '../../shared/strings';
-import { useGameStore } from '../../shared/store';
+import { levelOf, modifiersOf, useGameStore } from '../../shared/store';
 
 const itemNames = strings.items as Readonly<Record<string, string>>;
 const cardStrings = strings.cards as Readonly<
@@ -17,9 +18,9 @@ function cardName(cardId: string): string {
   return cardStrings[cardId]?.name ?? cardId;
 }
 
-/** "1× Kupfererz, 0× Stein" — every line shown, transparency over the 50 %/special rule. */
-function refundText(cardId: string): string {
-  const refund = disenchantRefund(cardId, allRecipes);
+/** "1× Kupfererz, 0× Stein" — every line shown, transparency over the refund/special rule. */
+function refundText(cardId: string, refundFraction: number): string {
+  const refund = disenchantRefund(cardId, allRecipes, refundFraction);
   if (!refund) return strings.deckChest.notDisenchantable;
   if (refund.length === 0) return strings.deckChest.refundNothing;
   const parts = refund.map((l) => `${l.amount}× ${itemNames[l.resource] ?? l.resource}`);
@@ -36,6 +37,8 @@ interface CollectionRowProps {
 function CollectionRow({ cardId, owned, inDeck, crafted }: CollectionRowProps) {
   const addCardToDeck = useGameStore((s) => s.addCardToDeck);
   const disenchant = useGameStore((s) => s.disenchant);
+  // Talent "Effizientes Zerlegen" changes the preview (docs/02).
+  const refundFraction = useGameStore((s) => modifiersOf(s).disenchantRefundFraction);
   const [confirming, setConfirming] = useState(false);
   const disenchantable = crafted > 0 && disenchantRefund(cardId, allRecipes) !== null;
 
@@ -63,7 +66,7 @@ function CollectionRow({ cardId, owned, inDeck, crafted }: CollectionRowProps) {
       {confirming && (
         <div className="deck-chest-confirm" role="alertdialog">
           <span>
-            {strings.deckChest.disenchantConfirm} {refundText(cardId)}
+            {strings.deckChest.disenchantConfirm} {refundText(cardId, refundFraction)}
           </span>
           <button
             onClick={() => {
@@ -92,6 +95,7 @@ export function DeckChestPanel() {
   const collection = useGameStore((s) => s.collection);
   const deck = useGameStore((s) => s.deck);
   const consumedStarterDishes = useGameStore((s) => s.consumedStarterDishes);
+  const xp = useGameStore((s) => s.xp);
   const removeCardFromDeck = useGameStore((s) => s.removeCardFromDeck);
 
   const open = activeStation === 'deck_chest';
@@ -106,6 +110,8 @@ export function DeckChestPanel() {
 
   if (!open) return null;
 
+  // Deck size is a range: min 12 (data/deck), max level-dependent (docs/02).
+  const maxSize = deckLimitForLevel(levelOf({ xp }));
   const owned = ownedCountsAfterConsumption(starterDeckIds, collection, consumedStarterDishes);
   const deckCounts = countCards(deck);
   const craftedCounts = countCards(collection);
@@ -120,9 +126,9 @@ export function DeckChestPanel() {
           {strings.workshop.close}
         </button>
       </header>
-      {deck.length !== deckConfig.deckSize && (
+      {deck.length < deckConfig.minSize && (
         <p className="deck-chest-warning" role="alert">
-          {strings.deckChest.deckIncomplete.replace('{size}', String(deckConfig.deckSize))}
+          {strings.deckChest.deckIncomplete.replace('{size}', String(deckConfig.minSize))}
         </p>
       )}
       <div className="deck-chest-columns">
@@ -148,7 +154,7 @@ export function DeckChestPanel() {
           <h3>
             {strings.deckChest.deckHeading
               .replace('{count}', String(deck.length))
-              .replace('{size}', String(deckConfig.deckSize))}
+              .replace('{size}', String(maxSize))}
           </h3>
           <ul className="deck-chest-list">
             {deckIds.map((id) => (

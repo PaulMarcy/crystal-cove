@@ -200,6 +200,62 @@ export const strings = {
     thorned: { name: 'Dornig' },
     draining: { name: 'Zehrend' },
   },
+  progression: {
+    levelLabel: 'Stufe {level}',
+    xpLabel: 'XP: {current}/{next}',
+    xpMax: 'XP: Maximum erreicht',
+    levelUpToast: 'Stufe {level} erreicht!',
+    xpGainToast: '+{amount} XP',
+  },
+  talents: {
+    panelTitle: 'Talente',
+    toggleHint: '[T] Talente',
+    pointsAvailable: 'Talentpunkte: {points}',
+    unlock: 'Freischalten',
+    unlocked: 'Freigeschaltet',
+    lockedRequiresPrevious: 'Gesperrt — benötigt vorherige Stufe',
+    lockedNoPoints: 'Kein Talentpunkt verfügbar',
+    tierLabel: 'Stufe {tier}',
+    branches: {
+      fighter: 'Kämpfer',
+      crafter: 'Handwerker',
+      wanderer: 'Wanderer',
+    },
+    blade_hone: {
+      name: 'Klingenschliff',
+      description: 'Der erste Angriff pro Kampf verursacht +2 Schaden.',
+    },
+    toughness: { name: 'Zähigkeit', description: '+5 maximale Lebenspunkte.' },
+    bulwark: {
+      name: 'Bollwerk',
+      description: 'Start-Block +3 in Dungeon-Kämpfen.',
+    },
+    thrifty_hands: {
+      name: 'Sparsame Hände',
+      description:
+        'Karten-Rezepte kosten 1 Basismaterial weniger (min. 1, Spezialmaterialien unberührt).',
+    },
+    good_cook: {
+      name: 'Guter Koch',
+      description: 'Gerichte wirken +25 % (aufgerundet).',
+    },
+    efficient_salvage: {
+      name: 'Effizientes Zerlegen',
+      description: 'Zerlegen erstattet 75 % statt 50 %.',
+    },
+    gatherers_luck: {
+      name: 'Sammlerglück',
+      description: '+1 Ertrag an Sammelstellen.',
+    },
+    loot_hunter: {
+      name: 'Beutejäger',
+      description: 'Kampfbeute +25 % (aufgerundet).',
+    },
+    map_savant: {
+      name: 'Kartenkenner',
+      description: 'Erkundungs-XP (Gebiet/Schrein) +50 %.',
+    },
+  },
 } as const;
 
 export type Strings = typeof strings;

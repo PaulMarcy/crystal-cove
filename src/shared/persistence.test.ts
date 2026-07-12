@@ -39,6 +39,8 @@ beforeEach(() => {
     playerZone: null,
     combat: null,
     saveRecovered: false,
+    xp: 0,
+    unlockedTalents: [],
   });
 });
 
@@ -97,6 +99,32 @@ describe('persistence wiring', () => {
     gameStore.getState().endCombat();
     // Combat end is an autosave trigger.
     expect(storage.map.has(PRIMARY_KEY)).toBe(true);
+  });
+
+  it('hydrates progression fields and defaults them on older saves (M4, additive)', () => {
+    const storage = memoryStorage();
+    saveGame(storage, { ...savedGame, xp: 450, unlockedTalents: ['blade_hone'] });
+    initPersistence(storage);
+    expect(gameStore.getState().xp).toBe(450);
+    expect(gameStore.getState().unlockedTalents).toEqual(['blade_hone']);
+
+    // Older save without the fields: defaults, no error (no version bump).
+    const legacy = memoryStorage();
+    saveGame(legacy, savedGame);
+    gameStore.setState({ xp: 999, unlockedTalents: ['toughness'] });
+    initPersistence(legacy);
+    expect(gameStore.getState().xp).toBe(0);
+    expect(gameStore.getState().unlockedTalents).toEqual([]);
+  });
+
+  it('autosaves when xp or talents change (progression trigger)', () => {
+    const storage = memoryStorage();
+    initPersistence(storage);
+    gameStore.getState().grantXp(25, 'area');
+    const raw = storage.map.get(PRIMARY_KEY);
+    expect(raw).toBeDefined();
+    const loaded = deserialize(raw!);
+    expect(loaded.ok && loaded.data.xp).toBe(25);
   });
 
   it('snapshotFromState mirrors serialize round-trip', () => {

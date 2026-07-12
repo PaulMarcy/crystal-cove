@@ -30,6 +30,8 @@ export function snapshotFromState(state: GameState): SaveData {
     farmPlots: state.farmPlots,
     sleepCount: state.sleepCount,
     toolTier: state.toolTier,
+    xp: state.xp,
+    unlockedTalents: state.unlockedTalents,
   };
 }
 
@@ -57,7 +59,9 @@ export function initPersistence(storage: SaveStorage): LoadResult {
       state.consumedStarterDishes !== prev.consumedStarterDishes ||
       state.farmPlots !== prev.farmPlots ||
       state.sleepCount !== prev.sleepCount ||
-      state.toolTier !== prev.toolTier;
+      state.toolTier !== prev.toolTier ||
+      state.xp !== prev.xp ||
+      state.unlockedTalents !== prev.unlockedTalents;
     if (combatJustEnded || persistedSliceChanged) {
       saveGame(storage, snapshotFromState(state));
     }
