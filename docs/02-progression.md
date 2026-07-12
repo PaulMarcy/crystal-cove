@@ -6,8 +6,8 @@ XP gibt es ausschließlich für Erlebnisse, nie für Wiederholung:
 
 | Quelle | XP |
 |---|---|
-| Kampf gewonnen (Tier 1 / 2 / 3 / 4 / 5) | 15 / 30 / 55 / 90 / 140 |
-| Elite (×) | Kampf-XP × 2,5 |
+| Kampf gewonnen (Tier 1 / 2 / 3 / 4 / 5) | 15 / 30 / 55 / 90 / 140 (+7 je zusätzlichem Gegner in Tier 1, docs/07) |
+| Elite (Tier 1) | **38 (Konstante, docs/07 maßgeblich — nicht Formel ×2,5)** |
 | Boss | 300 × Tier-Faktor |
 | Neues Gebiet aufgedeckt | 25 |
 | Schrein / Geheimnis entdeckt | 40 |
@@ -27,7 +27,7 @@ Level-Verlauf grob synchron zu den 5 Inseln (siehe unten).
 
 | Level | Freischaltung |
 |---|---|
-| 4 | Kampfdeck 12 → 15 Karten |
+| 4 | Kampfdeck-Obergrenze 12 → 15 Karten (Deck-Größe ist eine Spanne: min. 12, max. levelabhängig) |
 | 8 | Talisman-Slot 1 (passive Relikte) |
 | 12 | 2 Gerichte pro Expedition |
 | 16 | Talisman-Slot 2 |
@@ -38,14 +38,21 @@ Level-Verlauf grob synchron zu den 5 Inseln (siehe unten).
 **Bewusst NICHT am Level:** Energie pro Zug (3) und Handgröße (5) bleiben fix —
 daran hängt die gesamte Kartenbalance. Stärke kommt primär aus dem Deck.
 
-## Talente (3 Zweige × 6 Stufen, 10 Punkte verfügbar → Spezialisierung)
+## Talente — V1 (M4): 3 Zweige × 3 Stufen, Ausbau auf 3×6 post-release
 
-- **Kämpfer:** z. B. erster Angriff pro Kampf +2 Schaden · +5 max. HP ·
-  Start-Block +3 in Dungeons · „Zweite Luft" (1×/Dungeon tödlichen Schlag mit 1 HP überleben)
-- **Handwerker:** Werkstatt-Erträge +, Karten-Upgrades günstiger, Gerichte
-  wirken +25 %, Prägen kostet weniger Material
-- **Wanderer:** schnelleres Ernten, +Beutemenge, Gefahren auf der Karte früher
-  sichtbar, Fluchtchance aus Kämpfen
+Regeln: 1 Punkt pro Talent · Stufen im Zweig sequenziell (Stufe 2 erst nach
+Stufe 1) · Talentpunkte: 1 je 3 Level (Lv 3/6/9 → in M4 max. 3) · Respec:
+nicht in M4.
+
+| Zweig | Stufe 1 | Stufe 2 | Stufe 3 |
+|---|---|---|---|
+| **Kämpfer** | Klingenschliff — erster Angriff pro Kampf +2 Schaden | Zähigkeit — +5 max. HP | Bollwerk — Start-Block +3 in Dungeon-Kämpfen |
+| **Handwerker** | Sparsame Hände — Karten-Rezepte kosten 1 Basismaterial weniger (min. 1, Spezialmaterialien unberührt) | Guter Koch — Gerichte wirken +25 % (aufgerundet) | Effizientes Zerlegen — Zerlegen erstattet 75 % statt 50 % |
+| **Wanderer** | Sammlerglück — +1 Ertrag an Harvest-Nodes | Beutejäger — Kampfbeute +25 % (aufgerundet) | Kartenkenner — Erkundungs-XP (Gebiet/Schrein) +50 % |
+
+Post-release-Kandidaten für die Stufen 4–6 (nicht in M4): „Zweite Luft"
+(1×/Dungeon tödlichen Schlag mit 1 HP überleben), Karten-Upgrades günstiger,
+Gefahren auf der Karte früher sichtbar, Fluchtchance aus Kämpfen.
 
 ## Inseln (feste Tiers, KEIN Level-Scaling)
 

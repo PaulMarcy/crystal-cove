@@ -60,7 +60,9 @@ Gift ignoriert Block.
    3–5 Kämpfe am Stück ohne Heilung, Wächter am Ende, Aufgeben jederzeit möglich
    (Beute des Durchgangs verfällt teilweise).
 3. **Deck = Rucksack.** Vor Expeditionen stellt man an der Deck-Truhe das
-   Kampfdeck zusammen (12–18 Karten je nach Level) aus der Gesamtsammlung.
+   Kampfdeck zusammen (min. 12 Karten; 12–18 ist die levelabhängige
+   OBERGRENZE, keine Exaktgröße — Meilensteine in docs/02) aus der
+   Gesamtsammlung.
    Vorbereitungs-Ritual + Lösung des Deck-Bloat-Problems.
 
 ## Die Insel füttert das Deck (Kern-Hook)
