@@ -2,7 +2,9 @@
  * Disenchant (Zerlegen, docs/10) — pure, engine-free.
  *
  * Rules (docs/10 "Zerlegen"):
- * - Refund = 50 % of the BASE minting recipe, floored PER ingredient line
+ * - Refund = 50 % of the BASE minting recipe (fraction in data/recipes;
+ *   the talent "Effizientes Zerlegen" raises it to 75 %), floored PER
+ *   ingredient line
  *   (Schwerer Hieb: floor(3/2)=1 Kupfer + floor(1/2)=0 Stein).
  * - Special material (= combat drops, `specialMaterial` flag in
  *   src/data/resources.ts) is never refunded.
@@ -13,12 +15,9 @@
  *   the deck may then be < deckSize until the player refills it; combat
  *   start requires a valid deck (core/deck).
  */
-import type { RecipeDef } from '../../data/recipes';
+import { disenchantConfig, type RecipeDef } from '../../data/recipes';
 import { resources } from '../../data/resources';
 import { addItem, type Inventory } from './inventory';
-
-/** Refund divisor for disenchanting: 50 % (docs/10). */
-const REFUND_DIVISOR = 2;
 
 export interface RefundLine {
   resource: string;
@@ -39,12 +38,15 @@ export function baseRecipeFor(cardId: string, recipes: readonly RecipeDef[]): Re
 export function disenchantRefund(
   cardId: string,
   recipes: readonly RecipeDef[],
+  refundFraction: number = disenchantConfig.baseRefundFraction,
 ): RefundLine[] | null {
   const recipe = baseRecipeFor(cardId, recipes);
   if (!recipe) return null;
   return recipe.ingredients.map((ing) => ({
     resource: ing.resource,
-    amount: resources[ing.resource].specialMaterial ? 0 : Math.floor(ing.amount / REFUND_DIVISOR),
+    amount: resources[ing.resource].specialMaterial
+      ? 0
+      : Math.floor(ing.amount * refundFraction),
   }));
 }
 
@@ -65,8 +67,9 @@ export function disenchantCard(
   deck: readonly string[],
   cardId: string,
   recipes: readonly RecipeDef[],
+  refundFraction: number = disenchantConfig.baseRefundFraction,
 ): DisenchantResult | null {
-  const refund = disenchantRefund(cardId, recipes);
+  const refund = disenchantRefund(cardId, recipes, refundFraction);
   if (!refund) return null;
   const collectionIndex = collection.indexOf(cardId);
   if (collectionIndex === -1) return null;

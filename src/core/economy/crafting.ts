@@ -7,7 +7,27 @@
  * applies them. Disenchant (50 % refund) is a separate M3 task (Deck-Truhe).
  */
 import type { RecipeDef, RecipeOutput } from '../../data/recipes';
+import { resources } from '../../data/resources';
 import { countOf, removeItem, type Inventory } from './inventory';
+
+/**
+ * Talent "Sparsame Hände" (docs/02): card recipes cost `discount` base
+ * material less. Applied ONCE per recipe, to the first non-special
+ * ingredient line with amount > 1, clamped at 1 (assumption: the singular
+ * "1 Basismaterial weniger" reads as one unit per craft, not one per line).
+ * Special materials (combat drops) and tool-upgrade recipes are untouched.
+ */
+export function discountedRecipe(recipe: RecipeDef, discount: number): RecipeDef {
+  if (discount <= 0 || recipe.output.kind !== 'card') return recipe;
+  const index = recipe.ingredients.findIndex(
+    (ing) => !resources[ing.resource].specialMaterial && ing.amount > 1,
+  );
+  if (index === -1) return recipe;
+  const ingredients = recipe.ingredients.map((ing, i) =>
+    i === index ? { ...ing, amount: Math.max(1, ing.amount - discount) } : ing,
+  );
+  return { ...recipe, ingredients };
+}
 
 export interface IngredientStatus {
   resource: string;

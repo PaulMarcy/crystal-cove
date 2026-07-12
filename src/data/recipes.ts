@@ -18,6 +18,12 @@ import type { ResourceId } from './resources';
 
 export type StationId = 'smithy' | 'kitchen';
 
+/** Disenchant balancing (docs/10 "Zerlegen": 50 % Grunderstattung). */
+export const disenchantConfig = {
+  /** Refund fraction of the base minting costs, floored per line. */
+  baseRefundFraction: 0.5,
+} as const;
+
 export interface RecipeIngredient {
   resource: ResourceId;
   amount: number;

@@ -141,8 +141,12 @@ export function createCombatState(setup: CombatSetup, rng: Rng): CombatState {
     nextCardCostDelta: 0,
     addedCardCounter: 0,
     blockGainedThisTurn: false,
+    firstAttackBonus: setup.firstAttackBonus ?? 0,
   };
   startPlayerTurn(state, rng);
+  // combatStart: talent "Bollwerk" (docs/02) — start block is applied AFTER
+  // the first turnStart (which zeroes block) and decays with the next one.
+  state.player.block += setup.playerStartBlock ?? 0;
   return state;
 }
 
@@ -231,7 +235,23 @@ function playCard(
   state.player.energy -= effectiveCost;
   state.nextCardCostDelta = 0;
   state.hand.splice(index, 1);
+  // Talent "Klingenschliff" (docs/02): the FIRST attack card played this
+  // combat hits for +bonus. Implemented as temporary strength for exactly
+  // this card's resolution (per hit, StS-Vigor convention), then consumed.
+  const attackBonus = card.def.type === 'attack' ? state.firstAttackBonus : 0;
+  if (attackBonus > 0) {
+    state.player.statuses.strength = (state.player.statuses.strength ?? 0) + attackBonus;
+    state.firstAttackBonus = 0;
+  }
   applyEffects(state, { side: 'player' }, card.def.effects, reshuffler(rng), targetEnemyId);
+  if (attackBonus > 0) {
+    const remaining = (state.player.statuses.strength ?? 0) - attackBonus;
+    if (remaining > 0) {
+      state.player.statuses.strength = remaining;
+    } else {
+      delete state.player.statuses.strength;
+    }
+  }
   // Gerichte sind Verbrauchskarten (docs/03) — sie verlassen das Deck.
   if (card.def.type === 'dish') {
     state.consumed.push(card);

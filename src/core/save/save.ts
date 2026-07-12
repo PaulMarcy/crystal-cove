@@ -59,6 +59,15 @@ export interface SaveDataV2 extends Omit<SaveDataV1, 'collection' | 'toolTier'> 
   farmPlots?: FarmPlots;
   /** Completed sleep cycles (tent/bed) — drives crop growth (docs/10). */
   sleepCount?: number;
+  /**
+   * M4 progression — additive-OPTIONAL late-V2 fields (no version bump
+   * needed, same pattern as consumedStarterDishes: absent = level 1, no
+   * talents on older saves).
+   */
+  /** Total XP ever earned (level is derived, core/progression). */
+  xp?: number;
+  /** Unlocked talent ids (docs/02 Talentbaum). */
+  unlockedTalents?: readonly string[];
 }
 
 /** Current save shape — alias moves forward with each new version. */
@@ -184,6 +193,13 @@ function isValidSaveData(value: unknown): value is SaveData {
   }
   if (v.sleepCount !== undefined) {
     if (!Number.isInteger(v.sleepCount) || (v.sleepCount as number) < 0) return false;
+  }
+  if (v.xp !== undefined) {
+    if (!Number.isInteger(v.xp) || (v.xp as number) < 0) return false;
+  }
+  if (v.unlockedTalents !== undefined) {
+    if (!Array.isArray(v.unlockedTalents)) return false;
+    if (!v.unlockedTalents.every((id) => typeof id === 'string')) return false;
   }
   return true;
 }

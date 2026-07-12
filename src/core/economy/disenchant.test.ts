@@ -68,3 +68,30 @@ describe('disenchantCard', () => {
     expect(result!.inventory).toEqual({ berry: 1 });
   });
 });
+
+describe('refund fraction (talent "Effizientes Zerlegen", docs/02: 75 %)', () => {
+  it('raises the per-line refund from 50 % to 75 % (floored)', () => {
+    // Schwerer Hieb: 3 Kupfer + 1 Stein → 50 %: 1 + 0; 75 %: 2 + 0.
+    const base = disenchantRefund('heavy_blow', allRecipes);
+    const talented = disenchantRefund('heavy_blow', allRecipes, 0.75);
+    expect(base).toEqual([
+      { resource: 'copper_ore', amount: 1 },
+      { resource: 'stone', amount: 0 },
+    ]);
+    expect(talented).toEqual([
+      { resource: 'copper_ore', amount: 2 },
+      { resource: 'stone', amount: 0 },
+    ]);
+  });
+
+  it('special material stays at 0 even at 75 %', () => {
+    const refund = disenchantRefund('counter_stance', allRecipes, 0.75)!;
+    const vineLine = refund.find((l) => l.resource === 'vine')!;
+    expect(vineLine.amount).toBe(0);
+  });
+
+  it('disenchantCard credits the talented refund', () => {
+    const result = disenchantCard({}, ['heavy_blow'], [], 'heavy_blow', allRecipes, 0.75);
+    expect(result?.inventory).toEqual({ copper_ore: 2 });
+  });
+});

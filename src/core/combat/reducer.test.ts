@@ -532,3 +532,59 @@ describe('combat start extensions (M2 encounter wiring)', () => {
     expect(ids.size).toBe(7);
   });
 });
+
+describe('talent hooks in combat setup (M4, docs/02)', () => {
+  it('playerStartBlock: player starts with block that decays next turn', () => {
+    const rng = createRng(1);
+    const state = createCombatState(
+      { playerHp: 50, deck: deckOf(axeStrike, 12), enemies: [shadowRat], playerStartBlock: 3 },
+      rng,
+    );
+    expect(state.player.block).toBe(3);
+    const next = combatReducer(state, { type: 'END_TURN' }, rng);
+    // turnStart of turn 2 zeroes the block again (docs/03 block decay).
+    expect(next.player.block).toBe(0);
+  });
+
+  it('firstAttackBonus: only the FIRST attack card hits harder', () => {
+    const rng = createRng(1);
+    const state = createCombatState(
+      {
+        playerHp: 50,
+        deck: deckOf(axeStrike, 12),
+        enemies: [shadowRat],
+        firstAttackBonus: 2,
+      },
+      rng,
+    );
+    const enemyHp = state.enemies[0]!.hp;
+    const afterFirst = play(state, rng, 'axe_strike');
+    expect(enemyHp - afterFirst.enemies[0]!.hp).toBe(8); // 6 base + 2 bonus
+    expect(afterFirst.firstAttackBonus).toBe(0);
+    // No lingering strength after the card resolved.
+    expect(afterFirst.player.statuses.strength).toBeUndefined();
+    const afterSecond = play(afterFirst, rng, 'axe_strike');
+    expect(afterFirst.enemies[0]!.hp - afterSecond.enemies[0]!.hp).toBe(6);
+  });
+
+  it('firstAttackBonus is not consumed by skills played before the attack', () => {
+    const rng = createRng(1);
+    const state = createCombatState(
+      {
+        playerHp: 50,
+        deck: [...deckOf(woodenShield, 6), ...deckOf(axeStrike, 6)],
+        enemies: [shadowRat],
+        firstAttackBonus: 2,
+      },
+      rng,
+    );
+    // Play a skill first — the bonus must survive for the first ATTACK.
+    const shield = handCard(state, 'wooden_shield'); // throws if the seed changes
+    const afterSkill = combatReducer(
+      state,
+      { type: 'PLAY_CARD', cardInstanceId: shield.instanceId },
+      rng,
+    );
+    expect(afterSkill.firstAttackBonus).toBe(2);
+  });
+});

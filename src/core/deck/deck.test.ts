@@ -32,9 +32,21 @@ describe('validateDeck', () => {
     });
   });
 
-  it('rejects wrong size', () => {
-    const short = starterDeckIds.slice(0, deckConfig.deckSize - 1);
-    expect(validateDeck(short, starterOwned, cardsById).errors).toContain('wrong_size');
+  it('rejects a deck below the minimum size', () => {
+    const short = starterDeckIds.slice(0, deckConfig.minSize - 1);
+    expect(validateDeck(short, starterOwned, cardsById).errors).toContain('too_small');
+  });
+
+  it('rejects a deck above the level max size (min = max at level 1)', () => {
+    const owned = ownedCounts(starterDeckIds, ['heavy_blow']);
+    const over = [...starterDeckIds, 'heavy_blow'];
+    expect(validateDeck(over, owned, cardsById, deckConfig.minSize).errors).toContain('too_large');
+  });
+
+  it('accepts 13 cards when the max size is raised (docs/02 Lv 4 → 15)', () => {
+    const owned = ownedCounts(starterDeckIds, ['heavy_blow']);
+    const bigger = [...starterDeckIds, 'heavy_blow'];
+    expect(validateDeck(bigger, owned, cardsById, 15).valid).toBe(true);
   });
 
   it('rejects more copies than owned', () => {
@@ -64,12 +76,18 @@ describe('addToDeck / removeFromDeck', () => {
     expect(addToDeck(starterDeckIds, 'heavy_blow', owned, cardsById)).toBeNull();
   });
 
+  it('add succeeds beyond 12 with a raised max size (docs/02 Lv 4)', () => {
+    const owned = ownedCounts(starterDeckIds, ['heavy_blow']);
+    const bigger = addToDeck(starterDeckIds, 'heavy_blow', owned, cardsById, 15);
+    expect(bigger).toHaveLength(deckConfig.minSize + 1);
+  });
+
   it('remove then add swaps a card', () => {
     const owned = ownedCounts(starterDeckIds, ['heavy_blow']);
     const without = removeFromDeck(starterDeckIds, 'stone_throw');
-    expect(without).toHaveLength(deckConfig.deckSize - 1);
+    expect(without).toHaveLength(deckConfig.minSize - 1);
     const swapped = addToDeck(without!, 'heavy_blow', owned, cardsById);
-    expect(swapped).toHaveLength(deckConfig.deckSize);
+    expect(swapped).toHaveLength(deckConfig.minSize);
     expect(validateDeck(swapped!, owned, cardsById).valid).toBe(true);
   });
 
@@ -98,7 +116,7 @@ describe('addToDeck / removeFromDeck', () => {
 describe('buildCombatDeck', () => {
   it('resolves a valid deck to CardDefs in order', () => {
     const defs = buildCombatDeck(starterDeckIds, starterOwned, cardsById);
-    expect(defs).toHaveLength(deckConfig.deckSize);
+    expect(defs).toHaveLength(deckConfig.minSize);
     expect(defs?.[0]?.id).toBe('axe_strike');
   });
 

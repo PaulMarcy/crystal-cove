@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RecipeDef } from '../../data/recipes';
 import { allRecipes } from '../../data/recipes';
-import { canCraft, craft, ingredientStatus, isRecipeUnlocked, isRecipeVisible } from './crafting';
+import { canCraft, craft, discountedRecipe, ingredientStatus, isRecipeUnlocked, isRecipeVisible } from './crafting';
 import type { Inventory } from './inventory';
 
 const cardRecipe: RecipeDef = {
@@ -99,5 +99,44 @@ describe('gating helpers', () => {
 
   it('always shows card recipes regardless of tool tier', () => {
     expect(isRecipeVisible(cardRecipe, 99)).toBe(true);
+  });
+});
+
+describe('discountedRecipe (talent "Sparsame Hände", docs/02)', () => {
+  const heavyBlow = allRecipes.find((r) => r.id === 'recipe_heavy_blow')!;
+
+  it('reduces the first base-material line by 1, once per recipe', () => {
+    const discounted = discountedRecipe(heavyBlow, 1);
+    expect(discounted.ingredients).toEqual([
+      { resource: 'copper_ore', amount: 2 },
+      { resource: 'stone', amount: 1 },
+    ]);
+  });
+
+  it('never drops a line below 1 and skips lines already at 1', () => {
+    const counterStance = allRecipes.find((r) => r.id === 'recipe_counter_stance')!;
+    // wood 2 (base) is reduced; vine (special) untouched.
+    const discounted = discountedRecipe(counterStance, 1);
+    expect(discounted.ingredients).toEqual([
+      { resource: 'wood', amount: 1 },
+      { resource: 'vine', amount: 2 },
+    ]);
+    // Applying again on a copy whose only base line is at 1: no change.
+    const again = discountedRecipe(discounted, 1);
+    expect(again.ingredients).toEqual(discounted.ingredients);
+  });
+
+  it('does not touch special materials', () => {
+    const single: RecipeDef = {
+      ...heavyBlow,
+      ingredients: [{ resource: 'vine', amount: 3 }],
+    };
+    expect(discountedRecipe(single, 1)).toBe(single);
+  });
+
+  it('does not touch tool-upgrade recipes or zero discount', () => {
+    const tool = allRecipes.find((r) => r.output.kind === 'toolUpgrade')!;
+    expect(discountedRecipe(tool, 1)).toBe(tool);
+    expect(discountedRecipe(heavyBlow, 0)).toBe(heavyBlow);
   });
 });

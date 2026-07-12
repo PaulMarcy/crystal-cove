@@ -203,6 +203,12 @@ export interface CombatState {
    * start — block from previous turns never counts.
    */
   blockGainedThisTurn: boolean;
+  /**
+   * Remaining bonus damage for the first attack card played this combat
+   * (talent "Klingenschliff", docs/02). Applied like temporary strength to
+   * every hit of that one card, then consumed (set to 0).
+   */
+  firstAttackBonus: number;
 }
 
 // ── Events ───────────────────────────────────────────────────────────────
@@ -226,4 +232,15 @@ export interface CombatSetup {
    * Erschöpfung in der Ablage, docs/02). They join the deck cycle on reshuffle.
    */
   startDiscard?: CardDef[];
+  /**
+   * Talent "Klingenschliff" (docs/02): +N damage on the first attack card
+   * played this combat (per hit, like temporary strength for that card).
+   */
+  firstAttackBonus?: number;
+  /**
+   * Player block at combat start (talent "Bollwerk", docs/02 — dungeon
+   * combats only; the CALLER decides whether the combat is a dungeon fight).
+   * Decays at the start of the player's second turn like any block.
+   */
+  playerStartBlock?: number;
 }

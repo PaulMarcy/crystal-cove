@@ -4,12 +4,14 @@
  * The player owns a multiset of cards: the fixed starter set plus every
  * crafted card in the collection. The combat deck is a list of card ids
  * (duplicates allowed) that must
- *   1. contain exactly `deckConfig.deckSize` cards,
+ *   1. contain between `deckConfig.minSize` and `maxSize` cards — the max
+ *      is level-dependent (docs/02 milestone Lv 4: 12 → 15; callers resolve
+ *      it via core/progression.deckLimitForLevel),
  *   2. be a sub-multiset of the owned cards,
  *   3. hold at most `deckConfig.dishSlots` dish cards (docs/10 Küche).
  *
- * All rule values live in src/data/deck.ts; card definitions are resolved
- * through a caller-supplied id → CardDef map (src/data/cards).
+ * All rule values live in src/data (deck.ts, progression.ts); card
+ * definitions are resolved through a caller-supplied id → CardDef map.
  */
 import { deckConfig } from '../../data/deck';
 import type { CardDef } from '../combat/types';
@@ -31,7 +33,7 @@ export function ownedCounts(
   return countCards([...starterIds, ...collection]);
 }
 
-export type DeckError = 'wrong_size' | 'not_owned' | 'too_many_dishes' | 'unknown_card';
+export type DeckError = 'too_small' | 'too_large' | 'not_owned' | 'too_many_dishes' | 'unknown_card';
 
 export interface DeckValidation {
   valid: boolean;
@@ -47,9 +49,11 @@ export function validateDeck(
   deck: readonly string[],
   owned: CardCounts,
   cardsById: ReadonlyMap<string, CardDef>,
+  maxSize: number = deckConfig.minSize,
 ): DeckValidation {
   const errors: DeckError[] = [];
-  if (deck.length !== deckConfig.deckSize) errors.push('wrong_size');
+  if (deck.length < deckConfig.minSize) errors.push('too_small');
+  if (deck.length > maxSize) errors.push('too_large');
   if (deck.some((id) => !cardsById.has(id))) errors.push('unknown_card');
   const deckCounts = countCards(deck);
   if (Object.entries(deckCounts).some(([id, n]) => n > (owned[id] ?? 0))) {
@@ -61,18 +65,19 @@ export function validateDeck(
 
 /**
  * Adds one copy of a card. Returns the new deck, or null when the deck is
- * already full, the player owns no free copy, the id is unknown, or the
- * dish slot limit would be exceeded.
+ * already at the level's max size, the player owns no free copy, the id is
+ * unknown, or the dish slot limit would be exceeded.
  */
 export function addToDeck(
   deck: readonly string[],
   cardId: string,
   owned: CardCounts,
   cardsById: ReadonlyMap<string, CardDef>,
+  maxSize: number = deckConfig.minSize,
 ): readonly string[] | null {
   const card = cardsById.get(cardId);
   if (!card) return null;
-  if (deck.length >= deckConfig.deckSize) return null;
+  if (deck.length >= maxSize) return null;
   const inDeck = deck.filter((id) => id === cardId).length;
   if (inDeck >= (owned[cardId] ?? 0)) return null;
   if (card.type === 'dish' && dishCount(deck, cardsById) >= deckConfig.dishSlots) return null;
@@ -95,7 +100,8 @@ export function buildCombatDeck(
   deck: readonly string[],
   owned: CardCounts,
   cardsById: ReadonlyMap<string, CardDef>,
+  maxSize: number = deckConfig.minSize,
 ): CardDef[] | null {
-  if (!validateDeck(deck, owned, cardsById).valid) return null;
+  if (!validateDeck(deck, owned, cardsById, maxSize).valid) return null;
   return deck.map((id) => cardsById.get(id)!);
 }
