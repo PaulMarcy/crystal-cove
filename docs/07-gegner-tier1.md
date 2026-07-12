@@ -19,7 +19,7 @@ additiv über die Stufen (Faktor `1 + Dichte × 0,1`, docs/02 maßgeblich).
 
 | ID | Name | HP | Zyklus | Besonderheit |
 |---|---|---|---|---|
-| thorn_terror | Dornenschreck | 38 | Dornenwall (8 Block, Vergeltung 3) → Doppelhieb 2×7 → Wildwuchs (mischt 1 Erschöpfung in Spieler-Ablage) | Ab Dichte 2: +1 zufälliges Affix (Gepanzert/Dornig/Zehrend) |
+| thorn_terror | Dornenschreck | 35 | Dornenwall (8 Block, Vergeltung 3) → Doppelhieb 2×7 → Wildwuchs (mischt 1 Erschöpfung in Spieler-Ablage) | Ab Dichte 2: +1 zufälliges Affix (Gepanzert/Dornig/Zehrend) |
 
 ## Boss (Vorab-Spezifikation für M4)
 
@@ -35,7 +35,7 @@ Verwurzelt (Zustandskarte): unspielbar, verstopft die Hand, verschwindet am Zuge
 |---|---|---|---|
 | Strand | Ratte · Möwe · Ratte+Ratte | Möwe+Ratte · Käfer | Möwe+Möwe+Ratte |
 | Wiese | Schwein · Ratte+Ratte | Möwe+Schwein (Kill-Order!) · Elite 15 % | Schwein+Schwein · Elite 30 % |
-| Waldrand | Kriecher · Kriecher+Ratte | Kriecher+Käfer · Elite 20 % | Kriecher+Kriecher+Möwe · Elite 35 % |
+| Waldrand | Kriecher · Kriecher+Ratte | Kriecher+Käfer · Elite 20 % | Kriecher+Kriecher · Elite 35 % |
 
 Tutorial-Kämpfe (siehe docs/06) nutzen die shadow_rat-Varianten
 `shadow_rat_tutorial` „Schattenratte" (10 HP, Zyklus nur [Biss 3]) und

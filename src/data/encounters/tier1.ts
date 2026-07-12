@@ -121,7 +121,7 @@ export const encounterTables: Record<ZoneId, ZoneEncounterTable> = {
         eliteChance: 0.2,
       },
       {
-        options: [{ enemies: ['thorn_creeper', 'thorn_creeper', 'shadow_gull'], weight: 1 }],
+        options: [{ enemies: ['thorn_creeper', 'thorn_creeper'], weight: 1 }],
         eliteChance: 0.35,
       },
     ],

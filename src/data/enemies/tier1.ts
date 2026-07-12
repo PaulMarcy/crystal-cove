@@ -154,7 +154,7 @@ export const thornTerror: EnemyDef = {
   id: 'thorn_terror',
   name: strings.enemies.thorn_terror.name,
   tier: 1,
-  hp: 38,
+  hp: 35,
   pattern: {
     kind: 'cycle',
     steps: [

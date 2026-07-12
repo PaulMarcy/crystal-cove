@@ -42,7 +42,7 @@ describe('scaleEnemyForDensity', () => {
 
   it('scales scaled amounts on their base and leaves block/status untouched', () => {
     const scaled = scaleEnemyForDensity(thornTerror, 3); // ×1.3
-    expect(scaled.hp).toBe(Math.round(38 * 1.3)); // 49
+    expect(scaled.hp).toBe(Math.round(35 * 1.3)); // 46
     if (scaled.pattern.kind !== 'cycle') throw new Error('expected cycle');
     const defend = scaled.pattern.steps[0]!.effects;
     expect(defend[0]).toEqual({ kind: 'block', amount: 8, target: 'self' }); // unchanged
@@ -114,7 +114,7 @@ describe('buildEncounterCombatSetup', () => {
       options,
     );
     const state = createCombatState(setup, createRng(42));
-    expect(state.enemies[0]!.hp).toBe(Math.round(38 * 1.2)); // 46
+    expect(state.enemies[0]!.hp).toBe(Math.round(35 * 1.2)); // 42
     expect(state.enemies[0]!.statuses.retaliate).toBe(2);
   });
 
