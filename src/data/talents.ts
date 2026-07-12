@@ -24,8 +24,8 @@ export type TalentBranch = 'fighter' | 'crafter' | 'wanderer';
  * - disenchantRefundFraction  → core/economy/disenchant (replaces base 50 %)
  * - harvestYieldBonus    → harvest nodes (store wiring)
  * - lootPercent          → combat loot scaling (rounded up)
- * - explorationXpPercent → area/shrine XP (TODO(M4-Task2): exploration XP
- *                          is granted there — modifier is ready, unused)
+ * - explorationXpPercent → area/shrine discovery XP (store discoverMarker
+ *                          via core/world/exploration.explorationXp)
  */
 export type TalentEffect =
   | { kind: 'firstAttackBonus'; amount: number }
@@ -126,8 +126,6 @@ export const talents: readonly TalentDef[] = [
   },
 ];
 
-export const talentsById: ReadonlyMap<string, TalentDef> = new Map(
-  talents.map((t) => [t.id, t]),
-);
+export const talentsById: ReadonlyMap<string, TalentDef> = new Map(talents.map((t) => [t.id, t]));
 
 export const talentBranches: readonly TalentBranch[] = ['fighter', 'crafter', 'wanderer'];

@@ -38,24 +38,27 @@ import {
   xpForEncounter,
   type TalentModifiers,
 } from '../core/progression/progression';
+import { rollEncounter, type EncounterResult, type ShadowDensity } from '../core/world/encounters';
 import {
-  rollEncounter,
-  type EncounterResult,
-  type ShadowDensity,
-} from '../core/world/encounters';
+  densityForExploration,
+  discoverMarker,
+  explorationFraction,
+  explorationXp,
+} from '../core/world/exploration';
 import { buildEncounterCombatSetup } from '../core/world/encounterCombat';
 import { rollLoot, type LootResult } from '../core/world/loot';
 import type { SaveData } from '../core/save/save';
 import type { ZoneId } from '../core/world/zones';
 import { cardsById, starterDeckIds } from '../data/cards/tier1';
 import { combatConfig } from '../data/combat';
-import { encounterTables, initialShadowDensity } from '../data/encounters/tier1';
+import { densityThresholds, encounterTables, initialShadowDensity } from '../data/encounters/tier1';
+import { heimatbuchtExplorationMarkers, zoneMarkerId } from '../data/exploration';
 import { crops, harvestToolBonus, heimatbuchtFarmPlots, type CropId } from '../data/farming';
 import { allRecipes } from '../data/recipes';
 import { harvestNodeTypes, heimatbuchtHarvestNodes } from '../data/resources';
 import { initialStationTiers, type WorldStationId } from '../data/stations';
 import { talents } from '../data/talents';
-import type { XpSource } from '../data/progression';
+import { xpSources, type XpSource } from '../data/progression';
 
 /**
  * Shared game store — the single bridge between Phaser (world) and React (ui).
@@ -157,8 +160,21 @@ export interface GameState {
   dispatchCombat: (event: CombatEvent) => void;
   endCombat: () => void;
 
-  /** Shadow density of the island (docs/02; rises with exploration, M4+). */
+  /**
+   * Shadow density of the island (docs/02) — DERIVED from exploration
+   * progress via densityForExploration whenever a marker is discovered.
+   * Kept as state (not recomputed everywhere) so cleansing (M4 Task 4) can
+   * pin it to 0 permanently.
+   */
   shadowDensity: ShadowDensity;
+  /** Discovered exploration marker ids (zones + shrines, data/exploration). */
+  discoveredMarkers: readonly string[];
+  /**
+   * Discovers a marker (idempotent): grants exploration XP (docs/02: area
+   * 25 / shrine 40, Kartenkenner +50 %) and re-derives the shadow density.
+   * Returns false when the marker is unknown or already discovered.
+   */
+  discoverMarker: (markerId: string) => boolean;
   /**
    * Rolls an encounter for the zone and starts the combat (M2 loop
    * island → combat → island). Returns false if a combat is already running.
@@ -194,13 +210,23 @@ export function levelOf(state: Pick<GameState, 'xp'>): number {
   return levelForXp(state.xp);
 }
 
+/** Exploration progress 0..1 (markers in data/exploration, docs/02). */
+export function explorationOf(state: Pick<GameState, 'discoveredMarkers'>): number {
+  return explorationFraction(state.discoveredMarkers, heimatbuchtExplorationMarkers);
+}
+
 export const gameStore = createStore<GameState>()((set, get) => ({
   worldReady: false,
   setWorldReady: (ready) => set({ worldReady: ready }),
 
   playerZone: null,
   playerPosition: null,
-  setPlayerLocation: (position, zone) => set({ playerPosition: position, playerZone: zone }),
+  setPlayerLocation: (position, zone) => {
+    set({ playerPosition: position, playerZone: zone });
+    // First entry into a zone reveals it (docs/02 "Neues Gebiet aufgedeckt").
+    // discoverMarker is idempotent, so this is a cheap no-op afterwards.
+    if (zone) get().discoverMarker(zoneMarkerId(zone));
+  },
 
   inventory: emptyInventory,
   harvestedNodeIds: [],
@@ -212,9 +238,7 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     // Tool tier 2 adds +1 yield (docs/10 Werkzeugstufen "Ernten +1 Ertrag");
     // talent "Sammlerglück" adds +1 on top (docs/02).
     const amount =
-      def.yield +
-      toolYieldBonus(toolTier, harvestToolBonus) +
-      modifiersOf(get()).harvestYieldBonus;
+      def.yield + toolYieldBonus(toolTier, harvestToolBonus) + modifiersOf(get()).harvestYieldBonus;
     const outcome = harvestNode(inventory, harvestedNodeIds, nodeId, def.resource, amount);
     if (!outcome) return false;
     set({ inventory: outcome.inventory, harvestedNodeIds: outcome.harvestedNodeIds });
@@ -417,6 +441,34 @@ export const gameStore = createStore<GameState>()((set, get) => ({
   },
 
   shadowDensity: initialShadowDensity,
+  discoveredMarkers: [],
+  discoverMarker: (markerId) => {
+    const { discoveredMarkers, xp } = get();
+    const next = discoverMarker(discoveredMarkers, markerId, heimatbuchtExplorationMarkers);
+    if (!next) return false;
+    const marker = heimatbuchtExplorationMarkers.find((m) => m.id === markerId)!;
+    // XP: docs/02 area 25 / shrine 40, talent "Kartenkenner" +50 % (rounded,
+    // core/world/exploration).
+    const gained = explorationXp(
+      marker.kind,
+      { area: xpSources.areaRevealed, shrine: xpSources.shrineDiscovered },
+      modifiersOf(get()).explorationXpMultiplier,
+    );
+    // One atomic set (markers + density + XP): subscribers (persistence,
+    // world feedback) see the discovery as a single state transition.
+    set({
+      discoveredMarkers: next,
+      // Density is DERIVED from exploration (docs/02 thresholds 25/50/75).
+      // densityForExploration is monotone, so density only ever rises here;
+      // cleansing (M4 Task 4) will pin it to 0 elsewhere.
+      shadowDensity: densityForExploration(
+        explorationFraction(next, heimatbuchtExplorationMarkers),
+        densityThresholds,
+      ),
+      xp: xp + gained,
+    });
+    return true;
+  },
   startEncounter: (zone, seed) => {
     const { combat, shadowDensity, startCombat, deck, collection, consumedStarterDishes } = get();
     if (combat) return false;
@@ -465,7 +517,16 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     set({
       inventory: data.inventory,
       harvestedNodeIds: data.harvestedNodeIds,
-      shadowDensity: data.shadowDensity,
+      // Exploration-derived density wins when it is higher (saves written
+      // before this field existed keep their stored density).
+      shadowDensity: Math.max(
+        data.shadowDensity,
+        densityForExploration(
+          explorationFraction(data.discoveredMarkers ?? [], heimatbuchtExplorationMarkers),
+          densityThresholds,
+        ),
+      ) as ShadowDensity,
+      discoveredMarkers: data.discoveredMarkers ?? [],
       playerPosition: data.playerPosition,
       playerZone: data.playerZone,
       collection: data.collection,

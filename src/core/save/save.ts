@@ -68,6 +68,12 @@ export interface SaveDataV2 extends Omit<SaveDataV1, 'collection' | 'toolTier'> 
   xp?: number;
   /** Unlocked talent ids (docs/02 Talentbaum). */
   unlockedTalents?: readonly string[];
+  /**
+   * M4 exploration (Task 2) — additive-OPTIONAL late-V2 field (no version
+   * bump, same pattern as xp): discovered exploration marker ids. Absent =
+   * nothing discovered; shadowDensity stays authoritative for old saves.
+   */
+  discoveredMarkers?: readonly string[];
 }
 
 /** Current save shape — alias moves forward with each new version. */
@@ -200,6 +206,10 @@ function isValidSaveData(value: unknown): value is SaveData {
   if (v.unlockedTalents !== undefined) {
     if (!Array.isArray(v.unlockedTalents)) return false;
     if (!v.unlockedTalents.every((id) => typeof id === 'string')) return false;
+  }
+  if (v.discoveredMarkers !== undefined) {
+    if (!Array.isArray(v.discoveredMarkers)) return false;
+    if (!v.discoveredMarkers.every((id) => typeof id === 'string')) return false;
   }
   return true;
 }

@@ -41,6 +41,7 @@ beforeEach(() => {
     saveRecovered: false,
     xp: 0,
     unlockedTalents: [],
+    discoveredMarkers: [],
   });
 });
 
@@ -125,6 +126,39 @@ describe('persistence wiring', () => {
     expect(raw).toBeDefined();
     const loaded = deserialize(raw!);
     expect(loaded.ok && loaded.data.xp).toBe(25);
+  });
+
+  it('hydrates discovered markers and derives density; older saves default (M4 Task 2)', () => {
+    const storage = memoryStorage();
+    // 3 of 5 markers → 60 % → derived density 2 wins over the stored 1.
+    saveGame(storage, {
+      ...savedGame,
+      discoveredMarkers: ['zone:strand', 'zone:wiese', 'zone:waldrand'],
+    });
+    initPersistence(storage);
+    expect(gameStore.getState().discoveredMarkers).toEqual([
+      'zone:strand',
+      'zone:wiese',
+      'zone:waldrand',
+    ]);
+    expect(gameStore.getState().shadowDensity).toBe(2);
+
+    // Older save without the field: empty markers, stored density kept.
+    const legacy = memoryStorage();
+    saveGame(legacy, savedGame);
+    initPersistence(legacy);
+    expect(gameStore.getState().discoveredMarkers).toEqual([]);
+    expect(gameStore.getState().shadowDensity).toBe(savedGame.shadowDensity);
+  });
+
+  it('autosaves when a marker is discovered (exploration trigger)', () => {
+    const storage = memoryStorage();
+    initPersistence(storage);
+    gameStore.getState().discoverMarker('zone:wiese');
+    const raw = storage.map.get(PRIMARY_KEY);
+    expect(raw).toBeDefined();
+    const loaded = deserialize(raw!);
+    expect(loaded.ok && loaded.data.discoveredMarkers).toEqual(['zone:wiese']);
   });
 
   it('snapshotFromState mirrors serialize round-trip', () => {

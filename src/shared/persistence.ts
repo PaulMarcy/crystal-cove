@@ -32,6 +32,7 @@ export function snapshotFromState(state: GameState): SaveData {
     toolTier: state.toolTier,
     xp: state.xp,
     unlockedTalents: state.unlockedTalents,
+    discoveredMarkers: state.discoveredMarkers,
   };
 }
 
@@ -61,7 +62,8 @@ export function initPersistence(storage: SaveStorage): LoadResult {
       state.sleepCount !== prev.sleepCount ||
       state.toolTier !== prev.toolTier ||
       state.xp !== prev.xp ||
-      state.unlockedTalents !== prev.unlockedTalents;
+      state.unlockedTalents !== prev.unlockedTalents ||
+      state.discoveredMarkers !== prev.discoveredMarkers;
     if (combatJustEnded || persistedSliceChanged) {
       saveGame(storage, snapshotFromState(state));
     }

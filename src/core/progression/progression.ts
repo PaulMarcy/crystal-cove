@@ -83,9 +83,7 @@ export function xpForEncounter(input: EncounterXpInput): number {
 
 /** Max HP at a level (docs/02: 50 + 5×(Level−1)), plus talent bonus. */
 export function maxHpForLevel(level: number, maxHpBonus = 0): number {
-  return (
-    progressionConfig.baseMaxHp + progressionConfig.hpPerLevel * (level - 1) + maxHpBonus
-  );
+  return progressionConfig.baseMaxHp + progressionConfig.hpPerLevel * (level - 1) + maxHpBonus;
 }
 
 /** Combat deck UPPER limit for a level (docs/02 milestone Lv 4: 12 → 15). */
@@ -119,10 +117,7 @@ export function availableTalentPoints(level: number, unlocked: readonly string[]
 }
 
 export type TalentUnlockError =
-  | 'unknown_talent'
-  | 'already_unlocked'
-  | 'previous_tier_locked'
-  | 'no_points';
+  'unknown_talent' | 'already_unlocked' | 'previous_tier_locked' | 'no_points';
 
 /**
  * Checks whether a talent can be unlocked now: it must exist, not be owned,
@@ -170,7 +165,7 @@ export interface TalentModifiers {
   harvestYieldBonus: number;
   /** Beutejäger: combat loot multiplier (1 = neutral, 1.25 with talent). */
   lootMultiplier: number;
-  /** Kartenkenner: area/shrine XP multiplier (TODO(M4-Task2): unused). */
+  /** Kartenkenner: area/shrine XP multiplier (core/world/exploration). */
   explorationXpMultiplier: number;
 }
 
@@ -213,10 +208,7 @@ export function talentModifiers(
         mods.dishEffectMultiplier *= 1 + effect.percent / 100;
         break;
       case 'disenchantRefundFraction':
-        mods.disenchantRefundFraction = Math.max(
-          mods.disenchantRefundFraction,
-          effect.fraction,
-        );
+        mods.disenchantRefundFraction = Math.max(mods.disenchantRefundFraction, effect.fraction);
         break;
       case 'harvestYieldBonus':
         mods.harvestYieldBonus += effect.amount;
