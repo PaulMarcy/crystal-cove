@@ -76,6 +76,15 @@ Rückkehr = spürbare Macht.
 Pro unbereinigter Insel: Dichte 0–3, steigt bei 25 % / 50 % / 75 %
 Erkundungsfortschritt.
 
+**Erkundungs-% (V1-Annahme, M4 Task 2):** Jede Insel hat eine feste Liste
+Erkundungs-Marker — ihre Zonen (aufgedeckt beim ersten Betreten) plus
+Schrein-/Geheimnis-Punkte (aufgedeckt bei Annäherung). Erkundungs-% =
+entdeckte Marker / Gesamtmarker. Heimatbucht: 3 Zonen + 2 Punkte = 5 Marker
+(20 %-Schritte). Marker-Listen in `src/data/exploration.ts`, Logik in
+`core/world/exploration.ts`. Die Dichte wird aus dem Erkundungs-% abgeleitet
+und steigt dadurch nur monoton; Reinigung (Boss besiegt) setzt sie separat
+dauerhaft auf 0.
+
 | Dichte | Effekt |
 |---|---|
 | 0 | Grundwerte |

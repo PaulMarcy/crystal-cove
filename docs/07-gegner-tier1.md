@@ -2,7 +2,8 @@
 
 Leitprinzip: **Jeder Gegner ist eine Lektion.** Werte sind V1-Richtwerte
 (Playtest-Anpassungen als `data:`-Commits). Schattendichte-Skalierung
-(+10 % HP & Schaden pro Stufe) kommt multiplikativ obendrauf.
+(+10 % HP & Schaden pro Stufe) kommt multiplikativ auf die Grundwerte,
+additiv über die Stufen (Faktor `1 + Dichte × 0,1`, docs/02 maßgeblich).
 
 ## Normale Gegner
 
