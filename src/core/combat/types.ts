@@ -249,4 +249,11 @@ export interface CombatSetup {
    * Decays at the start of the player's second turn like any block.
    */
   playerStartBlock?: number;
+  /**
+   * Player statuses at combat start (talismans, docs/07 "Dornenring" →
+   * Vergeltung 1 dauerhaft im Kampf). Mirror of EnemyDef.startStatuses:
+   * existing status mechanics apply — retaliate persists, duration statuses
+   * would decay normally.
+   */
+  playerStartStatuses?: StatusMap;
 }

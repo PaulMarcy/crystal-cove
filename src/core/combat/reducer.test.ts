@@ -533,6 +533,51 @@ describe('combat start extensions (M2 encounter wiring)', () => {
   });
 });
 
+describe('player start statuses (talismans, M4 Task 4)', () => {
+  function retaliateCombat(enemy: EnemyDef, seed = 7) {
+    const rng = createRng(seed);
+    const state = createCombatState(
+      {
+        playerHp: 50,
+        deck: deckOf(woodenShield, 8),
+        enemies: [enemy],
+        playerStartStatuses: { retaliate: 1 },
+      },
+      rng,
+    );
+    return { state, rng };
+  }
+
+  it('applies playerStartStatuses at combat start (Dornenring → Vergeltung 1)', () => {
+    const { state } = retaliateCombat(shadowRat);
+    expect(state.player.statuses.retaliate).toBe(1);
+  });
+
+  it('retaliates when an enemy attack hits the player, deterministically', () => {
+    const { state, rng } = retaliateCombat(shadowRat);
+    expect(state.enemies[0]!.intent.intent).toBe('attack');
+    const enemyHpBefore = state.enemies[0]!.hp;
+    // End turn → the rat attacks into Vergeltung 1 and takes 1 plain
+    // damage (docs/03); the status persists — „dauerhaft im Kampf".
+    const next = combatReducer(state, { type: 'END_TURN' }, rng);
+    expect(next.enemies[0]!.hp).toBe(enemyHpBefore - 1);
+    expect(next.player.statuses.retaliate).toBe(1);
+  });
+
+  it('a non-attack enemy action does not trigger the retaliation', () => {
+    const { state, rng } = retaliateCombat(copperBeetle);
+    expect(state.enemies[0]!.intent.intent).toBe('defend');
+    const enemyHpBefore = state.enemies[0]!.hp;
+    const next = combatReducer(state, { type: 'END_TURN' }, rng);
+    expect(next.enemies[0]!.hp).toBe(enemyHpBefore);
+  });
+
+  it('omitting playerStartStatuses keeps the player status-free', () => {
+    const { state } = newCombat();
+    expect(state.player.statuses).toEqual({});
+  });
+});
+
 describe('talent hooks in combat setup (M4, docs/02)', () => {
   it('playerStartBlock: player starts with block that decays next turn', () => {
     const rng = createRng(1);

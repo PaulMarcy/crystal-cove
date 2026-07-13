@@ -41,6 +41,11 @@ export interface DungeonDef {
   rooms: readonly DungeonRoomDef[];
   /** Dungeon fights scale with shadow density like island fights (assumption, see header). */
   scalesWithDensity: boolean;
+  /**
+   * Island cleansed when this dungeon is completed (docs/02: Inselboss
+   * besiegt → Dichte dauerhaft 0). Wurzelwächter is the Heimatbucht boss.
+   */
+  cleansesIsland?: string;
 }
 
 const roomStrings = strings.dungeons.verwachsene_hoehle.rooms;
@@ -49,6 +54,7 @@ export const verwachseneHoehle: DungeonDef = {
   id: 'verwachsene_hoehle',
   name: strings.dungeons.verwachsene_hoehle.name,
   scalesWithDensity: true,
+  cleansesIsland: 'heimatbucht',
   rooms: [
     {
       id: 'cave_entrance',

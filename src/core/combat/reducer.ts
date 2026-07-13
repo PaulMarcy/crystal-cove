@@ -124,7 +124,9 @@ export function createCombatState(setup: CombatSetup, rng: Rng): CombatState {
       maxHp: setup.playerMaxHp ?? setup.playerHp,
       block: 0,
       energy: 0,
-      statuses: {},
+      // combatStart: talisman start statuses (docs/07 Dornenring →
+      // Vergeltung 1) — same mechanism as EnemyDef.startStatuses.
+      statuses: { ...setup.playerStartStatuses },
     },
     enemies: setup.enemies.map(createEnemyState),
     drawPile: shuffle(deck, rng),

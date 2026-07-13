@@ -64,6 +64,16 @@ export function densityForExploration(
 }
 
 /**
+ * Effective shadow density (docs/02 "Reinigung"): once the island boss is
+ * defeated the island is cleansed and its density is PERMANENTLY 0 —
+ * regardless of exploration progress. Cleansing beats the exploration-derived
+ * density; elites/affixes disappear automatically (they require density ≥ 2).
+ */
+export function effectiveShadowDensity(density: ShadowDensity, cleansed: boolean): ShadowDensity {
+  return cleansed ? 0 : density;
+}
+
+/**
  * XP for discovering a marker: base value per kind (data/progression via
  * caller) times the exploration XP multiplier (Kartenkenner), rounded.
  */

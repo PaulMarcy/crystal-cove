@@ -10,6 +10,7 @@ import {
   explorationFraction,
   explorationXp,
   type ExplorationMarkerDef,
+  effectiveShadowDensity,
 } from './exploration';
 
 const markers: readonly ExplorationMarkerDef[] = [
@@ -130,5 +131,29 @@ describe('Heimatbucht marker data → density brackets (docs/07 reachability)', 
     expect(elite).toBeDefined();
     expect(elite!.enemies).toEqual(['thorn_terror']);
     expect(elite!.affix).not.toBeNull();
+  });
+});
+
+describe('effectiveShadowDensity (Reinigung, docs/02)', () => {
+  it('cleansed pins the density to 0 regardless of exploration', () => {
+    for (const density of [0, 1, 2, 3] as const) {
+      expect(effectiveShadowDensity(density, true)).toBe(0);
+    }
+  });
+
+  it('cleansing beats full exploration (100 % markers → density 3 → 0)', () => {
+    const all = heimatbuchtExplorationMarkers.map((m) => m.id);
+    const derived = densityForExploration(
+      explorationFraction(all, heimatbuchtExplorationMarkers),
+      densityThresholds,
+    );
+    expect(derived).toBe(3);
+    expect(effectiveShadowDensity(derived, true)).toBe(0);
+  });
+
+  it('uncleansed islands keep their derived density', () => {
+    for (const density of [0, 1, 2, 3] as const) {
+      expect(effectiveShadowDensity(density, false)).toBe(density);
+    }
   });
 });

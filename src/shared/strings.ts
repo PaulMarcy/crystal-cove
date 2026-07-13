@@ -23,6 +23,7 @@ export const strings = {
     hp: 'Lebenspunkte',
     turn: 'Runde',
     locationChip: 'Heimatbucht · Dichte {density}',
+    locationChipCleansed: 'Heimatbucht · Gereinigt',
     victoryTitle: 'Sieg!',
     lootHeading: 'Beute',
     defeatTitle: 'Erschöpft …',
@@ -237,6 +238,20 @@ export const strings = {
     thorned: { name: 'Dornig' },
     draining: { name: 'Zehrend' },
   },
+  talismans: {
+    heading: 'Talismane',
+    slotsLabel: 'Talisman-Slots: {used}/{slots}',
+    lockedHint: 'Talisman-Slot gesperrt — ab Stufe {level}.',
+    equip: 'Anlegen',
+    unequip: 'Ablegen',
+    equipped: 'Angelegt',
+    noneOwned: 'Noch keine Talismane gefunden.',
+    obtainedToast: 'Talisman gefunden: {name}',
+    thorn_ring: {
+      name: 'Dornenring',
+      description: 'Du startest jeden Kampf mit Vergeltung 1 (dauerhaft im Kampf).',
+    },
+  },
   progression: {
     levelLabel: 'Stufe {level}',
     xpLabel: 'XP: {current}/{next}',
@@ -245,6 +260,7 @@ export const strings = {
     xpGainToast: '+{amount} XP',
     explorationLabel: 'Erkundet: {percent} %',
     densityLabel: 'Schattendichte: {density}',
+    cleansedLabel: 'Gereinigt',
   },
   exploration: {
     zoneNames: {
