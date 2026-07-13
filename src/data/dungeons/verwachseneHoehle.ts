@@ -79,6 +79,28 @@ export const verwachseneHoehle: DungeonDef = {
 /** Sanity export for tests/wiring: every referenced enemy id must resolve. */
 export const allDungeons: readonly DungeonDef[] = [verwachseneHoehle];
 
+export const dungeonsById: Record<string, DungeonDef> = Object.fromEntries(
+  allDungeons.map((d) => [d.id, d]),
+);
+
+/** World placement of a dungeon entrance (Phaser sprite + interact prompt). */
+export interface DungeonEntrancePlacement {
+  dungeonId: string;
+  tileX: number;
+  tileY: number;
+}
+
+/**
+ * Cave mouth in the Waldrand treeline (rows 0–2 are solid trees on the map,
+ * so the entrance sits embedded in row 2 and is approached from row 3).
+ */
+export const heimatbuchtDungeonEntrances: readonly DungeonEntrancePlacement[] = [
+  { dungeonId: 'verwachsene_hoehle', tileX: 23, tileY: 2 },
+];
+
+/** Max distance (px) at which the entrance prompt appears (like stations). */
+export const dungeonEntranceInteractRange = 28;
+
 // Fail fast in dev if data drifts (also covered by tests).
 for (const dungeon of allDungeons) {
   for (const room of dungeon.rooms) {

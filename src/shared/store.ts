@@ -2,7 +2,7 @@ import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import { combatReducer, createCombatState } from '../core/combat/reducer';
 import { createRng, type Rng } from '../core/combat/rng';
-import type { CombatEvent, CombatSetup, CombatState } from '../core/combat/types';
+import type { CardDef, CombatEvent, CombatSetup, CombatState } from '../core/combat/types';
 import {
   applyDishConsumption,
   clearsStarterMarker,
@@ -46,12 +46,25 @@ import {
   explorationXp,
 } from '../core/world/exploration';
 import { buildEncounterCombatSetup } from '../core/world/encounterCombat';
+import {
+  applyRoomVictory,
+  currentRoom,
+  roomEncounter,
+  startDungeonRun,
+  type DungeonRunState,
+} from '../core/world/dungeon';
 import { rollLoot, type LootResult } from '../core/world/loot';
 import type { SaveData } from '../core/save/save';
 import type { ZoneId } from '../core/world/zones';
 import { cardsById, starterDeckIds } from '../data/cards/tier1';
 import { combatConfig } from '../data/combat';
-import { densityThresholds, encounterTables, initialShadowDensity } from '../data/encounters/tier1';
+import { dungeonsById } from '../data/dungeons/verwachseneHoehle';
+import {
+  densityThresholds,
+  eliteAffixIds,
+  encounterTables,
+  initialShadowDensity,
+} from '../data/encounters/tier1';
 import { heimatbuchtExplorationMarkers, zoneMarkerId } from '../data/exploration';
 import { crops, harvestToolBonus, heimatbuchtFarmPlots, type CropId } from '../data/farming';
 import { allRecipes } from '../data/recipes';
@@ -182,6 +195,26 @@ export interface GameState {
   startEncounter: (zone: ZoneId, seed?: number) => boolean;
   /** Encounter behind the running combat (XP calculation at victory). */
   currentEncounter: EncounterResult | null;
+
+  /**
+   * Running dungeon expedition (M4, docs/03) — transient run state: room
+   * index + HP carried between rooms. NOT persisted (reload = run lost,
+   * documented in core/world/dungeon.ts).
+   */
+  currentDungeonRun: DungeonRunState | null;
+  /** NPCs freed in dungeons (docs/09 Orin) — persisted, additive save field. */
+  rescuedNpcs: readonly string[];
+  /** Completed dungeon ids — persisted; cleansing (M4 Task 4) docks here. */
+  completedDungeons: readonly string[];
+  /** NPC freed by the LAST won room fight — panel feedback, cleared on continue. */
+  lastRescuedNpc: string | null;
+  /** Enters the dungeon (run at room 0, full HP). False mid-combat/mid-run. */
+  enterDungeon: (dungeonId: string) => boolean;
+  /** Starts the fight of the current room. False without run/invalid deck. */
+  startDungeonRoomCombat: (seed?: number) => boolean;
+  /** Aufgeben (docs/03: jederzeit möglich) — ends the run, back to island.
+   * TODO(M4 Task 5): Beute-Malus des Durchgangs (docs/03) — kein Malus vorerst. */
+  abandonDungeonRun: () => void;
   /** Loot rolled at the moment of victory (shown in the victory panel). */
   combatLoot: LootResult | null;
   /** Outcome of the last finished combat — world layer reacts (despawn etc.). */
@@ -213,6 +246,28 @@ export function levelOf(state: Pick<GameState, 'xp'>): number {
 /** Exploration progress 0..1 (markers in data/exploration, docs/02). */
 export function explorationOf(state: Pick<GameState, 'discoveredMarkers'>): number {
   return explorationFraction(state.discoveredMarkers, heimatbuchtExplorationMarkers);
+}
+
+/**
+ * Combat deck from the Deck-Truhe assembly incl. talent scaling ("Guter
+ * Koch"); null when the deck is invalid (< min size after disenchant/dish
+ * consumption, docs/03) — combat start is then refused.
+ */
+function buildScaledCombatDeck(state: GameState): CardDef[] | null {
+  const owned = ownedCountsAfterConsumption(
+    starterDeckIds,
+    state.collection,
+    state.consumedStarterDishes,
+  );
+  const combatDeck = buildCombatDeck(
+    state.deck,
+    owned,
+    cardsById,
+    deckLimitForLevel(levelOf(state)),
+  );
+  if (!combatDeck) return null;
+  const mods = modifiersOf(state);
+  return combatDeck.map((card) => scaleDishCard(card, mods.dishEffectMultiplier));
 }
 
 export const gameStore = createStore<GameState>()((set, get) => ({
@@ -415,18 +470,54 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     );
     // XP for a won encounter (docs/07: 15 + 7×Zusatzgegner, Elite 38) —
     // dev/test combats without an encounter grant nothing.
-    const { currentEncounter, xp } = get();
-    const xpGain =
+    const { currentEncounter, xp, currentDungeonRun, rescuedNpcs, completedDungeons } = get();
+    let xpGain =
       won && currentEncounter
         ? xpForEncounter({
             enemyCount: currentEncounter.enemies.length,
             elite: currentEncounter.elite,
           })
         : 0;
+
+    // ── Dungeon run transition (M4, core/world/dungeon) ──────────────────
+    let nextRun = currentDungeonRun;
+    let nextRescuedNpcs = rescuedNpcs;
+    let nextCompletedDungeons = completedDungeons;
+    let lastRescuedNpc: string | null = null;
+    if (currentDungeonRun) {
+      const dungeon = dungeonsById[currentDungeonRun.dungeonId];
+      if (won && dungeon && combat) {
+        const result = applyRoomVictory(dungeon, currentDungeonRun, combat.player.hp);
+        if (result.rescuedNpc && !rescuedNpcs.includes(result.rescuedNpc)) {
+          // Orin-Rettung (docs/09, Raum 2) — persisted, additive save field.
+          nextRescuedNpcs = [...rescuedNpcs, result.rescuedNpc];
+        }
+        lastRescuedNpc = result.rescuedNpc;
+        if (result.kind === 'completed') {
+          // Boss down: Boss-XP 300 statt Begegnungs-XP (docs/07); Abschluss-
+          // Flag persistiert — die Reinigung (M4 Task 4) dockt hier an.
+          xpGain = xpSources.boss;
+          nextRun = null;
+          if (!completedDungeons.includes(dungeon.id)) {
+            nextCompletedDungeons = [...completedDungeons, dungeon.id];
+          }
+        } else {
+          nextRun = result.run; // HP-Übertrag in den nächsten Raum (docs/03)
+        }
+      } else {
+        // Niederlage/Rückzug im Dungeon: Run endet, zurück zur Insel.
+        // TODO(M4 Task 5): Beute-Malus (docs/03) — vorerst wie Kampfabbruch.
+        nextRun = null;
+      }
+    }
     // TODO(M4): defeat flow — for now the player just returns to the island
     // with full HP and no penalty (docs/12: Niederlage-Fluss ist M4).
     set({
       xp: xp + xpGain,
+      currentDungeonRun: nextRun,
+      rescuedNpcs: nextRescuedNpcs,
+      completedDungeons: nextCompletedDungeons,
+      lastRescuedNpc,
       currentEncounter: null,
       collection: consumption.collection,
       deck: consumption.deck,
@@ -470,44 +561,85 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     return true;
   },
   startEncounter: (zone, seed) => {
-    const { combat, shadowDensity, startCombat, deck, collection, consumedStarterDishes } = get();
-    if (combat) return false;
+    const { combat, shadowDensity, startCombat, currentDungeonRun } = get();
+    if (combat || currentDungeonRun) return false;
     // Combat uses the deck assembled at the Deck-Truhe; an invalid deck
     // (e.g. < 12 after a disenchant or dish consumption) blocks the
     // encounter (docs/03).
-    const level = levelOf(get());
-    const mods = modifiersOf(get());
-    const combatDeck = buildCombatDeck(
-      deck,
-      ownedCountsAfterConsumption(starterDeckIds, collection, consumedStarterDishes),
-      cardsById,
-      deckLimitForLevel(level),
-    );
+    const combatDeck = buildScaledCombatDeck(get());
     if (!combatDeck) return false;
+    const mods = modifiersOf(get());
     const encounterSeed = seed ?? Math.floor(Math.random() * 0xffffffff);
     const encounter = rollEncounter(encounterTables[zone], shadowDensity, createRng(encounterSeed));
     // Max HP scales with level (+5/level, docs/02) plus talent "Zähigkeit";
     // combats start at full HP (HP persistence between combats is a later
     // M4 task — see sleep()).
-    const playerHp = maxHpForLevel(level, mods.maxHpBonus);
+    const playerHp = maxHpForLevel(levelOf(get()), mods.maxHpBonus);
     const setup = buildEncounterCombatSetup(encounter, shadowDensity, {
       playerHp,
-      deck: combatDeck.map((card) =>
-        // Talent "Guter Koch": dish effects +25 %, rounded up (docs/02).
-        scaleDishCard(card, mods.dishEffectMultiplier),
-      ),
+      deck: combatDeck,
     });
     setup.toolTier = get().toolTier; // Axtschlag scaling (docs/10 Werkzeugstufen)
     // Talent "Klingenschliff": first attack per combat +2 damage (docs/02).
     if (mods.firstAttackBonus > 0) setup.firstAttackBonus = mods.firstAttackBonus;
-    // TODO(M4): talent "Bollwerk" (playerStartBlock) applies to DUNGEON
-    // combats only — dungeons arrive in Task 3; open-field encounters never
-    // get the start block.
+    // Talent "Bollwerk" (dungeonStartBlock) applies to DUNGEON combats only
+    // (startDungeonRoomCombat) — open-field encounters never get it.
     set({ currentEncounter: encounter });
     startCombat(setup, seed);
     return true;
   },
   currentEncounter: null,
+
+  currentDungeonRun: null,
+  rescuedNpcs: [],
+  completedDungeons: [],
+  lastRescuedNpc: null,
+  enterDungeon: (dungeonId) => {
+    const { combat, currentDungeonRun } = get();
+    if (combat || currentDungeonRun) return false;
+    const dungeon = dungeonsById[dungeonId];
+    if (!dungeon) return false;
+    // Full HP at the ENTRANCE; inside the run HP is carried between rooms
+    // (docs/03: keine Heilung zwischen den Räumen).
+    const maxHp = maxHpForLevel(levelOf(get()), modifiersOf(get()).maxHpBonus);
+    set({ currentDungeonRun: startDungeonRun(dungeon, maxHp), lastRescuedNpc: null });
+    return true;
+  },
+  startDungeonRoomCombat: (seed) => {
+    const { combat, currentDungeonRun, shadowDensity, startCombat } = get();
+    if (combat || !currentDungeonRun) return false;
+    const dungeon = dungeonsById[currentDungeonRun.dungeonId];
+    if (!dungeon) return false;
+    const room = currentRoom(dungeon, currentDungeonRun);
+    if (!room) return false;
+    const combatDeck = buildScaledCombatDeck(get());
+    if (!combatDeck) return false; // invalid deck blocks combat (docs/03)
+    const mods = modifiersOf(get());
+    const encounterSeed = seed ?? Math.floor(Math.random() * 0xffffffff);
+    // Dungeon fights scale with shadow density like island fights
+    // (DungeonDef.scalesWithDensity, assumption documented in data).
+    const density = dungeon.scalesWithDensity ? shadowDensity : 0;
+    // Elite room: affix rules from the encounter system (docs/02, ab Dichte 2).
+    const encounter = roomEncounter(room, density, eliteAffixIds, createRng(encounterSeed));
+    const setup = buildEncounterCombatSetup(encounter, density, {
+      playerHp: currentDungeonRun.hp, // run HP — no healing between rooms
+      playerMaxHp: currentDungeonRun.maxHp,
+      deck: combatDeck,
+    });
+    setup.toolTier = get().toolTier;
+    if (mods.firstAttackBonus > 0) setup.firstAttackBonus = mods.firstAttackBonus;
+    // Talent "Bollwerk" (docs/02): Start-Block +3 in DUNGEON-Kämpfen.
+    if (mods.dungeonStartBlock > 0) setup.playerStartBlock = mods.dungeonStartBlock;
+    set({ currentEncounter: encounter, lastRescuedNpc: null });
+    startCombat(setup, seed);
+    return true;
+  },
+  abandonDungeonRun: () => {
+    // Aufgeben (docs/03: jederzeit garantiert). TODO(M4 Task 5): Beute-Malus
+    // des Durchgangs — vorerst konsequenzlos wie der heutige Kampfabbruch.
+    if (get().combat) return; // mid-combat the retreat button owns this
+    set({ currentDungeonRun: null, lastRescuedNpc: null });
+  },
   combatLoot: null,
   lastCombatOutcome: null,
   lastLoot: null,
@@ -537,6 +669,8 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       toolTier: data.toolTier,
       xp: data.xp ?? 0,
       unlockedTalents: data.unlockedTalents ?? [],
+      rescuedNpcs: data.rescuedNpcs ?? [],
+      completedDungeons: data.completedDungeons ?? [],
       saveRecovered: recovered,
     }),
   saveRecovered: false,

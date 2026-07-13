@@ -32,6 +32,10 @@ export const strings = {
     backToIsland: 'Zurück zur Insel',
     unplayable: 'Unspielbar',
     ignoresBlock: 'ignoriert Block',
+    /** Extra text on emphasized boss telegraphs (docs/07 Erdstampfer) —
+     * information never via size/color alone (docs/11). */
+    intentEmphasis: 'Achtung: schwerer Schlag!',
+    dungeonLocationChip: '{dungeon} · Raum {room}/{total}',
     intents: {
       attack: 'Angriff',
       defend: 'Verteidigung',
@@ -199,6 +203,23 @@ export const strings = {
     shadow_gull: { name: 'Schattenmöwe' },
     thorn_terror: { name: 'Dornenschreck' },
     root_warden: { name: 'Wurzelwächter' },
+  },
+  dungeonRun: {
+    enterPrompt: '[E] {dungeon} betreten',
+    roomProgress: 'Raum {current}/{total}',
+    hpLabel: 'Lebenspunkte: {hp}/{maxHp}',
+    noHealHint: 'Keine Heilung zwischen den Räumen.',
+    startFight: 'Kampf beginnen',
+    abandon: 'Aufgeben',
+    deckIncomplete: 'Deck unvollständig — der Kampf kann nicht beginnen.',
+    npcRescued: '{npc} befreit!',
+    orinRescuedBody:
+      'Der Einsiedler-Magier Orin ist frei. Nach dem Dungeon kehrt er in die Heimatbucht zurück.',
+    completedToast: '{dungeon} abgeschlossen! (+{xp} XP)',
+    bossRoomHint: 'Der Wurzelwächter lauert hier.',
+  },
+  npcs: {
+    orin: 'Orin',
   },
   dungeons: {
     verwachsene_hoehle: {

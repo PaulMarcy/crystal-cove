@@ -33,6 +33,9 @@ export function snapshotFromState(state: GameState): SaveData {
     xp: state.xp,
     unlockedTalents: state.unlockedTalents,
     discoveredMarkers: state.discoveredMarkers,
+    // Dungeon outcomes only — the RUNNING run is never saved (core/world/dungeon).
+    rescuedNpcs: state.rescuedNpcs,
+    completedDungeons: state.completedDungeons,
   };
 }
 
@@ -63,7 +66,9 @@ export function initPersistence(storage: SaveStorage): LoadResult {
       state.toolTier !== prev.toolTier ||
       state.xp !== prev.xp ||
       state.unlockedTalents !== prev.unlockedTalents ||
-      state.discoveredMarkers !== prev.discoveredMarkers;
+      state.discoveredMarkers !== prev.discoveredMarkers ||
+      state.rescuedNpcs !== prev.rescuedNpcs ||
+      state.completedDungeons !== prev.completedDungeons;
     if (combatJustEnded || persistedSliceChanged) {
       saveGame(storage, snapshotFromState(state));
     }
