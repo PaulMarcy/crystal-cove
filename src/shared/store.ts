@@ -16,6 +16,7 @@ import {
   isRecipeUnlocked,
   isRecipeVisible,
 } from '../core/economy/crafting';
+import { applyLootPenalty } from '../core/economy/defeat';
 import { disenchantCard } from '../core/economy/disenchant';
 import {
   advanceSleep,
@@ -65,6 +66,7 @@ import type { SaveData } from '../core/save/save';
 import type { ZoneId } from '../core/world/zones';
 import { cardsById, starterDeckIds } from '../data/cards/tier1';
 import { combatConfig } from '../data/combat';
+import { defeatConfig } from '../data/defeat';
 import { dungeonsById } from '../data/dungeons/verwachseneHoehle';
 import {
   densityThresholds,
@@ -97,6 +99,24 @@ export interface GameState {
   /** Player world position in pixels — updated on tile change, not per frame. */
   playerPosition: { x: number; y: number } | null;
   setPlayerLocation: (position: { x: number; y: number }, zone: ZoneId | null) => void;
+
+  /**
+   * Persisted player HP OUTSIDE combat (M4 Task 5): island encounters start
+   * from this value; victory/retreat write the remaining HP back. Sleeping
+   * and waking up after a defeat heal to full — HP can never be 0 outside
+   * combat (no dead end). Dungeon-run HP stays run-internal (full at the
+   * entrance, documented assumption in core/world/dungeon).
+   */
+  playerHp: number;
+  /**
+   * Run loot (docs/03 defeat penalty): every inventory GAIN since the last
+   * rest (sleep or wake-up) — combat loot, harvest nodes, farm harvests.
+   * Defeat/abandon removes 50 % of it (core/economy/defeat), then resets.
+   */
+  lootSinceRest: Inventory;
+  /** Items lost to the last defeat/abandon penalty — UI feedback, cleared on continue. */
+  lastDefeatLoss: Inventory | null;
+  clearLastDefeatLoss: () => void;
 
   /** Player inventory — item id → count (resources + combat drops). */
   inventory: Inventory;
@@ -263,6 +283,41 @@ export function levelOf(state: Pick<GameState, 'xp'>): number {
   return levelForXp(state.xp);
 }
 
+/** Full (max) HP of the current state — level curve + talent "Zähigkeit". */
+export function fullHpOf(state: Pick<GameState, 'xp' | 'unlockedTalents'>): number {
+  return maxHpForLevel(levelOf(state), modifiersOf(state).maxHpBonus);
+}
+
+/**
+ * Level-up heal (docs/02: +5 max HP pro Level — der Zugewinn heilt mit):
+ * current HP plus the max-HP difference the XP gain caused, clamped to the
+ * new max. No level-up → HP is only clamped.
+ */
+function hpAfterXpGain(oldXp: number, newXp: number, currentHp: number, maxHpBonus: number): number {
+  const oldMax = maxHpForLevel(levelForXp(oldXp), maxHpBonus);
+  const newMax = maxHpForLevel(levelForXp(newXp), maxHpBonus);
+  return Math.min(currentHp + Math.max(0, newMax - oldMax), newMax);
+}
+
+/** Positive per-item deltas between two inventories (run-loot tracking). */
+function inventoryGains(before: Inventory, after: Inventory): Inventory {
+  const gains: Record<string, number> = {};
+  for (const [item, count] of Object.entries(after)) {
+    const delta = count - (before[item] ?? 0);
+    if (delta > 0) gains[item] = delta;
+  }
+  return gains;
+}
+
+/** Merges gains into the tracked run loot (lootSinceRest). */
+function trackGains(lootSinceRest: Inventory, gains: Inventory): Inventory {
+  let next = lootSinceRest;
+  for (const [item, amount] of Object.entries(gains)) {
+    if (amount > 0) next = addItem(next, item, amount);
+  }
+  return next;
+}
+
 /** Exploration progress 0..1 (markers in data/exploration, docs/02). */
 export function explorationOf(state: Pick<GameState, 'discoveredMarkers'>): number {
   return explorationFraction(state.discoveredMarkers, heimatbuchtExplorationMarkers);
@@ -335,6 +390,11 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     if (zone) get().discoverMarker(zoneMarkerId(zone));
   },
 
+  playerHp: maxHpForLevel(1),
+  lootSinceRest: emptyInventory,
+  lastDefeatLoss: null,
+  clearLastDefeatLoss: () => set({ lastDefeatLoss: null }),
+
   inventory: emptyInventory,
   harvestedNodeIds: [],
   harvestNode: (nodeId) => {
@@ -348,7 +408,12 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       def.yield + toolYieldBonus(toolTier, harvestToolBonus) + modifiersOf(get()).harvestYieldBonus;
     const outcome = harvestNode(inventory, harvestedNodeIds, nodeId, def.resource, amount);
     if (!outcome) return false;
-    set({ inventory: outcome.inventory, harvestedNodeIds: outcome.harvestedNodeIds });
+    set({
+      inventory: outcome.inventory,
+      harvestedNodeIds: outcome.harvestedNodeIds,
+      // Run-loot tracking (defeat penalty basis, docs/03).
+      lootSinceRest: trackGains(get().lootSinceRest, inventoryGains(inventory, outcome.inventory)),
+    });
     return true;
   },
 
@@ -365,19 +430,26 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     const { inventory, farmPlots, toolTier } = get();
     const outcome = harvestPlot(inventory, farmPlots, plotId, crops, toolTier, harvestToolBonus);
     if (!outcome) return false;
-    set({ inventory: outcome.inventory, farmPlots: outcome.plots });
+    set({
+      inventory: outcome.inventory,
+      farmPlots: outcome.plots,
+      // Run-loot tracking (defeat penalty basis, docs/03).
+      lootSinceRest: trackGains(get().lootSinceRest, inventoryGains(inventory, outcome.inventory)),
+    });
     return true;
   },
   sleep: () => {
     const { farmPlots, sleepCount } = get();
-    // Full heal is intentionally absent: HP is not persisted outside combat
-    // until M4 (every combat starts at basePlayerHp) — nothing to heal here.
     set({
       farmPlots: advanceSleep(farmPlots),
       sleepCount: sleepCount + 1,
       // Harvest nodes respawn on sleep (docs/10 — closes the M2 "no respawn
       // until sleep exists" gap in data/resources.ts / core/economy/harvest).
       harvestedNodeIds: [],
+      // Sleep heals to full (docs/10) and closes the loot-penalty window:
+      // rested loot is banked, a later defeat cannot touch it (docs/03).
+      playerHp: fullHpOf(get()),
+      lootSinceRest: emptyInventory,
     });
   },
 
@@ -462,7 +534,10 @@ export const gameStore = createStore<GameState>()((set, get) => ({
   // future logging — the XP math is source-agnostic on purpose.
   grantXp: (amount) => {
     if (!Number.isFinite(amount) || amount <= 0) return;
-    set({ xp: get().xp + Math.floor(amount) });
+    const { xp, playerHp } = get();
+    const nextXp = xp + Math.floor(amount);
+    // Level-up heals by the max-HP gain (docs/02: +5 max HP pro Level).
+    set({ xp: nextXp, playerHp: hpAfterXpGain(xp, nextXp, playerHp, modifiersOf(get()).maxHpBonus) });
   },
   unlockTalent: (talentId) => {
     const { unlockedTalents, xp } = get();
@@ -545,6 +620,8 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     let nextRescuedNpcs = rescuedNpcs;
     let nextCompletedDungeons = completedDungeons;
     let lastRescuedNpc: string | null = null;
+    let dungeonEndedWithoutVictory = false;
+    let dungeonCompleted = false;
     if (currentDungeonRun) {
       const dungeon = dungeonsById[currentDungeonRun.dungeonId];
       if (won && dungeon && combat) {
@@ -559,6 +636,7 @@ export const gameStore = createStore<GameState>()((set, get) => ({
           // Flag persistiert — die Reinigung (M4 Task 4) dockt hier an.
           xpGain = xpSources.boss;
           nextRun = null;
+          dungeonCompleted = true;
           if (!completedDungeons.includes(dungeon.id)) {
             nextCompletedDungeons = [...completedDungeons, dungeon.id];
           }
@@ -567,14 +645,60 @@ export const gameStore = createStore<GameState>()((set, get) => ({
         }
       } else {
         // Niederlage/Rückzug im Dungeon: Run endet, zurück zur Insel.
-        // TODO(M4 Task 5): Beute-Malus (docs/03) — vorerst wie Kampfabbruch.
         nextRun = null;
+        dungeonEndedWithoutVictory = true;
       }
     }
-    // TODO(M4): defeat flow — for now the player just returns to the island
-    // with full HP and no penalty (docs/12: Niederlage-Fluss ist M4).
+
+    // ── Defeat flow (M4 Task 5, docs/03 Cozy-Anpassung 1) ────────────────
+    // Defeat ANYWHERE: wake up at the tent (world layer moves the sprite),
+    // lose 50 % of the run loot, wake-up counts as a sleep cycle (crops
+    // grow, nodes respawn), fully healed — never a dead end.
+    // Dungeon retreat = Aufgeben (docs/03: "Beute-Malus wie gehabt") — same
+    // penalty, but the player stays where they are, no sleep cycle.
+    // Free-field retreat stays penalty-free (docs/03: "keine Beute" only).
+    const defeated = combat?.phase === 'defeat';
+    const penalized = defeated || (dungeonEndedWithoutVictory && combat?.phase === 'retreated');
+    const { lootSinceRest, playerHp, farmPlots, sleepCount, harvestedNodeIds } = get();
+    let lastDefeatLoss: Inventory | null = null;
+    let nextLootSinceRest = lootSinceRest;
+    if (penalized) {
+      const penalty = applyLootPenalty(
+        nextInventory,
+        lootSinceRest,
+        defeatConfig.lootPenaltyFraction,
+      );
+      nextInventory = penalty.inventory;
+      lastDefeatLoss = penalty.lost;
+      nextLootSinceRest = emptyInventory; // penalty applied exactly once
+    } else if (won && combatLoot) {
+      // Victory loot joins the run loot (items only — talisman ownership is
+      // permanent progression, never part of the defeat penalty, docs/03).
+      const itemLoot = Object.fromEntries(
+        Object.entries(combatLoot).filter(([item]) => !talismansById[item]),
+      );
+      nextLootSinceRest = trackGains(lootSinceRest, itemLoot);
+    }
+
+    // ── HP persistence outside combat (M4 Task 5) ─────────────────────────
+    const nextXp = xp + xpGain;
+    const maxHpBonus = modifiersOf(get()).maxHpBonus;
+    let nextPlayerHp: number;
+    if (defeated) {
+      // Waking up in the bed = fully healed (docs/03: kein Game Over).
+      nextPlayerHp = maxHpForLevel(levelForXp(nextXp), maxHpBonus);
+    } else if (combat && (!currentDungeonRun || dungeonCompleted)) {
+      // Island victory/retreat and a finished dungeon carry the remaining
+      // HP back to the island (level-up heal applies, docs/02).
+      nextPlayerHp = hpAfterXpGain(xp, nextXp, combat.player.hp, maxHpBonus);
+    } else {
+      // Mid-run room win or dungeon abandon: island HP untouched (run HP is
+      // run-internal, core/world/dungeon).
+      nextPlayerHp = hpAfterXpGain(xp, nextXp, playerHp, maxHpBonus);
+    }
+
     set({
-      xp: xp + xpGain,
+      xp: nextXp,
       currentDungeonRun: nextRun,
       rescuedNpcs: nextRescuedNpcs,
       completedDungeons: nextCompletedDungeons,
@@ -590,6 +714,18 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       ownedTalismans: nextOwnedTalismans,
       lastCombatOutcome: combat?.phase ?? null,
       lastLoot: won ? combatLoot : null,
+      playerHp: nextPlayerHp,
+      lootSinceRest: nextLootSinceRest,
+      lastDefeatLoss,
+      // Waking up after a defeat counts as sleeping (consistent with
+      // sleep()): crops advance, harvest nodes respawn.
+      ...(defeated
+        ? {
+            farmPlots: advanceSleep(farmPlots),
+            sleepCount: sleepCount + 1,
+            harvestedNodeIds: [] as readonly string[],
+          }
+        : { farmPlots, sleepCount, harvestedNodeIds }),
     });
   },
 
@@ -619,6 +755,8 @@ export const gameStore = createStore<GameState>()((set, get) => ({
         densityThresholds,
       ),
       xp: xp + gained,
+      // Level-up heals by the max-HP gain (docs/02), same rule as grantXp.
+      playerHp: hpAfterXpGain(xp, xp + gained, get().playerHp, modifiersOf(get()).maxHpBonus),
     });
     return true;
   },
@@ -636,12 +774,12 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     const mods = modifiersOf(get());
     const encounterSeed = seed ?? Math.floor(Math.random() * 0xffffffff);
     const encounter = rollEncounter(encounterTables[zone], density, createRng(encounterSeed));
-    // Max HP scales with level (+5/level, docs/02) plus talent "Zähigkeit";
-    // combats start at full HP (HP persistence between combats is a later
-    // M4 task — see sleep()).
-    const playerHp = maxHpForLevel(levelOf(get()), mods.maxHpBonus);
+    // Island encounters start from the PERSISTED HP (M4 Task 5) — clamped
+    // to the level/talent max in case talents or levels changed since.
+    const maxHp = maxHpForLevel(levelOf(get()), mods.maxHpBonus);
     const setup = buildEncounterCombatSetup(encounter, density, {
-      playerHp,
+      playerHp: Math.min(get().playerHp, maxHp),
+      playerMaxHp: maxHp,
       deck: combatDeck,
     });
     setup.toolTier = get().toolTier; // Axtschlag scaling (docs/10 Werkzeugstufen)
@@ -725,10 +863,18 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     return true;
   },
   abandonDungeonRun: () => {
-    // Aufgeben (docs/03: jederzeit garantiert). TODO(M4 Task 5): Beute-Malus
-    // des Durchgangs — vorerst konsequenzlos wie der heutige Kampfabbruch.
+    // Aufgeben (docs/03: jederzeit garantiert, Beute-Malus wie gehabt):
+    // 50 % of the run loot is lost, the player stays where they are.
     if (get().combat) return; // mid-combat the retreat button owns this
-    set({ currentDungeonRun: null, lastRescuedNpc: null });
+    const { inventory, lootSinceRest } = get();
+    const penalty = applyLootPenalty(inventory, lootSinceRest, defeatConfig.lootPenaltyFraction);
+    set({
+      currentDungeonRun: null,
+      lastRescuedNpc: null,
+      inventory: penalty.inventory,
+      lastDefeatLoss: penalty.lost,
+      lootSinceRest: emptyInventory,
+    });
   },
   combatLoot: null,
   lastCombatOutcome: null,
@@ -763,6 +909,16 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       completedDungeons: data.completedDungeons ?? [],
       ownedTalismans: data.ownedTalismans ?? [],
       equippedTalismans: data.equippedTalismans ?? [],
+      // HP persistence (M4 Task 5, additive-optional): older saves wake up
+      // at full HP; loaded values are clamped to the level/talent max.
+      playerHp: Math.min(
+        data.playerHp ?? Number.POSITIVE_INFINITY,
+        maxHpForLevel(
+          levelForXp(data.xp ?? 0),
+          talentModifiers(data.unlockedTalents ?? [], talents).maxHpBonus,
+        ),
+      ),
+      lootSinceRest: data.lootSinceRest ?? emptyInventory,
       saveRecovered: recovered,
     }),
   saveRecovered: false,

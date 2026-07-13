@@ -51,6 +51,21 @@ describe('save codec', () => {
     expect(deserialize(serialize(sample))).toEqual({ ok: true, data: sample });
   });
 
+  it('round-trips the optional defeat-flow fields (late-V2, no bump, M4 Task 5)', () => {
+    const withDefeat: SaveData = { ...sample, playerHp: 23, lootSinceRest: { wood: 2 } };
+    expect(deserialize(serialize(withDefeat))).toEqual({ ok: true, data: withDefeat });
+    // Older V2 saves without the fields stay valid (additive-optional).
+    expect(deserialize(serialize(sample))).toEqual({ ok: true, data: sample });
+  });
+
+  it('rejects invalid defeat-flow fields', () => {
+    expect(deserialize(serialize({ ...sample, playerHp: 0 } as SaveData)).ok).toBe(false);
+    expect(deserialize(serialize({ ...sample, playerHp: 1.5 } as SaveData)).ok).toBe(false);
+    expect(
+      deserialize(serialize({ ...sample, lootSinceRest: { wood: 0 } } as SaveData)).ok,
+    ).toBe(false);
+  });
+
   it('embeds the current save version', () => {
     const envelope = JSON.parse(serialize(sample)) as { v: number };
     expect(envelope.v).toBe(SAVE_VERSION);

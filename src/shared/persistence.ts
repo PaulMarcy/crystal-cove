@@ -38,6 +38,9 @@ export function snapshotFromState(state: GameState): SaveData {
     completedDungeons: state.completedDungeons,
     ownedTalismans: state.ownedTalismans,
     equippedTalismans: state.equippedTalismans,
+    // Defeat flow (M4 Task 5): HP outside combat + run-loot penalty basis.
+    playerHp: state.playerHp,
+    lootSinceRest: state.lootSinceRest,
   };
 }
 
@@ -72,7 +75,9 @@ export function initPersistence(storage: SaveStorage): LoadResult {
       state.rescuedNpcs !== prev.rescuedNpcs ||
       state.completedDungeons !== prev.completedDungeons ||
       state.ownedTalismans !== prev.ownedTalismans ||
-      state.equippedTalismans !== prev.equippedTalismans;
+      state.equippedTalismans !== prev.equippedTalismans ||
+      state.playerHp !== prev.playerHp ||
+      state.lootSinceRest !== prev.lootSinceRest;
     if (combatJustEnded || persistedSliceChanged) {
       saveGame(storage, snapshotFromState(state));
     }

@@ -118,6 +118,39 @@ describe('persistence wiring', () => {
     expect(gameStore.getState().unlockedTalents).toEqual([]);
   });
 
+  it('hydrates playerHp/lootSinceRest, clamps and defaults them (M4 Task 5)', () => {
+    const storage = memoryStorage();
+    saveGame(storage, { ...savedGame, playerHp: 12, lootSinceRest: { wood: 3 } });
+    initPersistence(storage);
+    expect(gameStore.getState().playerHp).toBe(12);
+    expect(gameStore.getState().lootSinceRest).toEqual({ wood: 3 });
+
+    // HP above the level max is clamped at hydrate (level 1 max = 50).
+    const inflated = memoryStorage();
+    saveGame(inflated, { ...savedGame, playerHp: 9999 });
+    initPersistence(inflated);
+    expect(gameStore.getState().playerHp).toBe(50);
+
+    // Older save without the fields: full HP, empty run loot (additive).
+    const legacy = memoryStorage();
+    saveGame(legacy, savedGame);
+    gameStore.setState({ playerHp: 7, lootSinceRest: { stone: 1 } });
+    initPersistence(legacy);
+    expect(gameStore.getState().playerHp).toBe(50);
+    expect(gameStore.getState().lootSinceRest).toEqual({});
+  });
+
+  it('autosaves when playerHp changes (sleep heal trigger)', () => {
+    const storage = memoryStorage();
+    initPersistence(storage);
+    gameStore.setState({ playerHp: 20 });
+    gameStore.getState().sleep();
+    const raw = storage.map.get(PRIMARY_KEY);
+    expect(raw).toBeDefined();
+    const loaded = deserialize(raw!);
+    expect(loaded.ok && loaded.data.playerHp).toBe(50);
+  });
+
   it('autosaves when xp or talents change (progression trigger)', () => {
     const storage = memoryStorage();
     initPersistence(storage);

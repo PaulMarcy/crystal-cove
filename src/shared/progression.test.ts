@@ -106,6 +106,8 @@ describe('talent modifiers wired into systems', () => {
     gameStore.setState({
       xp: totalXpForLevel(4),
       unlockedTalents: ['blade_hone', 'toughness'],
+      // Combats start from the PERSISTED HP (M4 Task 5), clamped to the max.
+      playerHp: 999,
     });
     gameStore.getState().startEncounter('strand', 7);
     const combat = gameStore.getState().combat!;

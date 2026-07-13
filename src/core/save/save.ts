@@ -92,6 +92,14 @@ export interface SaveDataV2 extends Omit<SaveDataV1, 'collection' | 'toolTier'> 
   ownedTalismans?: readonly string[];
   /** Equipped talisman ids (slot rules re-checked at equip time, not here). */
   equippedTalismans?: readonly string[];
+  /**
+   * M4 defeat flow (Task 5) — additive-OPTIONAL late-V2 fields (no version
+   * bump, same pattern as xp): absent = full HP / nothing gathered.
+   */
+  /** Player HP outside combat (clamped to the level max at hydrate). */
+  playerHp?: number;
+  /** Inventory gains since the last rest — basis of the defeat loot penalty. */
+  lootSinceRest?: Inventory;
 }
 
 /** Current save shape — alias moves forward with each new version. */
@@ -244,6 +252,15 @@ function isValidSaveData(value: unknown): value is SaveData {
   if (v.equippedTalismans !== undefined) {
     if (!Array.isArray(v.equippedTalismans)) return false;
     if (!v.equippedTalismans.every((id) => typeof id === 'string')) return false;
+  }
+  if (v.playerHp !== undefined) {
+    if (!Number.isInteger(v.playerHp) || (v.playerHp as number) < 1) return false;
+  }
+  if (v.lootSinceRest !== undefined) {
+    if (typeof v.lootSinceRest !== 'object' || v.lootSinceRest === null) return false;
+    if (!Object.values(v.lootSinceRest).every((n) => Number.isInteger(n) && (n as number) > 0)) {
+      return false;
+    }
   }
   return true;
 }
