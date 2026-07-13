@@ -42,7 +42,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] XP/Level 1–10 + Meilensteine (Deck 15, Talisman-Slot 1), Talentbaum 3×3
 - [x] Erkundungs-% + Schattendichte 0–3 (Eliten ab 2, Affixe)
 - [x] Dungeon „Verwachsene Höhle": 3 Kämpfe + Wurzelwächter (phased), Orin-Rettung
-- [ ] Reinigung (Dichte dauerhaft 0), Talismane funktional; offen aus Task 2: Schattenrisse (Dichte 3, docs/07: Beute ×2, Chance-Drops +20 pp — Loot-Konstanten liegen in data/encounters/tier1, Map-Spawn + Encounter-Mechanik fehlen)
+- [x] Reinigung (Dichte dauerhaft 0), Talismane funktional (Dornenring); weiterhin offen: offen aus Task 2: Schattenrisse (Dichte 3, docs/07: Beute ×2, Chance-Drops +20 pp — Loot-Konstanten liegen in data/encounters/tier1, Map-Spawn + Encounter-Mechanik fehlen)
 - [ ] Niederlage-Fluss: Aufwachen im Bett + Beute-Malus
 
 ## M5 — Dorf, NPCs & Quests

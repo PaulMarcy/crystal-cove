@@ -1094,3 +1094,41 @@ body {
 .talent-unlock-button {
   pointer-events: auto;
 }
+
+/* Talisman section inside the talent panel (M4 Task 4) */
+.talisman-section {
+  margin-top: 14px;
+  border-top: 1px solid var(--color-sand);
+  padding-top: 8px;
+}
+
+.talisman-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.talisman-cell {
+  border: 1px solid var(--color-sand);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.talisman-slots,
+.talisman-locked,
+.talisman-empty {
+  margin: 4px 0 8px;
+  font-size: 13px;
+}
+
+.talisman-locked {
+  font-style: italic;
+}
+
+.talisman-status {
+  font-size: 12px;
+  font-style: italic;
+}

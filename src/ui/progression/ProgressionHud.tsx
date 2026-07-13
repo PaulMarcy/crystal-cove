@@ -2,7 +2,7 @@ import { xpProgress } from '../../core/progression/progression';
 import { explorationFraction } from '../../core/world/exploration';
 import { heimatbuchtExplorationMarkers } from '../../data/exploration';
 import { strings } from '../../shared/strings';
-import { useGameStore } from '../../shared/store';
+import { cleansedOf, effectiveDensityOf, useGameStore } from '../../shared/store';
 
 /**
  * Island HUD chip (M4): current level + XP progress + exploration % and
@@ -13,7 +13,10 @@ import { useGameStore } from '../../shared/store';
 export function ProgressionHud() {
   const xp = useGameStore((s) => s.xp);
   const discoveredMarkers = useGameStore((s) => s.discoveredMarkers);
-  const shadowDensity = useGameStore((s) => s.shadowDensity);
+  // Effective density: permanently 0 once the island is cleansed (docs/02);
+  // the HUD then says "Gereinigt" AS TEXT (never number/color alone, docs/11).
+  const shadowDensity = useGameStore(effectiveDensityOf);
+  const cleansed = useGameStore(cleansedOf);
   const progress = xpProgress(xp);
   const explorationPercent = Math.round(
     explorationFraction(discoveredMarkers, heimatbuchtExplorationMarkers) * 100,
@@ -36,7 +39,9 @@ export function ProgressionHud() {
         {strings.progression.explorationLabel.replace('{percent}', String(explorationPercent))}
       </span>
       <span className="progression-density">
-        {strings.progression.densityLabel.replace('{density}', String(shadowDensity))}
+        {cleansed
+          ? strings.progression.cleansedLabel
+          : strings.progression.densityLabel.replace('{density}', String(shadowDensity))}
       </span>
     </div>
   );

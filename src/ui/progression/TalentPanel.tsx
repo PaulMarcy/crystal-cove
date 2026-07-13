@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import {
   availableTalentPoints,
   canUnlockTalent,
+  talismanSlotsForLevel,
 } from '../../core/progression/progression';
+import { milestones } from '../../data/progression';
+import { talismansById } from '../../data/talismans';
 import { talentBranches, talents, type TalentDef } from '../../data/talents';
 import { strings } from '../../shared/strings';
 import { levelOf, useGameStore } from '../../shared/store';
@@ -49,6 +52,75 @@ function TalentCell({ talent, unlocked, level }: {
         <span className="talent-status">{statusText}</span>
       )}
     </li>
+  );
+}
+
+/**
+ * Talisman section (M4 Task 4, docs/02 Lv 8 / docs/07 Dornenring): owned
+ * talismans with equip/unequip. Slot lock is communicated as TEXT
+ * (docs/11: information never only via color).
+ */
+function TalismanSection({ level }: { level: number }) {
+  const owned = useGameStore((s) => s.ownedTalismans);
+  const equipped = useGameStore((s) => s.equippedTalismans);
+  const equip = useGameStore((s) => s.equipTalisman);
+  const unequip = useGameStore((s) => s.unequipTalisman);
+  const slots = talismanSlotsForLevel(level);
+  // First unlock level from data (docs/02: Slot 1 ab Lv 8) — no magic number.
+  const firstSlotLevel = milestones.talismanSlots[0].level;
+  const uniqueOwned = [...new Set(owned)].filter((id) => talismansById[id]);
+
+  return (
+    <div className="talisman-section">
+      <h3>{strings.talismans.heading}</h3>
+      {slots === 0 ? (
+        <p className="talisman-locked">
+          {strings.talismans.lockedHint.replace('{level}', String(firstSlotLevel))}
+        </p>
+      ) : (
+        <p className="talisman-slots">
+          {strings.talismans.slotsLabel
+            .replace('{used}', String(equipped.length))
+            .replace('{slots}', String(slots))}
+        </p>
+      )}
+      {uniqueOwned.length === 0 ? (
+        <p className="talisman-empty">{strings.talismans.noneOwned}</p>
+      ) : (
+        <ul className="talisman-list">
+          {uniqueOwned.map((id) => {
+            const def = talismansById[id]!;
+            const isEquipped = equipped.includes(id);
+            return (
+              <li key={id} className="talisman-cell">
+                <div className="talent-cell-head">
+                  <span className="talent-name">{def.name}</span>
+                  {isEquipped && <span className="talisman-status">{strings.talismans.equipped}</span>}
+                </div>
+                <p className="talent-desc">{def.description}</p>
+                {isEquipped ? (
+                  <button className="talent-unlock-button" onClick={() => unequip(id)}>
+                    {strings.talismans.unequip}
+                  </button>
+                ) : slots > 0 && equipped.length < slots ? (
+                  <button className="talent-unlock-button" onClick={() => equip(id)}>
+                    {strings.talismans.equip}
+                  </button>
+                ) : (
+                  <span className="talisman-status">
+                    {slots === 0
+                      ? strings.talismans.lockedHint.replace('{level}', String(firstSlotLevel))
+                      : strings.talismans.slotsLabel
+                          .replace('{used}', String(equipped.length))
+                          .replace('{slots}', String(slots))}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -105,6 +177,7 @@ export function TalentPanel() {
               </div>
             ))}
           </div>
+          <TalismanSection level={level} />
         </section>
       )}
     </>

@@ -4,7 +4,7 @@ import type { CombatCard, CombatState } from '../../core/combat/types';
 import { cardNeedsTarget, getValidTargets, isCardPlayable } from '../../core/combat/view';
 import { combatConfig } from '../../data/combat';
 import { dungeonsById } from '../../data/dungeons/verwachseneHoehle';
-import { useGameStore } from '../../shared/store';
+import { cleansedOf, effectiveDensityOf, useGameStore } from '../../shared/store';
 import { strings } from '../../shared/strings';
 import { EnemyView } from './EnemyView';
 import { Hand } from './Hand';
@@ -75,7 +75,10 @@ export function CombatScreen() {
   const state = useGameStore((s) => s.combat);
   const dispatch = useGameStore((s) => s.dispatchCombat);
   const endCombat = useGameStore((s) => s.endCombat);
-  const density = useGameStore((s) => s.shadowDensity);
+  // Effective density (docs/02 Reinigung): cleansed islands fight at 0 and
+  // the chip says so as text (docs/11).
+  const density = useGameStore(effectiveDensityOf);
+  const cleansed = useGameStore(cleansedOf);
   const dungeonRun = useGameStore((s) => s.currentDungeonRun);
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -204,7 +207,9 @@ export function CombatScreen() {
                   '{total}',
                   String(dungeonsById[dungeonRun.dungeonId]?.rooms.length ?? 0),
                 )
-            : strings.combat.locationChip.replace('{density}', String(density))}
+            : cleansed
+              ? strings.combat.locationChipCleansed
+              : strings.combat.locationChip.replace('{density}', String(density))}
         </div>
         <RetreatButton
           chance={state.retreatChance}
