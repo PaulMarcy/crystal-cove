@@ -84,6 +84,14 @@ export interface SaveDataV2 extends Omit<SaveDataV1, 'collection' | 'toolTier'> 
   rescuedNpcs?: readonly string[];
   /** Completed dungeon ids — cleansing (M4 Task 4) docks onto this flag. */
   completedDungeons?: readonly string[];
+  /**
+   * M4 talismans (Task 4) — additive-OPTIONAL late-V2 fields (no version
+   * bump, same pattern as xp): absent = no talismans on older saves.
+   */
+  /** Owned talisman ids (multiset — duplicate drops are kept). */
+  ownedTalismans?: readonly string[];
+  /** Equipped talisman ids (slot rules re-checked at equip time, not here). */
+  equippedTalismans?: readonly string[];
 }
 
 /** Current save shape — alias moves forward with each new version. */
@@ -228,6 +236,14 @@ function isValidSaveData(value: unknown): value is SaveData {
   if (v.completedDungeons !== undefined) {
     if (!Array.isArray(v.completedDungeons)) return false;
     if (!v.completedDungeons.every((id) => typeof id === 'string')) return false;
+  }
+  if (v.ownedTalismans !== undefined) {
+    if (!Array.isArray(v.ownedTalismans)) return false;
+    if (!v.ownedTalismans.every((id) => typeof id === 'string')) return false;
+  }
+  if (v.equippedTalismans !== undefined) {
+    if (!Array.isArray(v.equippedTalismans)) return false;
+    if (!v.equippedTalismans.every((id) => typeof id === 'string')) return false;
   }
   return true;
 }

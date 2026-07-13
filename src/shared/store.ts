@@ -35,13 +35,20 @@ import {
   scaleDishCard,
   scaleLoot,
   talentModifiers,
+  talismanSlotsForLevel,
   xpForEncounter,
   type TalentModifiers,
 } from '../core/progression/progression';
+import {
+  combatStartStatuses,
+  equipTalisman,
+  unequipTalisman,
+} from '../core/progression/talismans';
 import { rollEncounter, type EncounterResult, type ShadowDensity } from '../core/world/encounters';
 import {
   densityForExploration,
   discoverMarker,
+  effectiveShadowDensity,
   explorationFraction,
   explorationXp,
 } from '../core/world/exploration';
@@ -71,6 +78,7 @@ import { allRecipes } from '../data/recipes';
 import { harvestNodeTypes, heimatbuchtHarvestNodes } from '../data/resources';
 import { initialStationTiers, type WorldStationId } from '../data/stations';
 import { talents } from '../data/talents';
+import { talismansById } from '../data/talismans';
 import { xpSources, type XpSource } from '../data/progression';
 
 /**
@@ -206,6 +214,18 @@ export interface GameState {
   rescuedNpcs: readonly string[];
   /** Completed dungeon ids — persisted; cleansing (M4 Task 4) docks here. */
   completedDungeons: readonly string[];
+
+  /**
+   * Talismans (M4 Task 4, docs/02 Lv 8): owned drops (multiset — duplicate
+   * drops are kept) and the equipped subset (max talismanSlotsForLevel).
+   * Equipped talismans apply their combatStartStatus at every combat start.
+   */
+  ownedTalismans: readonly string[];
+  equippedTalismans: readonly string[];
+  /** Equips an owned talisman (rules in core/progression/talismans). */
+  equipTalisman: (talismanId: string) => boolean;
+  /** Unequips an equipped talisman. */
+  unequipTalisman: (talismanId: string) => boolean;
   /** NPC freed by the LAST won room fight — panel feedback, cleared on continue. */
   lastRescuedNpc: string | null;
   /** Enters the dungeon (run at room 0, full HP). False mid-combat/mid-run. */
@@ -249,6 +269,26 @@ export function explorationOf(state: Pick<GameState, 'discoveredMarkers'>): numb
 }
 
 /**
+ * Island cleansed? (docs/02: Inselboss besiegt → Dichte dauerhaft 0.)
+ * Derived from completedDungeons: a dungeon with cleansesIsland set cleanses
+ * its island (Wurzelwächter = Boss der Heimatbucht, data/dungeons).
+ */
+export function cleansedOf(state: Pick<GameState, 'completedDungeons'>): boolean {
+  return state.completedDungeons.some((id) => dungeonsById[id]?.cleansesIsland === 'heimatbucht');
+}
+
+/**
+ * Shadow density every consumer must use (encounter rolls, dungeon scaling,
+ * loot, HUD): exploration-derived density, permanently pinned to 0 once the
+ * island is cleansed (core/world/exploration.effectiveShadowDensity).
+ */
+export function effectiveDensityOf(
+  state: Pick<GameState, 'shadowDensity' | 'completedDungeons'>,
+): ShadowDensity {
+  return effectiveShadowDensity(state.shadowDensity, cleansedOf(state));
+}
+
+/**
  * Combat deck from the Deck-Truhe assembly incl. talent scaling ("Guter
  * Koch"); null when the deck is invalid (< min size after disenchant/dish
  * consumption, docs/03) — combat start is then refused.
@@ -268,6 +308,18 @@ function buildScaledCombatDeck(state: GameState): CardDef[] | null {
   if (!combatDeck) return null;
   const mods = modifiersOf(state);
   return combatDeck.map((card) => scaleDishCard(card, mods.dishEffectMultiplier));
+}
+
+/**
+ * Applies the equipped talismans to a combat setup (docs/07 Dornenring →
+ * Vergeltung 1 ab Kampfstart; descriptor interpretation in core/progression).
+ */
+function applyEquippedTalismans(
+  setup: CombatSetup,
+  state: Pick<GameState, 'equippedTalismans'>,
+): void {
+  const statuses = combatStartStatuses(state.equippedTalismans, talismansById);
+  if (Object.keys(statuses).length > 0) setup.playerStartStatuses = statuses;
 }
 
 export const gameStore = createStore<GameState>()((set, get) => ({
@@ -428,7 +480,7 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     set({ combat: createCombatState(setup, combatRng), combatSeed: usedSeed });
   },
   dispatchCombat: (event) => {
-    const { combat, shadowDensity } = get();
+    const { combat } = get();
     if (!combat || !combatRng) return;
     const next = combatReducer(combat, event, combatRng);
     // Loot is rolled exactly once, at the victory transition, with the
@@ -440,7 +492,8 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       ? scaleLoot(
           rollLoot(
             next.enemies.map((enemy) => enemy.def),
-            shadowDensity,
+            // Cleansed island → effective density 0: no ×2/loot bonus.
+            effectiveDensityOf(get()),
             combatRng,
           ),
           modifiersOf(get()).lootMultiplier,
@@ -453,9 +506,17 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     combatRng = null;
     const won = combat?.phase === 'victory';
     let nextInventory = inventory;
+    let nextOwnedTalismans = get().ownedTalismans;
     if (won && combatLoot) {
       for (const [item, amount] of Object.entries(combatLoot)) {
-        nextInventory = addItem(nextInventory, item, amount);
+        // Talisman drops (ids double as loot item ids, data/talismans)
+        // become talisman OWNERSHIP, not inventory items (docs/07
+        // Dornenschreck → 25 % Dornenring).
+        if (talismansById[item]) {
+          nextOwnedTalismans = [...nextOwnedTalismans, ...Array(amount).fill(item) as string[]];
+        } else {
+          nextInventory = addItem(nextInventory, item, amount);
+        }
       }
     }
     // Dishes consumed in combat leave collection + deck permanently until
@@ -526,6 +587,7 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       combatSeed: null,
       combatLoot: null,
       inventory: nextInventory,
+      ownedTalismans: nextOwnedTalismans,
       lastCombatOutcome: combat?.phase ?? null,
       lastLoot: won ? combatLoot : null,
     });
@@ -561,8 +623,11 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     return true;
   },
   startEncounter: (zone, seed) => {
-    const { combat, shadowDensity, startCombat, currentDungeonRun } = get();
+    const { combat, startCombat, currentDungeonRun } = get();
     if (combat || currentDungeonRun) return false;
+    // Cleansed island: permanent density 0 (docs/02) — encounters stay
+    // possible, but without scaling/elites/affixes.
+    const density = effectiveDensityOf(get());
     // Combat uses the deck assembled at the Deck-Truhe; an invalid deck
     // (e.g. < 12 after a disenchant or dish consumption) blocks the
     // encounter (docs/03).
@@ -570,18 +635,19 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     if (!combatDeck) return false;
     const mods = modifiersOf(get());
     const encounterSeed = seed ?? Math.floor(Math.random() * 0xffffffff);
-    const encounter = rollEncounter(encounterTables[zone], shadowDensity, createRng(encounterSeed));
+    const encounter = rollEncounter(encounterTables[zone], density, createRng(encounterSeed));
     // Max HP scales with level (+5/level, docs/02) plus talent "Zähigkeit";
     // combats start at full HP (HP persistence between combats is a later
     // M4 task — see sleep()).
     const playerHp = maxHpForLevel(levelOf(get()), mods.maxHpBonus);
-    const setup = buildEncounterCombatSetup(encounter, shadowDensity, {
+    const setup = buildEncounterCombatSetup(encounter, density, {
       playerHp,
       deck: combatDeck,
     });
     setup.toolTier = get().toolTier; // Axtschlag scaling (docs/10 Werkzeugstufen)
     // Talent "Klingenschliff": first attack per combat +2 damage (docs/02).
     if (mods.firstAttackBonus > 0) setup.firstAttackBonus = mods.firstAttackBonus;
+    applyEquippedTalismans(setup, get());
     // Talent "Bollwerk" (dungeonStartBlock) applies to DUNGEON combats only
     // (startDungeonRoomCombat) — open-field encounters never get it.
     set({ currentEncounter: encounter });
@@ -594,6 +660,28 @@ export const gameStore = createStore<GameState>()((set, get) => ({
   rescuedNpcs: [],
   completedDungeons: [],
   lastRescuedNpc: null,
+  ownedTalismans: [],
+  equippedTalismans: [],
+  equipTalisman: (talismanId) => {
+    const { ownedTalismans, equippedTalismans } = get();
+    // Slots per level (docs/02: Slot 1 ab Lv 8); rules in core/progression.
+    const next = equipTalisman(
+      equippedTalismans,
+      ownedTalismans,
+      talismanId,
+      talismanSlotsForLevel(levelOf(get())),
+      talismansById,
+    );
+    if (!next) return false;
+    set({ equippedTalismans: next });
+    return true;
+  },
+  unequipTalisman: (talismanId) => {
+    const next = unequipTalisman(get().equippedTalismans, talismanId);
+    if (!next) return false;
+    set({ equippedTalismans: next });
+    return true;
+  },
   enterDungeon: (dungeonId) => {
     const { combat, currentDungeonRun } = get();
     if (combat || currentDungeonRun) return false;
@@ -606,7 +694,7 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     return true;
   },
   startDungeonRoomCombat: (seed) => {
-    const { combat, currentDungeonRun, shadowDensity, startCombat } = get();
+    const { combat, currentDungeonRun, startCombat } = get();
     if (combat || !currentDungeonRun) return false;
     const dungeon = dungeonsById[currentDungeonRun.dungeonId];
     if (!dungeon) return false;
@@ -617,8 +705,9 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     const mods = modifiersOf(get());
     const encounterSeed = seed ?? Math.floor(Math.random() * 0xffffffff);
     // Dungeon fights scale with shadow density like island fights
-    // (DungeonDef.scalesWithDensity, assumption documented in data).
-    const density = dungeon.scalesWithDensity ? shadowDensity : 0;
+    // (DungeonDef.scalesWithDensity, assumption documented in data);
+    // effective density — a cleansed island's repeat dungeon runs at 0.
+    const density = dungeon.scalesWithDensity ? effectiveDensityOf(get()) : 0;
     // Elite room: affix rules from the encounter system (docs/02, ab Dichte 2).
     const encounter = roomEncounter(room, density, eliteAffixIds, createRng(encounterSeed));
     const setup = buildEncounterCombatSetup(encounter, density, {
@@ -630,6 +719,7 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     if (mods.firstAttackBonus > 0) setup.firstAttackBonus = mods.firstAttackBonus;
     // Talent "Bollwerk" (docs/02): Start-Block +3 in DUNGEON-Kämpfen.
     if (mods.dungeonStartBlock > 0) setup.playerStartBlock = mods.dungeonStartBlock;
+    applyEquippedTalismans(setup, get());
     set({ currentEncounter: encounter, lastRescuedNpc: null });
     startCombat(setup, seed);
     return true;
@@ -671,6 +761,8 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       unlockedTalents: data.unlockedTalents ?? [],
       rescuedNpcs: data.rescuedNpcs ?? [],
       completedDungeons: data.completedDungeons ?? [],
+      ownedTalismans: data.ownedTalismans ?? [],
+      equippedTalismans: data.equippedTalismans ?? [],
       saveRecovered: recovered,
     }),
   saveRecovered: false,
