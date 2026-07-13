@@ -93,6 +93,12 @@ export type IntentKind = 'attack' | 'defend' | 'buff' | 'debuff' | 'deck';
 export interface IntentStep {
   intent: IntentKind;
   effects: Effect[];
+  /**
+   * Data-only hint: the UI renders this intent's telegraph extra large
+   * (docs/07 Wurzelwächter: „Erdstampfer wird 1 Runde vorher groß
+   * telegrafiert"). No interpreter behavior attached.
+   */
+  emphasis?: boolean;
 }
 
 export interface CyclePattern {

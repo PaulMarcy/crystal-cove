@@ -184,6 +184,10 @@ export const strings = {
       description: 'Unspielbar. Verschwindet am Zugende.',
     },
     dazed: { name: 'Benommen', description: 'Unspielbar. Verschwindet am Zugende.' },
+    rooted: {
+      name: 'Verwurzelt',
+      description: 'Unspielbar. Verstopft die Hand. Verschwindet am Zugende.',
+    },
   },
   enemies: {
     shadow_rat: { name: 'Schattenratte' },
@@ -194,6 +198,18 @@ export const strings = {
     copper_beetle: { name: 'Kupferkäfer' },
     shadow_gull: { name: 'Schattenmöwe' },
     thorn_terror: { name: 'Dornenschreck' },
+    root_warden: { name: 'Wurzelwächter' },
+  },
+  dungeons: {
+    verwachsene_hoehle: {
+      name: 'Verwachsene Höhle',
+      rooms: {
+        cave_entrance: 'Höhleneingang',
+        root_chamber: 'Wurzelkammer',
+        thorn_passage: 'Dornengang',
+        heart_of_the_cave: 'Herz der Höhle',
+      },
+    },
   },
   affixes: {
     armored: { name: 'Gepanzert' },

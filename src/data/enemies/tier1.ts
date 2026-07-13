@@ -3,11 +3,9 @@
  * Every enemy is a lesson (noted inline); all shadow creatures drop
  * shadow_dust (shrine currency). XP is NOT stored here — it is computed
  * per encounter in core/progression (docs/07).
- *
- * Boss (Wurzelwächter) is deliberately absent — M4 (docs/07).
  */
 import type { EnemyDef } from '../../core/combat/types';
-import { exhaustion } from '../cards/tier1';
+import { exhaustion, rooted } from '../cards/tier1';
 import { strings } from '../../shared/strings';
 
 // ── Normal enemies ───────────────────────────────────────────────────────
@@ -185,6 +183,67 @@ export const thornTerror: EnemyDef = {
   },
 };
 
+// ── Boss (docs/07 — M4, Dungeon „Verwachsene Höhle") ─────────────────────
+
+/**
+ * Lesson: hand economy under pressure — Verwurzelt clogs the HAND (zone
+ * 'hand', vanishes at turn end), the telegraphed Erdstampfer forces block
+ * planning, Rindenhaut punishes slow damage. Below 50 % HP the cycle drops
+ * Rindenhaut and Erdstampfer hits 14 (Zorn-Modus, kind 'phased'/hpBelow).
+ * The `emphasis` flag on Erdstampfer is the data hook for the "1 Runde
+ * vorher groß telegrafiert" UI treatment (docs/07 assumption: intent
+ * display handles it, no new DSL mechanic).
+ * Loot: docs define no boss loot table — minimal Schattenstaub drop; the
+ * Kristall/story flag is dungeon cleanup (M4 Task 4), not enemy loot.
+ */
+export const rootWarden: EnemyDef = {
+  id: 'root_warden',
+  name: strings.enemies.root_warden.name,
+  tier: 1,
+  hp: 90,
+  pattern: {
+    kind: 'phased',
+    phases: [
+      {
+        steps: [
+          {
+            intent: 'deck',
+            effects: [{ kind: 'addCard', card: rooted, zone: 'hand' }],
+          },
+          {
+            intent: 'attack',
+            emphasis: true,
+            effects: [{ kind: 'damage', amount: 12, target: 'player' }],
+          },
+          {
+            intent: 'defend',
+            effects: [{ kind: 'block', amount: 10, target: 'self' }],
+          },
+        ],
+      },
+      {
+        // Zorn-Modus (docs/07): below 50 % HP the cycle shortens.
+        hpBelow: 0.5,
+        steps: [
+          {
+            intent: 'deck',
+            effects: [{ kind: 'addCard', card: rooted, zone: 'hand' }],
+          },
+          {
+            intent: 'attack',
+            emphasis: true,
+            effects: [{ kind: 'damage', amount: 14, target: 'player' }],
+          },
+        ],
+      },
+    ],
+  },
+  loot: {
+    guaranteed: [{ item: 'shadow_dust', min: 5, max: 5 }],
+    chance: [],
+  },
+};
+
 // ── Tutorial variants (docs/06 + docs/07) ────────────────────────────────
 
 /** Tutorial fight 1: weakened rat, single repeating bite. */
@@ -237,6 +296,7 @@ export const allEnemies: readonly EnemyDef[] = [
   copperBeetle,
   shadowGull,
   thornTerror,
+  rootWarden,
   shadowRatTutorial,
   shadowMouse,
 ];

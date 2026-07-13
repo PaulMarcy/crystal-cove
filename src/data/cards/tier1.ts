@@ -237,6 +237,19 @@ export const dazed: CardDef = {
   effects: [],
 };
 
+/**
+ * Verwurzelt (docs/07 Wurzelwächter): unplayable, clogs the HAND — the boss
+ * adds it via addCard zone 'hand' (unlike Zehrend's Erschöpfung → discard) —
+ * and vanishes at turn end via the shared status-card lifecycle.
+ */
+export const rooted: CardDef = {
+  id: 'rooted',
+  name: strings.cards.rooted.name,
+  type: 'status',
+  cost: 0,
+  effects: [],
+};
+
 // ── Collections ──────────────────────────────────────────────────────────
 
 export const allCards: readonly CardDef[] = [
@@ -260,6 +273,7 @@ export const allCards: readonly CardDef[] = [
   crystalShield,
   exhaustion,
   dazed,
+  rooted,
 ];
 
 /** Starter deck, 12 cards (docs/03): 4× Axtschlag, 4× Holzschild, 2× Steinwurf, 1× Verschnaufen, 1× Beerensnack. */

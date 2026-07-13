@@ -106,8 +106,15 @@ describe('enemy data (docs/07)', () => {
     }
   });
 
-  it('does not include the M4 boss', () => {
-    expect(allEnemies.some((e) => e.id === 'root_warden')).toBe(false);
+  it('includes the M4 boss with docs/07 values (90 HP, phased Zorn below 50 %)', () => {
+    const boss = allEnemies.find((e) => e.id === 'root_warden');
+    expect(boss).toBeDefined();
+    expect(boss!.hp).toBe(90);
+    expect(boss!.pattern.kind).toBe('phased');
+    if (boss!.pattern.kind === 'phased') {
+      expect(boss!.pattern.phases).toHaveLength(2);
+      expect(boss!.pattern.phases[1]!.hpBelow).toBe(0.5);
+    }
   });
 });
 
