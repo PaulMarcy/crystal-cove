@@ -74,6 +74,16 @@ export interface SaveDataV2 extends Omit<SaveDataV1, 'collection' | 'toolTier'> 
    * nothing discovered; shadowDensity stays authoritative for old saves.
    */
   discoveredMarkers?: readonly string[];
+  /**
+   * M4 dungeon (Task 3) — additive-OPTIONAL late-V2 fields (no version bump,
+   * same pattern as xp). The RUNNING dungeon run is intentionally never
+   * saved (reload = run lost, see core/world/dungeon.ts) — only permanent
+   * outcomes persist.
+   */
+  /** NPCs freed in dungeons (docs/09: Orin, Verwachsene Höhle Raum 2). */
+  rescuedNpcs?: readonly string[];
+  /** Completed dungeon ids — cleansing (M4 Task 4) docks onto this flag. */
+  completedDungeons?: readonly string[];
 }
 
 /** Current save shape — alias moves forward with each new version. */
@@ -210,6 +220,14 @@ function isValidSaveData(value: unknown): value is SaveData {
   if (v.discoveredMarkers !== undefined) {
     if (!Array.isArray(v.discoveredMarkers)) return false;
     if (!v.discoveredMarkers.every((id) => typeof id === 'string')) return false;
+  }
+  if (v.rescuedNpcs !== undefined) {
+    if (!Array.isArray(v.rescuedNpcs)) return false;
+    if (!v.rescuedNpcs.every((id) => typeof id === 'string')) return false;
+  }
+  if (v.completedDungeons !== undefined) {
+    if (!Array.isArray(v.completedDungeons)) return false;
+    if (!v.completedDungeons.every((id) => typeof id === 'string')) return false;
   }
   return true;
 }
