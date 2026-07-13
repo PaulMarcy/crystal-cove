@@ -3,6 +3,7 @@ import { getIntentPreview } from '../../core/combat/intent';
 import type { CombatCard, CombatState } from '../../core/combat/types';
 import { cardNeedsTarget, getValidTargets, isCardPlayable } from '../../core/combat/view';
 import { combatConfig } from '../../data/combat';
+import { dungeonsById } from '../../data/dungeons/verwachseneHoehle';
 import { useGameStore } from '../../shared/store';
 import { strings } from '../../shared/strings';
 import { EnemyView } from './EnemyView';
@@ -75,6 +76,7 @@ export function CombatScreen() {
   const dispatch = useGameStore((s) => s.dispatchCombat);
   const endCombat = useGameStore((s) => s.endCombat);
   const density = useGameStore((s) => s.shadowDensity);
+  const dungeonRun = useGameStore((s) => s.currentDungeonRun);
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [hoveredEnemyId, setHoveredEnemyId] = useState<string | null>(null);
@@ -193,7 +195,16 @@ export function CombatScreen() {
     >
       <div className="combat-stage">
         <div className="location-chip">
-          {strings.combat.locationChip.replace('{density}', String(density))}
+          {dungeonRun
+            ? // Dungeon fight: dungeon name + room progress instead of the zone chip.
+              strings.combat.dungeonLocationChip
+                .replace('{dungeon}', dungeonsById[dungeonRun.dungeonId]?.name ?? '')
+                .replace('{room}', String(dungeonRun.roomIndex + 1))
+                .replace(
+                  '{total}',
+                  String(dungeonsById[dungeonRun.dungeonId]?.rooms.length ?? 0),
+                )
+            : strings.combat.locationChip.replace('{density}', String(density))}
         </div>
         <RetreatButton
           chance={state.retreatChance}

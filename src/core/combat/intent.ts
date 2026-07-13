@@ -31,6 +31,12 @@ export interface IntentPreview {
   attacks: IntentAttackPreview[];
   /** Raw DSL effects of the telegraphed step (for detailed tooltips). */
   effects: Effect[];
+  /**
+   * Emphasized telegraph (docs/07 Wurzelwächter: Erdstampfer „1 Runde vorher
+   * groß telegrafiert"): the UI renders the chip extra large AND with an
+   * explicit warning text — never size/color alone (docs/11).
+   */
+  emphasis: boolean;
 }
 
 /**
@@ -69,5 +75,6 @@ export function getIntentPreview(
     kind: enemy.intent.intent,
     attacks,
     effects: enemy.intent.effects,
+    emphasis: enemy.intent.emphasis ?? false,
   };
 }

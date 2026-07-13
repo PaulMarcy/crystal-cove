@@ -22,7 +22,10 @@ function HpBar({ hp, maxHp, poisoned }: { hp: number; maxHp: number; poisoned: b
  */
 function IntentChip({ preview }: { preview: IntentPreview }) {
   return (
-    <div className="intent-chip" data-intent={preview.kind}>
+    <div
+      className={`intent-chip${preview.emphasis ? ' intent-chip--emphasis' : ''}`}
+      data-intent={preview.kind}
+    >
       <span aria-hidden>{intentIcons[preview.kind]}</span>
       <span className="intent-label">{strings.combat.intents[preview.kind]}</span>
       {preview.attacks.map((attack, i) => (
@@ -31,6 +34,11 @@ function IntentChip({ preview }: { preview: IntentPreview }) {
           {attack.ignoresBlock ? '!' : ''}
         </span>
       ))}
+      {preview.emphasis && (
+        // Boss telegraph (docs/07): extra large AND explicit text — the
+        // warning is never conveyed by size/color alone (docs/11).
+        <span className="intent-emphasis-text">{strings.combat.intentEmphasis}</span>
+      )}
     </div>
   );
 }

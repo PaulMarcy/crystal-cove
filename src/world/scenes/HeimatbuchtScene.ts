@@ -21,6 +21,12 @@ import {
   type ShrinePlacement,
 } from '../../data/exploration';
 import {
+  dungeonEntranceInteractRange,
+  dungeonsById,
+  heimatbuchtDungeonEntrances,
+  type DungeonEntrancePlacement,
+} from '../../data/dungeons/verwachseneHoehle';
+import {
   creatureContactRange,
   creatureIdleMs,
   creatureWanderRadius,
@@ -51,6 +57,11 @@ interface WorldStation {
 
 interface WorldFarmPlot {
   id: string;
+  sprite: Phaser.GameObjects.Sprite;
+}
+
+interface WorldDungeonEntrance {
+  placement: DungeonEntrancePlacement;
   sprite: Phaser.GameObjects.Sprite;
 }
 
@@ -92,6 +103,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
   private tentFocused = false;
   private plantKeys: Phaser.Input.Keyboard.Key[] = [];
   private shrines: WorldShrine[] = [];
+  private dungeonEntrances: WorldDungeonEntrance[] = [];
+  private focusedEntrance: WorldDungeonEntrance | null = null;
   private discoveryToast: Phaser.GameObjects.Text | null = null;
   private creatures: WorldCreature[] = [];
   /** Creature that triggered the running combat — despawned on victory. */
@@ -124,6 +137,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.tentFocused = false;
     this.plantKeys = [];
     this.shrines = [];
+    this.dungeonEntrances = [];
+    this.focusedEntrance = null;
     this.discoveryToast = null;
     this.creatures = [];
     this.engagedCreature = null;
@@ -150,6 +165,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.spawnStations();
     this.spawnFarm();
     this.spawnShrines();
+    this.spawnDungeonEntrances();
     this.spawnCreatures();
 
     // Saved position wins (save V1); fresh games start at the map center.
@@ -212,7 +228,19 @@ export class HeimatbuchtScene extends Phaser.Scene {
       if (prev.combat === null && state.combat !== null) {
         this.scene.pause();
       } else if (prev.combat !== null && state.combat === null) {
-        this.onCombatEnded(state.lastCombatOutcome);
+        // Dungeon room won: the run continues in the React panel — the
+        // world stays frozen until the run ends (no creature involved).
+        if (state.currentDungeonRun === null) this.onCombatEnded(state.lastCombatOutcome);
+      } else if (prev.currentDungeonRun === null && state.currentDungeonRun !== null) {
+        // Dungeon panel open (React overlay) → freeze the world, like combat.
+        this.scene.pause();
+      } else if (
+        prev.currentDungeonRun !== null &&
+        state.currentDungeonRun === null &&
+        state.combat === null
+      ) {
+        // Run over (abandon, defeat/retreat handled above, boss victory).
+        this.scene.resume();
       } else if (prev.activeStation === null && state.activeStation !== null) {
         // Workshop UI open (React overlay) → freeze the world, like combat.
         this.scene.pause();
@@ -252,12 +280,16 @@ export class HeimatbuchtScene extends Phaser.Scene {
     }
 
     this.updateStationFocus();
+    this.updateDungeonEntranceFocus();
     this.updateFarmFocus();
     this.updateHarvestFocus();
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
-      // Priority when several are in range: station > tent > plot > node.
+      // Priority when several are in range: station > entrance > tent > plot > node.
       if (this.focusedStation) {
         gameStore.getState().openStation(this.focusedStation.station);
+      } else if (this.focusedEntrance) {
+        // Dungeon flow runs in the React overlay (store-driven, M4).
+        gameStore.getState().enterDungeon(this.focusedEntrance.placement.dungeonId);
       } else if (this.tentFocused) {
         this.doSleep();
       } else if (this.focusedPlot) {
@@ -386,6 +418,77 @@ export class HeimatbuchtScene extends Phaser.Scene {
     };
     make('shrine-secret', (g) => secretBase(g, 0x9668d8)); // faint magic shimmer
     make('shrine-secret-found', (g) => secretBase(g, 0x8d6a45)); // plain wood
+  }
+
+  // ── Dungeon entrance (M4 Task 3, docs/03) ───────────────────────────────
+
+  /** Spawns cave-mouth sprites from data placements (src/data/dungeons). */
+  private spawnDungeonEntrances(): void {
+    this.createDungeonEntranceTexture();
+    for (const placement of heimatbuchtDungeonEntrances) {
+      const x = placement.tileX * TILE + TILE / 2;
+      const y = placement.tileY * TILE + TILE / 2;
+      const sprite = this.add.sprite(x, y, 'dungeon-entrance').setDepth(5);
+      this.dungeonEntrances.push({ placement, sprite });
+    }
+  }
+
+  /** Nearest entrance in range gets highlight + prompt; stations keep priority. */
+  private updateDungeonEntranceFocus(): void {
+    let nearest: WorldDungeonEntrance | null = null;
+    let nearestDist = dungeonEntranceInteractRange;
+    if (!this.focusedStation) {
+      for (const entrance of this.dungeonEntrances) {
+        const dist = Phaser.Math.Distance.Between(
+          this.player.x,
+          this.player.y,
+          entrance.sprite.x,
+          entrance.sprite.y,
+        );
+        if (dist <= nearestDist) {
+          nearest = entrance;
+          nearestDist = dist;
+        }
+      }
+    }
+    if (nearest === this.focusedEntrance) return;
+
+    this.focusedEntrance?.sprite.clearTint();
+    this.focusedEntrance = nearest;
+    if (!nearest) {
+      if (!this.focusedStation && !this.focusedNode && !this.focusedPlot && !this.tentFocused) {
+        this.harvestPrompt.setVisible(false);
+      }
+      return;
+    }
+    nearest.sprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
+    const dungeonName = dungeonsById[nearest.placement.dungeonId]?.name ?? '';
+    this.harvestPrompt
+      .setText(strings.dungeonRun.enterPrompt.replace('{dungeon}', dungeonName))
+      .setPosition(nearest.sprite.x, nearest.sprite.y - 14)
+      .setVisible(true);
+  }
+
+  /**
+   * Placeholder cave mouth (grade 1 "Funktional", docs/04): dark opening in
+   * grey rock; the overgrowth crystal in corruption violet marks the
+   * corrupted dungeon (violet = Korruption/Magie only, docs/04).
+   */
+  private createDungeonEntranceTexture(): void {
+    if (this.textures.exists('dungeon-entrance')) return;
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.fillStyle(0x8d8d94); // rock face
+    g.fillRect(0, 4, 20, 14);
+    g.fillTriangle(0, 4, 10, 0, 20, 4);
+    g.fillStyle(0x1c1720); // cave opening (near-black)
+    g.fillTriangle(4, 18, 10, 6, 16, 18);
+    g.fillStyle(0x9668d8); // corruption crystal (docs/04 violet)
+    g.fillTriangle(15, 6, 18, 1, 19, 7);
+    g.fillStyle(0x4f7d3a); // overgrowth vines
+    g.fillRect(2, 4, 2, 6);
+    g.fillRect(17, 8, 2, 5);
+    g.generateTexture('dungeon-entrance', 20, 18);
+    g.destroy();
   }
 
   // ── Creatures (M2 encounter triggers) ───────────────────────────────────
@@ -548,7 +651,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.focusedStation?.sprite.clearTint();
     this.focusedStation = nearest;
     if (!nearest) {
-      if (!this.focusedNode) this.harvestPrompt.setVisible(false);
+      if (!this.focusedNode && !this.focusedEntrance) this.harvestPrompt.setVisible(false);
       return;
     }
     nearest.sprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
@@ -634,7 +737,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
 
   /** Tent or nearest plot in range gets focus; stations keep priority. */
   private updateFarmFocus(): void {
-    if (this.focusedStation) {
+    if (this.focusedStation || this.focusedEntrance) {
       this.clearFarmFocus();
       return;
     }
@@ -803,8 +906,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
 
   /** Finds the nearest harvestable node in range and moves highlight + prompt onto it. */
   private updateHarvestFocus(): void {
-    if (this.focusedStation || this.focusedPlot || this.tentFocused) {
-      // Station/farm prompt has priority — drop any node focus while it is shown.
+    if (this.focusedStation || this.focusedEntrance || this.focusedPlot || this.tentFocused) {
+      // Station/entrance/farm prompt has priority — drop any node focus while it is shown.
       if (this.focusedNode) {
         this.focusedNode.sprite.clearTint();
         this.focusedNode = null;

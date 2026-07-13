@@ -557,6 +557,33 @@ body {
   font-size: 0.8rem;
   opacity: 0.85;
 }
+/* Boss-Telegraph (docs/07 Erdstampfer „1 Runde vorher groß telegrafiert"):
+   deutlich größer UND mit Warntext — nie nur Größe/Farbe (docs/11). */
+.intent-chip--emphasis {
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 220px;
+  font-size: 1.2rem;
+  padding: 6px 16px;
+  border-width: 3px;
+  animation:
+    intent-in 260ms ease-out 320ms forwards,
+    intent-pulse 900ms ease-in-out 700ms infinite alternate;
+}
+@keyframes intent-pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.07);
+  }
+}
+.intent-emphasis-text {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
 
 /* Treffer: Ziel zuckt 4 px + weißer Blitz 80 ms (docs/11). */
 .hit-flash {
@@ -879,6 +906,75 @@ body {
 }
 .loot-list li {
   padding: 2px 0;
+}
+
+/* ── Dungeon-Panel (M4, docs/03): Raum-Fortschritt zwischen den Kämpfen ── */
+
+.dungeon-panel {
+  background: var(--color-ui-ground);
+  border: 2px solid var(--color-sand);
+  border-radius: 12px;
+  padding: 22px 34px;
+  text-align: center;
+  min-width: 300px;
+  max-width: min(440px, 92vw);
+  pointer-events: auto;
+}
+.dungeon-title {
+  margin: 0 0 4px;
+  color: var(--color-sand);
+}
+.dungeon-room {
+  margin: 0 0 6px;
+}
+.dungeon-hp {
+  margin: 0 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+.dungeon-hint {
+  margin: 0 0 14px;
+  font-size: 0.85rem;
+  font-style: italic;
+  opacity: 0.85;
+}
+.dungeon-rescue {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+  /* Magie/Kristall-Violett (docs/04) — Orin ist der Einsiedler-Magier. */
+  border: 1px solid var(--color-magic);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 0 0 14px;
+}
+.dungeon-rescue-sprite {
+  font-size: 34px;
+  line-height: 1;
+}
+.dungeon-rescue-body {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+.dungeon-deck-blocked {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: #ff8a7a;
+}
+.dungeon-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.dungeon-abandon-button {
+  background: none;
+  border: 1px solid var(--color-sand);
+  border-radius: 10px;
+  color: var(--color-text);
+  padding: 12px 22px;
+  font-size: 1rem;
+  cursor: pointer;
 }
 
 /* Einstellungen: „Effekte reduzieren" respektieren (docs/06/11). */

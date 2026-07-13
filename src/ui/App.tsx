@@ -5,6 +5,7 @@ import { shadowGull, shadowRat } from '../data/enemies/tier1';
 import { strings } from '../shared/strings';
 import { useGameStore } from '../shared/store';
 import { CombatScreen } from './combat/CombatScreen';
+import { DungeonPanel } from './dungeon/DungeonPanel';
 import { InventoryPanel } from './inventory/InventoryPanel';
 import { WorkshopPanel } from './workshop/WorkshopPanel';
 import { DeckChestPanel } from './deck/DeckChestPanel';
@@ -62,6 +63,8 @@ export function App() {
 
   return (
     <>
+      {/* Dungeon-Panel between dungeon rooms (renders null without a run). */}
+      <DungeonPanel />
       <div className="overlay-badge">
         {strings.game.title} — {worldReady ? strings.ui.overlayReady : '…'}
       </div>
