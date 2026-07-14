@@ -42,6 +42,12 @@ import {
 } from '../core/progression/progression';
 import { combatStartStatuses, equipTalisman, unequipTalisman } from '../core/progression/talismans';
 import { build, canBuild, dishSlots, type BuildContext } from '../core/village/buildings';
+import {
+  advanceDialogRun,
+  resolveDialogChoice,
+  startDialogRun,
+  type DialogRunState,
+} from '../core/dialog/dialog';
 import { rollEncounter, type EncounterResult, type ShadowDensity } from '../core/world/encounters';
 import {
   densityForExploration,
@@ -82,6 +88,7 @@ import {
   initialBuildingStages,
   type BuildingSlotId,
 } from '../data/buildings';
+import { dialogsById, type DialogActionDef } from '../data/dialogs';
 import { deckConfig } from '../data/deck';
 import { talents } from '../data/talents';
 import { talismansById } from '../data/talismans';
@@ -218,6 +225,22 @@ export interface GameState {
    * into the station tier. Returns false when anything blocks the build.
    */
   buildBuilding: (slot: BuildingSlotId) => boolean;
+
+  /**
+   * Running dialog (M5, docs/13) — transient UI/flow state, never persisted.
+   * Flow rules live in core/dialog; this store only holds the run state and
+   * interprets the declarative end actions (setStoryFlag today; the
+   * acceptQuest/openTrade hooks dock onto the questlog/market tasks).
+   */
+  activeDialog: DialogRunState | null;
+  /** Starts a dialog by id. False mid-combat/-run, with another overlay
+   * open, while a dialog runs, or for unknown/empty dialogs. */
+  startDialog: (dialogId: string) => boolean;
+  /** Weiter (Klick/Leertaste): next box, or end + end actions. No-op at the
+   * choice gate — the UI shows the options instead (docs/13). */
+  advanceDialog: () => void;
+  /** Picks a choice at the gate; applies its action and ends the dialog. */
+  chooseDialogOption: (index: number) => void;
 
   /**
    * Total XP ever earned (docs/02) — the level is always DERIVED via
@@ -454,6 +477,33 @@ function applyEquippedTalismans(
   if (Object.keys(statuses).length > 0) setup.playerStartStatuses = statuses;
 }
 
+/**
+ * Interprets declarative dialog-end actions (docs/13: Flags/Quest-Folgen
+ * als Events durch core) and closes the dialog. setStoryFlag works today;
+ * acceptQuest/openTrade are PREPARED no-ops — the M5 questlog and market
+ * tasks replace the branches with their real triggers.
+ */
+function endDialog(
+  actions: readonly DialogActionDef[],
+  set: (partial: Partial<GameState>) => void,
+  get: () => GameState,
+): void {
+  set({ activeDialog: null });
+  for (const action of actions) {
+    switch (action.type) {
+      case 'setStoryFlag':
+        get().setStoryFlag(action.flag);
+        break;
+      case 'acceptQuest':
+        // Questlog-Task (M5) dockt hier an: Eintrag erzeugen (docs/13).
+        break;
+      case 'openTrade':
+        // Markt-Task (M5) dockt hier an: Handels-Panel öffnen (docs/13).
+        break;
+    }
+  }
+}
+
 export const gameStore = createStore<GameState>()((set, get) => ({
   worldReady: false,
   setWorldReady: (ready) => set({ worldReady: ready }),
@@ -652,6 +702,45 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       set({ inventory: result.inventory, toolTier: Math.max(toolTier, result.output.toolTier) });
     }
     return true;
+  },
+
+  activeDialog: null,
+  startDialog: (dialogId) => {
+    const { combat, currentDungeonRun, activeStation, activeBuildSlot, activeDialog } = get();
+    // One overlay at a time — dialogs follow the station/build rule.
+    if (combat || currentDungeonRun || activeStation || activeBuildSlot || activeDialog) {
+      return false;
+    }
+    const def = dialogsById[dialogId];
+    if (!def) return false;
+    const run = startDialogRun(def);
+    if (!run) return false;
+    set({ activeDialog: run });
+    return true;
+  },
+  advanceDialog: () => {
+    const { activeDialog } = get();
+    if (!activeDialog) return;
+    const def = dialogsById[activeDialog.dialogId];
+    if (!def) {
+      set({ activeDialog: null }); // defensive: data vanished mid-run
+      return;
+    }
+    const result = advanceDialogRun(def, activeDialog);
+    if (result.kind === 'line') set({ activeDialog: result.run });
+    else if (result.kind === 'end') endDialog(result.actions, set, get);
+    // 'awaitChoice': blocked — the UI renders the options (docs/13).
+  },
+  chooseDialogOption: (index) => {
+    const { activeDialog } = get();
+    if (!activeDialog) return;
+    const def = dialogsById[activeDialog.dialogId];
+    if (!def) {
+      set({ activeDialog: null });
+      return;
+    }
+    const result = resolveDialogChoice(def, activeDialog, index);
+    if (result) endDialog(result.actions, set, get);
   },
 
   xp: 0,

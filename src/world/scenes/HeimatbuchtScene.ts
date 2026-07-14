@@ -6,6 +6,11 @@ import { heimatbuchtHarvestNodes, type HarvestNodeType } from '../../data/resour
 import { heimatbuchtStations, stationInteractRange } from '../../data/stations';
 import { buildings, buildSlotInteractRange, type BuildingDef } from '../../data/buildings';
 import {
+  dialogNpcPlacements,
+  npcInteractRange,
+  type DialogNpcPlacement,
+} from '../../data/dialogs';
+import {
   crops,
   farmInteractRange,
   FARM_CROP_IDS,
@@ -61,6 +66,11 @@ interface WorldBuildSlot {
   sprite: Phaser.GameObjects.Sprite;
 }
 
+interface WorldDialogNpc {
+  placement: DialogNpcPlacement;
+  sprite: Phaser.GameObjects.Sprite;
+}
+
 interface WorldFarmPlot {
   id: string;
   sprite: Phaser.GameObjects.Sprite;
@@ -105,6 +115,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
   private focusedStation: WorldStation | null = null;
   private buildSlots: WorldBuildSlot[] = [];
   private focusedBuildSlot: WorldBuildSlot | null = null;
+  private dialogNpcs: WorldDialogNpc[] = [];
+  private focusedNpc: WorldDialogNpc | null = null;
   private farmPlots: WorldFarmPlot[] = [];
   private focusedPlot: WorldFarmPlot | null = null;
   private tentSprite: Phaser.GameObjects.Sprite | null = null;
@@ -141,6 +153,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.focusedStation = null;
     this.buildSlots = [];
     this.focusedBuildSlot = null;
+    this.dialogNpcs = [];
+    this.focusedNpc = null;
     this.farmPlots = [];
     this.focusedPlot = null;
     this.tentSprite = null;
@@ -174,6 +188,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.spawnHarvestNodes();
     this.spawnStations();
     this.spawnBuildSlots();
+    this.spawnDialogNpcs();
     this.spawnFarm();
     this.spawnShrines();
     this.spawnDungeonEntrances();
@@ -262,6 +277,11 @@ export class HeimatbuchtScene extends Phaser.Scene {
         this.scene.pause();
       } else if (prev.activeBuildSlot !== null && state.activeBuildSlot === null) {
         this.scene.resume();
+      } else if (prev.activeDialog === null && state.activeDialog !== null) {
+        // Dialog open (React overlay, docs/13) → freeze the world.
+        this.scene.pause();
+      } else if (prev.activeDialog !== null && state.activeDialog === null) {
+        this.scene.resume();
       }
       // Built stage changed (build panel) → mirror onto the world sprites.
       if (state.builtBuildings !== prev.builtBuildings) this.refreshBuildSlotSprites();
@@ -302,10 +322,14 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.updateDungeonEntranceFocus();
     this.updateFarmFocus();
     this.updateHarvestFocus();
+    this.updateNpcFocus();
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
       // Priority when several are in range:
-      // station > build slot > entrance > tent > plot > node.
-      if (this.focusedStation) {
+      // station > build slot > entrance > tent > plot > node > npc.
+      if (this.focusedNpc) {
+        // Dialog flow runs in the React overlay (store-driven, docs/13).
+        gameStore.getState().startDialog(this.focusedNpc.placement.dialogId);
+      } else if (this.focusedStation) {
         gameStore.getState().openStation(this.focusedStation.station);
       } else if (this.focusedBuildSlot) {
         gameStore.getState().openBuildSlot(this.focusedBuildSlot.def.id);
@@ -865,6 +889,99 @@ export class HeimatbuchtScene extends Phaser.Scene {
       g.fillStyle(0x3a2e28); // door
       g.fillRect(6, 11, 4, 6);
     });
+  }
+
+  // ── Dialog-NPCs (M5, docs/13) ───────────────────────────────────────────
+
+  /**
+   * Spawns talkable NPCs (data/dialogs). Only the Lumen demo for now —
+   * the NPC arrival task (M5) feeds this from arrival state.
+   */
+  private spawnDialogNpcs(): void {
+    this.createNpcTextures();
+    for (const placement of dialogNpcPlacements) {
+      const x = placement.tileX * TILE + TILE / 2;
+      const y = placement.tileY * TILE + TILE / 2;
+      const sprite = this.add.sprite(x, y, `npc-${placement.npcId}`).setDepth(6);
+      this.dialogNpcs.push({ placement, sprite });
+    }
+  }
+
+  /**
+   * Nearest NPC in range gets highlight + prompt. NPCs yield to every other
+   * interactable (they stand apart in the world; keeps the focus chain flat).
+   * Runs LAST in update() so a cleared earlier focus hands the prompt over
+   * within the same frame.
+   */
+  private updateNpcFocus(): void {
+    if (
+      this.focusedStation ||
+      this.focusedBuildSlot ||
+      this.focusedEntrance ||
+      this.focusedPlot ||
+      this.tentFocused ||
+      this.focusedNode
+    ) {
+      if (this.focusedNpc) {
+        this.focusedNpc.sprite.clearTint();
+        this.focusedNpc = null;
+      }
+      return;
+    }
+    let nearest: WorldDialogNpc | null = null;
+    let nearestDist = npcInteractRange;
+    for (const npc of this.dialogNpcs) {
+      const dist = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        npc.sprite.x,
+        npc.sprite.y,
+      );
+      if (dist <= nearestDist) {
+        nearest = npc;
+        nearestDist = dist;
+      }
+    }
+    if (nearest === this.focusedNpc) return;
+
+    this.focusedNpc?.sprite.clearTint();
+    this.focusedNpc = nearest;
+    if (!nearest) {
+      this.harvestPrompt.setVisible(false);
+      return;
+    }
+    nearest.sprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
+    const npcNames = strings.npcs as Readonly<Record<string, string>>;
+    this.harvestPrompt
+      .setText(
+        strings.world.npcTalkPrompt.replace(
+          '{npc}',
+          npcNames[nearest.placement.npcId] ?? nearest.placement.npcId,
+        ),
+      )
+      .setPosition(nearest.sprite.x, nearest.sprite.y - 14)
+      .setVisible(true);
+  }
+
+  /**
+   * Placeholder NPC textures (grade 1 "Funktional", docs/04): Lumen is a
+   * crystal fox (docs/06) — crystal violet = magic (docs/04 color rule);
+   * orange appears only as focus tint.
+   */
+  private createNpcTextures(): void {
+    if (this.textures.exists('npc-lumen')) return;
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.fillStyle(0x9668d8); // crystal violet body
+    g.fillEllipse(8, 12, 12, 8); // body
+    g.fillTriangle(4, 8, 6, 3, 8, 8); // left ear
+    g.fillTriangle(8, 8, 10, 3, 12, 8); // right ear
+    g.fillEllipse(8, 8, 8, 6); // head
+    g.fillTriangle(13, 12, 17, 8, 15, 15); // tail
+    g.fillStyle(0xd8c8f0); // pale crystal glow accents
+    g.fillRect(6, 7, 1, 1);
+    g.fillRect(10, 7, 1, 1);
+    g.generateTexture('npc-lumen', 18, 18);
+    g.destroy();
   }
 
   // ── Farming (M3, docs/10 Farming & Zeit) ────────────────────────────────

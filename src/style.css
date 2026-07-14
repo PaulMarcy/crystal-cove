@@ -1192,3 +1192,138 @@ body {
   font-size: 12px;
   font-style: italic;
 }
+
+/* ── Dialog overlay (M5, docs/13) ──────────────────────────────────────── */
+/* Textbox unten über volle Breite, UI-Braun mit Papier-Innenfläche;
+   Portrait links (~96 px), Name-Plakette darüber, ▼-Weiter-Indikator. */
+.dialog-overlay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  pointer-events: auto;
+  z-index: 30;
+}
+
+.dialog-box {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  background: var(--color-ui-ground);
+  border: 2px solid var(--color-sand);
+  border-radius: 10px;
+  padding: 10px 14px 12px;
+  cursor: pointer;
+}
+
+.dialog-portrait-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.dialog-nameplate {
+  background: var(--color-sand);
+  color: var(--color-ui-ground);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+/* Portrait placeholder: initial on magic violet (Lumen = Kristallwesen,
+   docs/04 Violett = Magie) until pixel-art portraits exist. */
+.dialog-portrait {
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-magic);
+  color: var(--color-text);
+  border: 2px solid var(--color-sand);
+  border-radius: 8px;
+  font-size: 2.4rem;
+  font-weight: bold;
+}
+
+/* Papier-Innenfläche (docs/13) — dark text on sand. */
+.dialog-text-column {
+  flex: 1;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--color-sand);
+  color: var(--color-ui-ground);
+  border-radius: 6px;
+  padding: 10px 12px;
+  min-height: 96px;
+}
+
+.dialog-text {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.dialog-continue {
+  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.dialog-continue-indicator {
+  animation: dialog-blink 1s steps(2, start) infinite;
+}
+
+@keyframes dialog-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Effekte reduzieren (docs/12): kein Blinken bei reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .dialog-continue-indicator {
+    animation: none;
+  }
+}
+
+/* Choices: max 3, vertikal unter der Textbox (docs/13); Highlight Orange
+   = handlungsfähig (docs/04) — zusätzlich Rahmen, nie nur Farbe. */
+.dialog-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.dialog-choice {
+  background: var(--color-ui-ground);
+  color: var(--color-text);
+  border: 2px solid var(--color-sand);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dialog-choice:hover,
+.dialog-choice:focus-visible {
+  border-color: var(--color-action);
+  outline: 2px solid var(--color-action);
+  background: #4a3a30;
+}

@@ -9,6 +9,7 @@ import { DungeonPanel } from './dungeon/DungeonPanel';
 import { InventoryPanel } from './inventory/InventoryPanel';
 import { WorkshopPanel } from './workshop/WorkshopPanel';
 import { BuildPanel } from './village/BuildPanel';
+import { DialogOverlay } from './dialog/DialogOverlay';
 import { DeckChestPanel } from './deck/DeckChestPanel';
 import { ProgressionHud } from './progression/ProgressionHud';
 import { TalentPanel } from './progression/TalentPanel';
@@ -124,6 +125,7 @@ export function App() {
       <TalentPanel />
       <WorkshopPanel />
       <BuildPanel />
+      <DialogOverlay />
       <DeckChestPanel />
       <InventoryPanel />
       <SaveRecoveryNotice />

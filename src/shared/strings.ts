@@ -86,6 +86,26 @@ export const strings = {
     },
     harvestGain: '+{amount} {item}',
     lootToastHeading: 'Beute erhalten',
+    npcTalkPrompt: '[E] Mit {npc} sprechen',
+  },
+  dialog: {
+    /** Blinking ▼ carries this label — never a glyph alone (docs/11). */
+    continueLabel: 'Weiter',
+    continueHint: 'Weiter: Klick oder Leertaste',
+    choicesLabel: 'Antwort wählen',
+    portraitLabel: 'Porträt: {npc}',
+  },
+  /** Dialog box texts (docs/13: max 2 Zeilen à ~60 Zeichen pro Box;
+   * Lumen-Regel docs/06: max 1 Satz pro Box). Keys ← data/dialogs.ts. */
+  dialogLines: {
+    lumen_intro_1: 'Da bist du ja endlich — ich bin Lumen!',
+    lumen_intro_2: 'Die Insel hat dich schon erwartet.',
+  },
+  /** Choice labels (docs/13: V1 nur Quest-Annahme und Piya-Handel). */
+  dialogChoices: {
+    quest_accept: 'Annehmen',
+    quest_later: 'Später',
+    trade_open: 'Zeig mir deine Waren',
   },
   save: {
     recoveryNotice:
