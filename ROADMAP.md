@@ -47,7 +47,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 
 ## M5 — Dorf, NPCs & Quests
 - [x] Bauplatz-System B1–B9 (docs/09), Bau-UI
-- [ ] Dialog-System (Portrait, Textbox, Weiter; Choices vorbereitet)
+- [x] Dialog-System (Portrait, Textbox, Weiter; Choices vorbereitet)
 - [ ] NPC-Ankunftstrigger, Freundschaftsketten aller 6 NPCs, Questlog minimal
 - [ ] Markt + Schwarzes Brett (Münz-Ökonomie), Angeln (Steg)
 - [ ] Schrein: Verzaubern + Karten-Upgrade (Karte+)
