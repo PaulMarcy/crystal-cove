@@ -15,14 +15,14 @@
 
 | Slot | Gebäude | Voraussetzung | Effekt |
 |---|---|---|---|
-| B1 | Zelt → Hütte → Haus | Onboarding / Holz+Stein / +Leder | Speichern; Haus: +1 Gericht-Slot auf Expedition |
-| B2 | Kochstelle → Küche St. 2/3 | Onboarding / Tilda St.1 / Tilda St.2 | Gerichte-Rezepte je Stufe |
-| B3 | Schmiede St. 1→3 | Beat 6 / Maro St.1 / Maro St.2 | Prägerezepte je Stufe, Werkzeug-Upgrades |
-| B4 | Wohnhaus 1 | Holz+Stein | Tilda zieht ein |
+| B1 | Zelt → Hütte → Haus | Onboarding / 8 Holz + 4 Stein / 12 Holz + 6 Stein + 2 Zähes Leder | Speichern; Haus: +1 Gericht-Slot auf Expedition (Cap 2 gesamt — nicht additiv mit Lv 12) |
+| B2 | Kochstelle → Küche St. 2/3 | Onboarding / Tilda St.1 + 6 Holz + 4 Stein + 2 Harz / Tilda St.2 + 6 Holz + 4 Stein + 2 Harz | Gerichte-Rezepte je Stufe |
+| B3 | Schmiede St. 1→3 | Beat 6 / Maro St.1 + 6 Stein + 4 Kupfer / Maro St.2 + 6 Stein + 4 Kupfer | Prägerezepte je Stufe, Werkzeug-Upgrades |
+| B4 | Wohnhaus 1 | 10 Holz + 6 Stein | Tilda zieht ein |
 | B5 | Steg | 4 Holz + 4 Ranken (Kriecher-Drops) | Bruna zieht ein; Angeln |
-| B6 | Kristallschrein | Orin befreit + Schattenstaub | Verzaubern, Karten-Upgrade, später Resonanz |
-| B7 | Wohnhaus 2 | nach Orin-Rettung | Orin zieht ein |
-| B8 | Markt | Insel gereinigt | Piya; Handel + Schwarzes Brett |
+| B6 | Kristallschrein | Orin befreit + 10 Schattenstaub (unabhängig von B7 baubar) | Verzaubern, Karten-Upgrade, später Resonanz |
+| B7 | Wohnhaus 2 | Orin gerettet + 10 Holz + 8 Stein + 2 Zähes Leder | Orin zieht ein (bis dahin steht er am Dorfplatz) |
+| B8 | Markt | Insel gereinigt + 12 Holz + 4 Stein | Piya; Handel + Schwarzes Brett |
 | B9 | Bootshaus | Piya-Kette abgeschlossen | Überfahrt Nebelwald (Insel 2) |
 
 ## NPC-Roster
@@ -78,7 +78,8 @@
   Schwarzes Brett
 - **Kette = Boot-Reparatur (Tor zu Insel 2):** (1) 10 Holz + 4 Zähes Leder ·
   (2) 5 Harz (Kriecher-Chance-Drop) · (3) Probefahrt-Quest →
-  **Überfahrt Nebelwald freigeschaltet**
+  **Überfahrt wählbar; Insel 2 (Nebelwald) bleibt in V1 gesperrt und zeigt
+  einen Hinweistext (sichtbar-verwehrtes-Ziel-Muster, siehe docs/12 M5)**
 
 ## Freundschaftsregeln
 
