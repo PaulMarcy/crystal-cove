@@ -252,8 +252,8 @@ export interface GameState {
   enterDungeon: (dungeonId: string) => boolean;
   /** Starts the fight of the current room. False without run/invalid deck. */
   startDungeonRoomCombat: (seed?: number) => boolean;
-  /** Aufgeben (docs/03: jederzeit möglich) — ends the run, back to island.
-   * TODO(M4 Task 5): Beute-Malus des Durchgangs (docs/03) — kein Malus vorerst. */
+  /** Aufgeben (docs/03: jederzeit möglich) — ends the run with the 50 %
+   * run-loot penalty; the player stays where they are. */
   abandonDungeonRun: () => void;
   /** Loot rolled at the moment of victory (shown in the victory panel). */
   combatLoot: LootResult | null;
