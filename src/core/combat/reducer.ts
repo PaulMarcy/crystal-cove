@@ -10,7 +10,14 @@
  * createCombatState; END_TURN chains turnEnd → enemyTurn → next turnStart.
  */
 import { combatConfig } from '../../data/combat';
-import { applyEffects, applyPoisonTick, decayTurnStatuses, drawCards, type Actor } from './effects';
+import {
+  applyEffects,
+  applyPoisonTick,
+  decayTurnStatuses,
+  drawCards,
+  isDefenseCard,
+  type Actor,
+} from './effects';
 import { shuffle, type Rng } from './rng';
 import type {
   CombatCard,
@@ -144,7 +151,14 @@ export function createCombatState(setup: CombatSetup, rng: Rng): CombatState {
     addedCardCounter: 0,
     blockGainedThisTurn: false,
     firstAttackBonus: setup.firstAttackBonus ?? 0,
+    defenseCardBlockBonus: setup.defenseCardBlockBonus ?? 0,
+    firstDefenseCardFree: setup.firstDefenseCardFree ?? false,
   };
+  // combatStart: talisman "Warmer Bauch" (docs/09) heals before the first
+  // turn; a heal never exceeds max HP (same rule as the 'heal' effect).
+  if (setup.combatStartHeal) {
+    state.player.hp = Math.min(state.player.maxHp, state.player.hp + setup.combatStartHeal);
+  }
   startPlayerTurn(state, rng);
   // combatStart: talent "Bollwerk" (docs/02) — start block is applied AFTER
   // the first turnStart (which zeroes block) and decays with the next one.
@@ -222,9 +236,14 @@ function playCard(
   if (!card) return;
   // Zustandskarten sind unspielbar — keine Energie-Interaktion (docs/03).
   if (card.def.type === 'status') return;
+  // Talisman "Seemannsgarn" (docs/09): the first defense card each combat
+  // costs 0. The override wins over cost modifiers; a pending Kristallschild
+  // delta is NOT consumed by the free card and stays armed for the next one.
+  const defenseCard = isDefenseCard(card.def);
+  const freeDefense = state.firstDefenseCardFree && defenseCard;
   // Cost modifier (docs/10 Kristallschild „nächste Karte −1⚡"): the pending
   // delta shifts this card's cost (never below 0) and is consumed by it.
-  const effectiveCost = Math.max(0, card.def.cost + state.nextCardCostDelta);
+  const effectiveCost = freeDefense ? 0 : Math.max(0, card.def.cost + state.nextCardCostDelta);
   if (effectiveCost > state.player.energy) return;
   const needsTarget = card.def.effects.some(
     (effect) => 'target' in effect && effect.target === 'target',
@@ -235,8 +254,19 @@ function playCard(
   }
 
   state.player.energy -= effectiveCost;
-  state.nextCardCostDelta = 0;
+  if (!freeDefense) state.nextCardCostDelta = 0;
+  // The free-card override is consumed by the FIRST defense card played,
+  // even one that already costs 0 (see CombatState.firstDefenseCardFree).
+  if (defenseCard) state.firstDefenseCardFree = false;
   state.hand.splice(index, 1);
+  // Talisman "Amboss-Herz" (docs/09): +N block per DEFENSE CARD played (per
+  // card, not per block effect). Applied before the card's effects so the
+  // bonus can absorb same-card retaliation; it counts as card-granted block
+  // for the "geblockt diese Runde" conditional (docs/03).
+  if (defenseCard && state.defenseCardBlockBonus > 0) {
+    state.player.block += state.defenseCardBlockBonus;
+    state.blockGainedThisTurn = true;
+  }
   // Talent "Klingenschliff" (docs/02): the FIRST attack card played this
   // combat hits for +bonus. Implemented as temporary strength for exactly
   // this card's resolution (per hit, StS-Vigor convention), then consumed.

@@ -327,6 +327,18 @@ export const strings = {
       name: 'Dornenring',
       description: 'Du startest jeden Kampf mit Vergeltung 1 (dauerhaft im Kampf).',
     },
+    warm_belly: {
+      name: 'Warmer Bauch',
+      description: 'Zu Kampfbeginn heilst du 3 HP.',
+    },
+    anvil_heart: {
+      name: 'Amboss-Herz',
+      description: 'Jede Verteidigungskarte gewährt +1 Block.',
+    },
+    sailors_yarn: {
+      name: 'Seemannsgarn',
+      description: 'Die erste Verteidigungskarte je Kampf kostet 0 Energie.',
+    },
   },
   progression: {
     levelLabel: 'Stufe {level}',

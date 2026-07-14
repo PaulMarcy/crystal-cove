@@ -2,10 +2,16 @@
  * View selectors for the combat UI (docs/11). Pure derivations from
  * CombatState — the UI never re-implements these rules (docs/05, Regel 1).
  */
+import { isDefenseCard } from './effects';
 import type { CardDef, CombatCard, CombatState } from './types';
 
-/** Effective energy cost of a card including a pending cost delta (never < 0). */
+/**
+ * Effective energy cost of a card: the "Seemannsgarn" free-defense override
+ * (docs/09) wins, otherwise cost plus the pending delta (never < 0).
+ * Mirrors the reducer's PLAY_CARD cost logic.
+ */
 export function getEffectiveCost(state: CombatState, card: CardDef): number {
+  if (state.firstDefenseCardFree && isDefenseCard(card)) return 0;
   return Math.max(0, card.cost + state.nextCardCostDelta);
 }
 

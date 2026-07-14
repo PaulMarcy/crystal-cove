@@ -52,6 +52,21 @@ function resolveTargets(
 }
 
 /**
+ * Defense card (docs/09 Amboss-Herz/Seemannsgarn „Verteidigungskarte"):
+ * a card with at least one 'block' effect that lands on the PLAYER when the
+ * player plays it — i.e. target 'self' or 'player'. docs/03 has no own card
+ * type for this (block cards are 'skill'), so the effect list is the
+ * testable source of truth. Enemy-granted block never counts: enemies act
+ * via intents, not cards, so card-based hooks are player-only by design.
+ */
+export function isDefenseCard(card: CardDef): boolean {
+  return card.effects.some(
+    (effect) =>
+      effect.kind === 'block' && (effect.target === 'self' || effect.target === 'player'),
+  );
+}
+
+/**
  * Resolve a DSL amount against combat context (docs/05):
  * 'toolTier' scaling adds a per-tier bonus above the base tool tier.
  */

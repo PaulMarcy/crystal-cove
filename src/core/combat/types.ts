@@ -215,6 +215,22 @@ export interface CombatState {
    * every hit of that one card, then consumed (set to 0).
    */
   firstAttackBonus: number;
+  /**
+   * Extra player block granted whenever a DEFENSE CARD is played (talisman
+   * "Amboss-Herz", docs/09: „+1 Block auf jede Verteidigungskarte").
+   * Defense card definition: see isDefenseCard in effects.ts. The bonus is
+   * per CARD (not per block effect) and applies before the card's effects
+   * resolve, so it can absorb same-card retaliation.
+   */
+  defenseCardBlockBonus: number;
+  /**
+   * True while the "first defense card costs 0" override (talisman
+   * "Seemannsgarn", docs/09) is still available this combat. Consumed by the
+   * first defense card played — even one whose cost is already 0 (documented
+   * simplification: "die erste Verteidigungskarte" is positional, not
+   * "the first one that saves energy").
+   */
+  firstDefenseCardFree: boolean;
 }
 
 // ── Events ───────────────────────────────────────────────────────────────
@@ -256,4 +272,13 @@ export interface CombatSetup {
    * would decay normally.
    */
   playerStartStatuses?: StatusMap;
+  /**
+   * HP healed at combat start (talisman "Warmer Bauch", docs/09:
+   * „Kampfstart: heile 3"). Capped at max HP like any heal.
+   */
+  combatStartHeal?: number;
+  /** Talisman "Amboss-Herz" (docs/09) — see CombatState.defenseCardBlockBonus. */
+  defenseCardBlockBonus?: number;
+  /** Talisman "Seemannsgarn" (docs/09) — see CombatState.firstDefenseCardFree. */
+  firstDefenseCardFree?: boolean;
 }

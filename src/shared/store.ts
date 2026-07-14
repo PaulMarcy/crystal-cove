@@ -40,7 +40,12 @@ import {
   xpForEncounter,
   type TalentModifiers,
 } from '../core/progression/progression';
-import { combatStartStatuses, equipTalisman, unequipTalisman } from '../core/progression/talismans';
+import {
+  combatStartStatuses,
+  equipTalisman,
+  talismanCombatModifiers,
+  unequipTalisman,
+} from '../core/progression/talismans';
 import { build, canBuild, dishSlots, type BuildContext } from '../core/village/buildings';
 import {
   advanceDialogRun,
@@ -475,6 +480,11 @@ function applyEquippedTalismans(
 ): void {
   const statuses = combatStartStatuses(state.equippedTalismans, talismansById);
   if (Object.keys(statuses).length > 0) setup.playerStartStatuses = statuses;
+  // M5 descriptor kinds (docs/09): Warmer Bauch / Amboss-Herz / Seemannsgarn.
+  const mods = talismanCombatModifiers(state.equippedTalismans, talismansById);
+  if (mods.combatStartHeal > 0) setup.combatStartHeal = mods.combatStartHeal;
+  if (mods.defenseCardBlockBonus > 0) setup.defenseCardBlockBonus = mods.defenseCardBlockBonus;
+  if (mods.firstDefenseCardFree) setup.firstDefenseCardFree = true;
 }
 
 /**

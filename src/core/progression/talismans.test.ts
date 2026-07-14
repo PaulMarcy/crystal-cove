@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { talismansById, thornRing } from '../../data/talismans';
-import { combatStartStatuses, equipTalisman, unequipTalisman, type TalismanDef } from './talismans';
+import { anvilHeart, sailorsYarn, talismansById, thornRing, warmBelly } from '../../data/talismans';
+import {
+  combatStartStatuses,
+  equipTalisman,
+  talismanCombatModifiers,
+  unequipTalisman,
+  type TalismanDef,
+} from './talismans';
 
 const secondRing: TalismanDef = {
   id: 'test_second_ring',
@@ -42,5 +48,38 @@ describe('combatStartStatuses', () => {
       retaliate: 3,
     });
     expect(combatStartStatuses([], defs)).toEqual({});
+  });
+
+  it('ignores non-status descriptor kinds (M5 talismans)', () => {
+    expect(combatStartStatuses(['warm_belly', 'anvil_heart', 'sailors_yarn'], defs)).toEqual({});
+  });
+});
+
+describe('talismanCombatModifiers', () => {
+  it('maps the docs/09 M5 talismans to their combat modifiers', () => {
+    expect(warmBelly.effect).toEqual({ kind: 'combatStartHeal', amount: 3 });
+    expect(anvilHeart.effect).toEqual({ kind: 'defenseCardBlockBonus', amount: 1 });
+    expect(sailorsYarn.effect).toEqual({ kind: 'firstDefenseCardFree' });
+    expect(
+      talismanCombatModifiers(['warm_belly', 'anvil_heart', 'sailors_yarn'], defs),
+    ).toEqual({ combatStartHeal: 3, defenseCardBlockBonus: 1, firstDefenseCardFree: true });
+  });
+
+  it('stacks amount kinds, ignores status kinds and unknown ids', () => {
+    const secondBelly: TalismanDef = {
+      id: 'test_belly',
+      name: 'Test',
+      description: 'Test',
+      effect: { kind: 'combatStartHeal', amount: 2 },
+    };
+    const withExtra = { ...defs, [secondBelly.id]: secondBelly };
+    expect(
+      talismanCombatModifiers(['warm_belly', 'test_belly', 'thorn_ring', 'gone'], withExtra),
+    ).toEqual({ combatStartHeal: 5, defenseCardBlockBonus: 0, firstDefenseCardFree: false });
+    expect(talismanCombatModifiers([], defs)).toEqual({
+      combatStartHeal: 0,
+      defenseCardBlockBonus: 0,
+      firstDefenseCardFree: false,
+    });
   });
 });
