@@ -44,9 +44,7 @@ export function disenchantRefund(
   if (!recipe) return null;
   return recipe.ingredients.map((ing) => ({
     resource: ing.resource,
-    amount: resources[ing.resource].specialMaterial
-      ? 0
-      : Math.floor(ing.amount * refundFraction),
+    amount: resources[ing.resource].specialMaterial ? 0 : Math.floor(ing.amount * refundFraction),
   }));
 }
 

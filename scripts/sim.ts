@@ -100,7 +100,9 @@ function main(): void {
   const policyName = args.get('policy') ?? 'noise';
   const policy = policies[policyName];
   if (!policy) {
-    console.error(`sim: unknown policy '${policyName}'. Known: ${Object.keys(policies).join(', ')}`);
+    console.error(
+      `sim: unknown policy '${policyName}'. Known: ${Object.keys(policies).join(', ')}`,
+    );
     process.exit(1);
   }
 

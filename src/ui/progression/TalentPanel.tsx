@@ -15,7 +15,11 @@ import { levelOf, useGameStore } from '../../shared/store';
  * Locked/unlocked state is always shown as TEXT, never only via color
  * (docs/11). All rules live in core/progression; this is a render layer.
  */
-function TalentCell({ talent, unlocked, level }: {
+function TalentCell({
+  talent,
+  unlocked,
+  level,
+}: {
   talent: TalentDef;
   unlocked: readonly string[];
   level: number;
@@ -95,7 +99,9 @@ function TalismanSection({ level }: { level: number }) {
               <li key={id} className="talisman-cell">
                 <div className="talent-cell-head">
                   <span className="talent-name">{def.name}</span>
-                  {isEquipped && <span className="talisman-status">{strings.talismans.equipped}</span>}
+                  {isEquipped && (
+                    <span className="talisman-status">{strings.talismans.equipped}</span>
+                  )}
                 </div>
                 <p className="talent-desc">{def.description}</p>
                 {isEquipped ? (

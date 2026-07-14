@@ -61,9 +61,9 @@ describe('save codec', () => {
   it('rejects invalid defeat-flow fields', () => {
     expect(deserialize(serialize({ ...sample, playerHp: 0 } as SaveData)).ok).toBe(false);
     expect(deserialize(serialize({ ...sample, playerHp: 1.5 } as SaveData)).ok).toBe(false);
-    expect(
-      deserialize(serialize({ ...sample, lootSinceRest: { wood: 0 } } as SaveData)).ok,
-    ).toBe(false);
+    expect(deserialize(serialize({ ...sample, lootSinceRest: { wood: 0 } } as SaveData)).ok).toBe(
+      false,
+    );
   });
 
   it('embeds the current save version', () => {

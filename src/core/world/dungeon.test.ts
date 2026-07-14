@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRng } from '../combat/rng';
-import {
-  applyRoomVictory,
-  currentRoom,
-  roomEncounter,
-  startDungeonRun,
-} from './dungeon';
+import { applyRoomVictory, currentRoom, roomEncounter, startDungeonRun } from './dungeon';
 import { verwachseneHoehle } from '../../data/dungeons/verwachseneHoehle';
 import { eliteAffixIds } from '../../data/encounters/tier1';
 

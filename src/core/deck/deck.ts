@@ -33,7 +33,8 @@ export function ownedCounts(
   return countCards([...starterIds, ...collection]);
 }
 
-export type DeckError = 'too_small' | 'too_large' | 'not_owned' | 'too_many_dishes' | 'unknown_card';
+export type DeckError =
+  'too_small' | 'too_large' | 'not_owned' | 'too_many_dishes' | 'unknown_card';
 
 export interface DeckValidation {
   valid: boolean;

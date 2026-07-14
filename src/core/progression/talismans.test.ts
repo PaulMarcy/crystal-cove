@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { talismansById, thornRing } from '../../data/talismans';
-import {
-  combatStartStatuses,
-  equipTalisman,
-  unequipTalisman,
-  type TalismanDef,
-} from './talismans';
+import { combatStartStatuses, equipTalisman, unequipTalisman, type TalismanDef } from './talismans';
 
 const secondRing: TalismanDef = {
   id: 'test_second_ring',

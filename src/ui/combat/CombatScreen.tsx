@@ -203,10 +203,7 @@ export function CombatScreen() {
               strings.combat.dungeonLocationChip
                 .replace('{dungeon}', dungeonsById[dungeonRun.dungeonId]?.name ?? '')
                 .replace('{room}', String(dungeonRun.roomIndex + 1))
-                .replace(
-                  '{total}',
-                  String(dungeonsById[dungeonRun.dungeonId]?.rooms.length ?? 0),
-                )
+                .replace('{total}', String(dungeonsById[dungeonRun.dungeonId]?.rooms.length ?? 0))
             : cleansed
               ? strings.combat.locationChipCleansed
               : strings.combat.locationChip.replace('{density}', String(density))}

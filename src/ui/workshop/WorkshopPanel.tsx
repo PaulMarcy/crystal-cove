@@ -27,7 +27,13 @@ function outputDescription(recipe: RecipeDef): string {
   return cardStrings[recipe.output.cardId]?.description ?? '';
 }
 
-function RecipeRow({ recipe: baseRecipe, stationTier }: { recipe: RecipeDef; stationTier: number }) {
+function RecipeRow({
+  recipe: baseRecipe,
+  stationTier,
+}: {
+  recipe: RecipeDef;
+  stationTier: number;
+}) {
   const inventory = useGameStore((s) => s.inventory);
   const craftRecipe = useGameStore((s) => s.craftRecipe);
   // Talent "Sparsame Hände" — display the same discounted costs the store

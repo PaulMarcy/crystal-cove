@@ -40,11 +40,7 @@ import {
   xpForEncounter,
   type TalentModifiers,
 } from '../core/progression/progression';
-import {
-  combatStartStatuses,
-  equipTalisman,
-  unequipTalisman,
-} from '../core/progression/talismans';
+import { combatStartStatuses, equipTalisman, unequipTalisman } from '../core/progression/talismans';
 import { rollEncounter, type EncounterResult, type ShadowDensity } from '../core/world/encounters';
 import {
   densityForExploration,
@@ -293,7 +289,12 @@ export function fullHpOf(state: Pick<GameState, 'xp' | 'unlockedTalents'>): numb
  * current HP plus the max-HP difference the XP gain caused, clamped to the
  * new max. No level-up → HP is only clamped.
  */
-function hpAfterXpGain(oldXp: number, newXp: number, currentHp: number, maxHpBonus: number): number {
+function hpAfterXpGain(
+  oldXp: number,
+  newXp: number,
+  currentHp: number,
+  maxHpBonus: number,
+): number {
   const oldMax = maxHpForLevel(levelForXp(oldXp), maxHpBonus);
   const newMax = maxHpForLevel(levelForXp(newXp), maxHpBonus);
   return Math.min(currentHp + Math.max(0, newMax - oldMax), newMax);
@@ -537,7 +538,10 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     const { xp, playerHp } = get();
     const nextXp = xp + Math.floor(amount);
     // Level-up heals by the max-HP gain (docs/02: +5 max HP pro Level).
-    set({ xp: nextXp, playerHp: hpAfterXpGain(xp, nextXp, playerHp, modifiersOf(get()).maxHpBonus) });
+    set({
+      xp: nextXp,
+      playerHp: hpAfterXpGain(xp, nextXp, playerHp, modifiersOf(get()).maxHpBonus),
+    });
   },
   unlockTalent: (talentId) => {
     const { unlockedTalents, xp } = get();
@@ -588,7 +592,7 @@ export const gameStore = createStore<GameState>()((set, get) => ({
         // become talisman OWNERSHIP, not inventory items (docs/07
         // Dornenschreck → 25 % Dornenring).
         if (talismansById[item]) {
-          nextOwnedTalismans = [...nextOwnedTalismans, ...Array(amount).fill(item) as string[]];
+          nextOwnedTalismans = [...nextOwnedTalismans, ...(Array(amount).fill(item) as string[])];
         } else {
           nextInventory = addItem(nextInventory, item, amount);
         }

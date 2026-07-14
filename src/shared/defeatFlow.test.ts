@@ -53,8 +53,7 @@ function endCombatWithPhase(phase: 'victory' | 'defeat' | 'retreated', remaining
       ...combat,
       phase,
       player: { ...combat.player, hp: remainingHp },
-      enemies:
-        phase === 'victory' ? combat.enemies.map((e) => ({ ...e, hp: 0 })) : combat.enemies,
+      enemies: phase === 'victory' ? combat.enemies.map((e) => ({ ...e, hp: 0 })) : combat.enemies,
     },
   });
   gameStore.getState().endCombat();
