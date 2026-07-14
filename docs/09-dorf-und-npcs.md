@@ -48,15 +48,19 @@
 - **Kette:** (1) 5 Beeren + 2 Fleisch → Rezept *Kürbiseintopf* (heilt 8) ·
   (2) 3 Fische (braucht Steg → Quest verweist auf Bruna: NPC-Vernetzung) →
   Rezept *Chili-Spieß* (+2 Stärke im Kampf) ·
-  (3) seltener Honig (Wiese, Dichte 2+) → Talisman **Warmer Bauch**
+  (3) seltener Honig (quest-gespawnter Sammelpunkt auf der Wiese, erscheint
+  sobald diese Quest aktiv ist — dichteunabhängig, damit die Kette nach der
+  Reinigung nicht verpassbar wird) → Talisman **Warmer Bauch**
   (Kampfstart: heile 3)
 
 ### Bruna (alte Fischerin)
 - **Ankunft:** Steg gebaut
-- **Funktion:** Angeln (Minispiel-frei: Köder rein, Beute nach Gebiet),
-  kauft Fisch; **lehrt Konter-Schule**
+- **Funktion:** Angeln (Minispiel-frei, V1: Interaktion am Steg gibt 1 Fisch
+  pro Schlafphase — Reset wie Ernte-Nodes; Köder/Beutetabellen sind
+  Post-V1-Erweiterung), kauft Fisch; **lehrt Konter-Schule**
 - **Kette:** (1) „Alte Netze" — 4 Ranken → Rezept *Gegenhalten* (4 Block;
-  wenn getroffen: 3 Schaden zurück) · (2) „Der Riesenwels" — Angel-Quest →
+  wenn getroffen: 3 Schaden zurück) · (2) „Der Riesenwels" — Angel-Quest
+  (der 5. Fang während aktiver Quest ist der Riesenwels) →
   Rezept *Riposte* (6 Schaden, +6 wenn du diese Runde geblockt hast) ·
   (3) „Brunas Geschichte" — Dialog-Quest nach Reinigung →
   Talisman **Seemannsgarn** (erste Verteidigungskarte je Kampf kostet 0)
@@ -93,7 +97,7 @@
 | Typ | Geber | Belohnung | XP? |
 |---|---|---|---|
 | Hauptquest | Lumen | Story-Fortschritt, Freischaltungen | ja (50–150) |
-| Persönliche Kette | je NPC (3 Quests) | Rezepte, Funktionen, Talismane | ja (30–80) |
+| Persönliche Kette | je NPC (3 Quests) | Rezepte, Funktionen, Talismane | ja (einheitlich: St. 1 = 30, St. 2 = 50, St. 3 = 80) |
 | Schwarzes Brett | Markt (Pool kleiner Bitten) | Münzen + Material | **nein** (Kein-Grind-Regel aus doc 02) |
 
 ## Datenformat-Hinweis (für src/data/npcs.ts)
