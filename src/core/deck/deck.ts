@@ -8,7 +8,8 @@
  *      is level-dependent (docs/02 milestone Lv 4: 12 → 15; callers resolve
  *      it via core/progression.deckLimitForLevel),
  *   2. be a sub-multiset of the owned cards,
- *   3. hold at most `deckConfig.dishSlots` dish cards (docs/10 Küche).
+ *   3. hold at most `dishSlots` dish cards — default deckConfig.dishSlots;
+ *      the B1-Haus raises it (core/village/buildings.dishSlots, docs/09).
  *
  * All rule values live in src/data (deck.ts, progression.ts); card
  * definitions are resolved through a caller-supplied id → CardDef map.
@@ -51,6 +52,7 @@ export function validateDeck(
   owned: CardCounts,
   cardsById: ReadonlyMap<string, CardDef>,
   maxSize: number = deckConfig.minSize,
+  dishSlots: number = deckConfig.dishSlots,
 ): DeckValidation {
   const errors: DeckError[] = [];
   if (deck.length < deckConfig.minSize) errors.push('too_small');
@@ -60,7 +62,7 @@ export function validateDeck(
   if (Object.entries(deckCounts).some(([id, n]) => n > (owned[id] ?? 0))) {
     errors.push('not_owned');
   }
-  if (dishCount(deck, cardsById) > deckConfig.dishSlots) errors.push('too_many_dishes');
+  if (dishCount(deck, cardsById) > dishSlots) errors.push('too_many_dishes');
   return { valid: errors.length === 0, errors };
 }
 
@@ -75,13 +77,14 @@ export function addToDeck(
   owned: CardCounts,
   cardsById: ReadonlyMap<string, CardDef>,
   maxSize: number = deckConfig.minSize,
+  dishSlots: number = deckConfig.dishSlots,
 ): readonly string[] | null {
   const card = cardsById.get(cardId);
   if (!card) return null;
   if (deck.length >= maxSize) return null;
   const inDeck = deck.filter((id) => id === cardId).length;
   if (inDeck >= (owned[cardId] ?? 0)) return null;
-  if (card.type === 'dish' && dishCount(deck, cardsById) >= deckConfig.dishSlots) return null;
+  if (card.type === 'dish' && dishCount(deck, cardsById) >= dishSlots) return null;
   return [...deck, cardId];
 }
 
@@ -102,7 +105,8 @@ export function buildCombatDeck(
   owned: CardCounts,
   cardsById: ReadonlyMap<string, CardDef>,
   maxSize: number = deckConfig.minSize,
+  dishSlots: number = deckConfig.dishSlots,
 ): CardDef[] | null {
-  if (!validateDeck(deck, owned, cardsById, maxSize).valid) return null;
+  if (!validateDeck(deck, owned, cardsById, maxSize, dishSlots).valid) return null;
   return deck.map((id) => cardsById.get(id)!);
 }

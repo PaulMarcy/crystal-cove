@@ -41,6 +41,12 @@ export function snapshotFromState(state: GameState): SaveData {
     // Defeat flow (M4 Task 5): HP outside combat + run-loot penalty basis.
     playerHp: state.playerHp,
     lootSinceRest: state.lootSinceRest,
+    // Buildings (M5 Task 1): slot stages, station tiers and the flags the
+    // build prerequisites consume (docs/09).
+    builtBuildings: state.builtBuildings,
+    stationTiers: state.stationTiers,
+    storyFlags: state.storyFlags,
+    friendshipLevels: state.friendshipLevels,
   };
 }
 
@@ -77,7 +83,11 @@ export function initPersistence(storage: SaveStorage): LoadResult {
       state.ownedTalismans !== prev.ownedTalismans ||
       state.equippedTalismans !== prev.equippedTalismans ||
       state.playerHp !== prev.playerHp ||
-      state.lootSinceRest !== prev.lootSinceRest;
+      state.lootSinceRest !== prev.lootSinceRest ||
+      state.builtBuildings !== prev.builtBuildings ||
+      state.stationTiers !== prev.stationTiers ||
+      state.storyFlags !== prev.storyFlags ||
+      state.friendshipLevels !== prev.friendshipLevels;
     if (combatJustEnded || persistedSliceChanged) {
       saveGame(storage, snapshotFromState(state));
     }

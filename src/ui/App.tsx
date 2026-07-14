@@ -8,6 +8,7 @@ import { CombatScreen } from './combat/CombatScreen';
 import { DungeonPanel } from './dungeon/DungeonPanel';
 import { InventoryPanel } from './inventory/InventoryPanel';
 import { WorkshopPanel } from './workshop/WorkshopPanel';
+import { BuildPanel } from './village/BuildPanel';
 import { DeckChestPanel } from './deck/DeckChestPanel';
 import { ProgressionHud } from './progression/ProgressionHud';
 import { TalentPanel } from './progression/TalentPanel';
@@ -122,6 +123,7 @@ export function App() {
       <ProgressionHud />
       <TalentPanel />
       <WorkshopPanel />
+      <BuildPanel />
       <DeckChestPanel />
       <InventoryPanel />
       <SaveRecoveryNotice />

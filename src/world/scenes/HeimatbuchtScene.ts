@@ -4,6 +4,7 @@ import { strings } from '../../shared/strings';
 import { isZoneId, zoneAt, type ZoneRect } from '../../core/world/zones';
 import { heimatbuchtHarvestNodes, type HarvestNodeType } from '../../data/resources';
 import { heimatbuchtStations, stationInteractRange } from '../../data/stations';
+import { buildings, buildSlotInteractRange, type BuildingDef } from '../../data/buildings';
 import {
   crops,
   farmInteractRange,
@@ -55,6 +56,11 @@ interface WorldStation {
   sprite: Phaser.GameObjects.Sprite;
 }
 
+interface WorldBuildSlot {
+  def: BuildingDef;
+  sprite: Phaser.GameObjects.Sprite;
+}
+
 interface WorldFarmPlot {
   id: string;
   sprite: Phaser.GameObjects.Sprite;
@@ -97,6 +103,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
   private focusedNode: WorldHarvestNode | null = null;
   private stations: WorldStation[] = [];
   private focusedStation: WorldStation | null = null;
+  private buildSlots: WorldBuildSlot[] = [];
+  private focusedBuildSlot: WorldBuildSlot | null = null;
   private farmPlots: WorldFarmPlot[] = [];
   private focusedPlot: WorldFarmPlot | null = null;
   private tentSprite: Phaser.GameObjects.Sprite | null = null;
@@ -131,6 +139,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.focusedNode = null;
     this.stations = [];
     this.focusedStation = null;
+    this.buildSlots = [];
+    this.focusedBuildSlot = null;
     this.farmPlots = [];
     this.focusedPlot = null;
     this.tentSprite = null;
@@ -163,6 +173,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
 
     this.spawnHarvestNodes();
     this.spawnStations();
+    this.spawnBuildSlots();
     this.spawnFarm();
     this.spawnShrines();
     this.spawnDungeonEntrances();
@@ -246,7 +257,14 @@ export class HeimatbuchtScene extends Phaser.Scene {
         this.scene.pause();
       } else if (prev.activeStation !== null && state.activeStation === null) {
         this.scene.resume();
+      } else if (prev.activeBuildSlot === null && state.activeBuildSlot !== null) {
+        // Build UI open (React overlay) → freeze the world, like stations.
+        this.scene.pause();
+      } else if (prev.activeBuildSlot !== null && state.activeBuildSlot === null) {
+        this.scene.resume();
       }
+      // Built stage changed (build panel) → mirror onto the world sprites.
+      if (state.builtBuildings !== prev.builtBuildings) this.refreshBuildSlotSprites();
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.unsubscribeStore?.();
@@ -280,13 +298,17 @@ export class HeimatbuchtScene extends Phaser.Scene {
     }
 
     this.updateStationFocus();
+    this.updateBuildSlotFocus();
     this.updateDungeonEntranceFocus();
     this.updateFarmFocus();
     this.updateHarvestFocus();
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
-      // Priority when several are in range: station > entrance > tent > plot > node.
+      // Priority when several are in range:
+      // station > build slot > entrance > tent > plot > node.
       if (this.focusedStation) {
         gameStore.getState().openStation(this.focusedStation.station);
+      } else if (this.focusedBuildSlot) {
+        gameStore.getState().openBuildSlot(this.focusedBuildSlot.def.id);
       } else if (this.focusedEntrance) {
         // Dungeon flow runs in the React overlay (store-driven, M4).
         gameStore.getState().enterDungeon(this.focusedEntrance.placement.dungeonId);
@@ -437,7 +459,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
   private updateDungeonEntranceFocus(): void {
     let nearest: WorldDungeonEntrance | null = null;
     let nearestDist = dungeonEntranceInteractRange;
-    if (!this.focusedStation) {
+    if (!this.focusedStation && !this.focusedBuildSlot) {
       for (const entrance of this.dungeonEntrances) {
         const dist = Phaser.Math.Distance.Between(
           this.player.x,
@@ -456,7 +478,13 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.focusedEntrance?.sprite.clearTint();
     this.focusedEntrance = nearest;
     if (!nearest) {
-      if (!this.focusedStation && !this.focusedNode && !this.focusedPlot && !this.tentFocused) {
+      if (
+        !this.focusedStation &&
+        !this.focusedBuildSlot &&
+        !this.focusedNode &&
+        !this.focusedPlot &&
+        !this.tentFocused
+      ) {
         this.harvestPrompt.setVisible(false);
       }
       return;
@@ -681,7 +709,9 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.focusedStation?.sprite.clearTint();
     this.focusedStation = nearest;
     if (!nearest) {
-      if (!this.focusedNode && !this.focusedEntrance) this.harvestPrompt.setVisible(false);
+      if (!this.focusedNode && !this.focusedBuildSlot && !this.focusedEntrance) {
+        this.harvestPrompt.setVisible(false);
+      }
       return;
     }
     nearest.sprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
@@ -730,6 +760,113 @@ export class HeimatbuchtScene extends Phaser.Scene {
     });
   }
 
+  // ── Building slots (M5 Task 1, docs/09 B1–B9) ───────────────────────────
+
+  /**
+   * Spawns a marker per building slot (src/data/buildings). B1–B3 already
+   * have a world counterpart (tent, kitchen, smithy) — their marker is an
+   * upgrade sign next to it; pure slots switch to a built placeholder once
+   * their first stage stands.
+   */
+  private spawnBuildSlots(): void {
+    this.createBuildSlotTextures();
+    for (const def of buildings) {
+      const x = def.tileX * TILE + TILE / 2;
+      const y = def.tileY * TILE + TILE / 2;
+      const sprite = this.add.sprite(x, y, this.buildSlotTextureKey(def)).setDepth(5);
+      this.buildSlots.push({ def, sprite });
+    }
+  }
+
+  /** Sign while nothing stands; built placeholder for pure slots (B4–B9). */
+  private buildSlotTextureKey(def: BuildingDef): string {
+    const stage = gameStore.getState().builtBuildings[def.id] ?? 0;
+    // B1–B3 keep the sign: tent/station sprites already show the building.
+    const hasWorldCounterpart = def.station !== undefined || def.id === 'b1';
+    return stage > 0 && !hasWorldCounterpart ? 'build-slot-built' : 'build-slot-sign';
+  }
+
+  /** Mirrors store build state onto the slot sprites (after a build). */
+  private refreshBuildSlotSprites(): void {
+    for (const slot of this.buildSlots) {
+      slot.sprite.setTexture(this.buildSlotTextureKey(slot.def));
+    }
+  }
+
+  /** Nearest build slot in range gets highlight + prompt; stations win. */
+  private updateBuildSlotFocus(): void {
+    let nearest: WorldBuildSlot | null = null;
+    let nearestDist = buildSlotInteractRange;
+    if (!this.focusedStation) {
+      for (const slot of this.buildSlots) {
+        const dist = Phaser.Math.Distance.Between(
+          this.player.x,
+          this.player.y,
+          slot.sprite.x,
+          slot.sprite.y,
+        );
+        if (dist <= nearestDist) {
+          nearest = slot;
+          nearestDist = dist;
+        }
+      }
+    }
+    if (nearest === this.focusedBuildSlot) return;
+
+    this.focusedBuildSlot?.sprite.clearTint();
+    this.focusedBuildSlot = nearest;
+    if (!nearest) {
+      if (
+        !this.focusedStation &&
+        !this.focusedEntrance &&
+        !this.focusedNode &&
+        !this.focusedPlot &&
+        !this.tentFocused
+      ) {
+        this.harvestPrompt.setVisible(false);
+      }
+      return;
+    }
+    nearest.sprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
+    this.harvestPrompt
+      .setText(
+        strings.build.slotPrompt.replace('{name}', strings.buildings[nearest.def.id].name),
+      )
+      .setPosition(nearest.sprite.x, nearest.sprite.y - 14)
+      .setVisible(true);
+  }
+
+  /**
+   * Placeholder build-slot textures (grade 1 "Funktional", docs/04):
+   * neutral wood tones — orange appears only as focus tint.
+   */
+  private createBuildSlotTextures(): void {
+    const make = (key: string, draw: (g: Phaser.GameObjects.Graphics) => void): void => {
+      if (this.textures.exists(key)) return;
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      draw(g);
+      g.generateTexture(key, 16, 18);
+      g.destroy();
+    };
+    make('build-slot-sign', (g) => {
+      g.fillStyle(0x6b4a2f); // post
+      g.fillRect(7, 8, 2, 9);
+      g.fillStyle(0x8d6a45); // board
+      g.fillRect(2, 3, 12, 6);
+      g.fillStyle(0x3a2e28); // hammer glyph (icon, not color-only)
+      g.fillRect(4, 5, 5, 2);
+      g.fillRect(9, 4, 2, 4);
+    });
+    make('build-slot-built', (g) => {
+      g.fillStyle(0x8d6a45); // walls
+      g.fillRect(2, 8, 12, 9);
+      g.fillStyle(0x7a4a35); // roof
+      g.fillTriangle(0, 8, 8, 1, 16, 8);
+      g.fillStyle(0x3a2e28); // door
+      g.fillRect(6, 11, 4, 6);
+    });
+  }
+
   // ── Farming (M3, docs/10 Farming & Zeit) ────────────────────────────────
 
   /** Spawns farm-plot sprites (state from the store) and the tent. */
@@ -767,7 +904,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
 
   /** Tent or nearest plot in range gets focus; stations keep priority. */
   private updateFarmFocus(): void {
-    if (this.focusedStation || this.focusedEntrance) {
+    if (this.focusedStation || this.focusedBuildSlot || this.focusedEntrance) {
       this.clearFarmFocus();
       return;
     }
@@ -936,8 +1073,14 @@ export class HeimatbuchtScene extends Phaser.Scene {
 
   /** Finds the nearest harvestable node in range and moves highlight + prompt onto it. */
   private updateHarvestFocus(): void {
-    if (this.focusedStation || this.focusedEntrance || this.focusedPlot || this.tentFocused) {
-      // Station/entrance/farm prompt has priority — drop any node focus while it is shown.
+    if (
+      this.focusedStation ||
+      this.focusedBuildSlot ||
+      this.focusedEntrance ||
+      this.focusedPlot ||
+      this.tentFocused
+    ) {
+      // Station/build/entrance/farm prompt has priority — drop any node focus while it is shown.
       if (this.focusedNode) {
         this.focusedNode.sprite.clearTint();
         this.focusedNode = null;

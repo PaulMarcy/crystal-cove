@@ -7,7 +7,7 @@ import { deckConfig } from '../../data/deck';
 import { allRecipes } from '../../data/recipes';
 import { deckLimitForLevel } from '../../core/progression/progression';
 import { strings } from '../../shared/strings';
-import { levelOf, modifiersOf, useGameStore } from '../../shared/store';
+import { dishSlotsOf, levelOf, modifiersOf, useGameStore } from '../../shared/store';
 
 const itemNames = strings.items as Readonly<Record<string, string>>;
 const cardStrings = strings.cards as Readonly<
@@ -96,6 +96,7 @@ export function DeckChestPanel() {
   const deck = useGameStore((s) => s.deck);
   const consumedStarterDishes = useGameStore((s) => s.consumedStarterDishes);
   const xp = useGameStore((s) => s.xp);
+  const builtBuildings = useGameStore((s) => s.builtBuildings);
   const removeCardFromDeck = useGameStore((s) => s.removeCardFromDeck);
 
   const open = activeStation === 'deck_chest';
@@ -112,6 +113,8 @@ export function DeckChestPanel() {
 
   // Deck size is a range: min 12 (data/deck), max level-dependent (docs/02).
   const maxSize = deckLimitForLevel(levelOf({ xp }));
+  // Dish slots: base 1, +1 with the finished B1-Haus, Cap 2 (docs/09).
+  const dishSlots = dishSlotsOf({ builtBuildings });
   const owned = ownedCountsAfterConsumption(starterDeckIds, collection, consumedStarterDishes);
   const deckCounts = countCards(deck);
   const craftedCounts = countCards(collection);
@@ -135,7 +138,7 @@ export function DeckChestPanel() {
         <div className="deck-chest-column">
           <h3>{strings.deckChest.collectionHeading}</h3>
           <p className="deck-chest-hint">
-            {strings.deckChest.dishSlotHint.replace('{slots}', String(deckConfig.dishSlots))}
+            {strings.deckChest.dishSlotHint.replace('{slots}', String(dishSlots))}
           </p>
           {ownedIds.length === 0 && <p>{strings.deckChest.emptyCollection}</p>}
           <ul className="deck-chest-list">

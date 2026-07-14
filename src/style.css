@@ -284,6 +284,61 @@ body {
   font-size: 0.8rem;
 }
 
+/* ── Bau-UI (M5): Bauplatz-Panel — erbt das Werkstatt-Layout ──────────── */
+
+.build-stage {
+  margin: 8px 0 2px;
+  font-weight: bold;
+  color: var(--color-sand);
+}
+
+.build-effect {
+  margin: 2px 0 10px;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.build-next-heading {
+  margin: 8px 0 4px;
+  font-size: 1rem;
+  color: var(--color-sand);
+}
+
+.build-subheading {
+  margin: 8px 0 4px;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.build-requirements,
+.build-costs {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fehlende Voraussetzung/Material: rot + Text-Tag — nie nur Farbe (docs/11). */
+.build-requirement--missing,
+.build-cost--missing {
+  color: #ff8a7a;
+}
+
+.build-requirement-state,
+.build-missing-tag {
+  font-size: 0.8rem;
+}
+
+.build-max,
+.build-no-costs {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
 /* Orange nur für Handlungsfähiges (docs/04): aktiver Craft-Button. */
 .workshop-craft-button {
   background: var(--color-action);

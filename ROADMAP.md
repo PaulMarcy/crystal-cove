@@ -46,7 +46,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Niederlage-Fluss: Aufwachen im Bett + Beute-Malus (50 % der Run-Beute, docs/03)
 
 ## M5 — Dorf, NPCs & Quests
-- [ ] Bauplatz-System B1–B9 (docs/09), Bau-UI
+- [x] Bauplatz-System B1–B9 (docs/09), Bau-UI
 - [ ] Dialog-System (Portrait, Textbox, Weiter; Choices vorbereitet)
 - [ ] NPC-Ankunftstrigger, Freundschaftsketten aller 6 NPCs, Questlog minimal
 - [ ] Markt + Schwarzes Brett (Münz-Ökonomie), Angeln (Steg)

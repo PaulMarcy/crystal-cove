@@ -100,6 +100,18 @@ export interface SaveDataV2 extends Omit<SaveDataV1, 'collection' | 'toolTier'> 
   playerHp?: number;
   /** Inventory gains since the last rest — basis of the defeat loot penalty. */
   lootSinceRest?: Inventory;
+  /**
+   * M5 buildings (Task 1) — additive-OPTIONAL late-V2 fields (no version
+   * bump, same pattern as xp): absent = initial stages / starter tiers.
+   */
+  /** Built stage per building slot (docs/09 B1–B9). */
+  builtBuildings?: Readonly<Record<string, number>>;
+  /** Workshop-station tiers (docs/10; raised by B2/B3 builds). */
+  stationTiers?: Readonly<Record<string, number>>;
+  /** Story flags (build/arrival prerequisites, set by M5/M6 tasks). */
+  storyFlags?: readonly string[];
+  /** Friendship level 0–3 per NPC id (docs/09 quest chains). */
+  friendshipLevels?: Readonly<Record<string, number>>;
 }
 
 /** Current save shape — alias moves forward with each new version. */
@@ -255,6 +267,22 @@ function isValidSaveData(value: unknown): value is SaveData {
   }
   if (v.playerHp !== undefined) {
     if (!Number.isInteger(v.playerHp) || (v.playerHp as number) < 1) return false;
+  }
+  // M5 buildings — non-negative integer maps / string lists (same
+  // validation depth as the other additive fields; unknown ids are
+  // tolerated and ignored by consumers).
+  for (const key of ['builtBuildings', 'stationTiers', 'friendshipLevels'] as const) {
+    const map = v[key];
+    if (map !== undefined) {
+      if (typeof map !== 'object' || map === null || Array.isArray(map)) return false;
+      if (!Object.values(map).every((n) => Number.isInteger(n) && (n as number) >= 0)) {
+        return false;
+      }
+    }
+  }
+  if (v.storyFlags !== undefined) {
+    if (!Array.isArray(v.storyFlags)) return false;
+    if (!v.storyFlags.every((id) => typeof id === 'string')) return false;
   }
   if (v.lootSinceRest !== undefined) {
     if (typeof v.lootSinceRest !== 'object' || v.lootSinceRest === null) return false;

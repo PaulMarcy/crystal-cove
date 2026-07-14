@@ -41,6 +41,7 @@ import {
   type TalentModifiers,
 } from '../core/progression/progression';
 import { combatStartStatuses, equipTalisman, unequipTalisman } from '../core/progression/talismans';
+import { build, canBuild, dishSlots, type BuildContext } from '../core/village/buildings';
 import { rollEncounter, type EncounterResult, type ShadowDensity } from '../core/world/encounters';
 import {
   densityForExploration,
@@ -75,6 +76,13 @@ import { crops, harvestToolBonus, heimatbuchtFarmPlots, type CropId } from '../d
 import { allRecipes } from '../data/recipes';
 import { harvestNodeTypes, heimatbuchtHarvestNodes } from '../data/resources';
 import { initialStationTiers, type WorldStationId } from '../data/stations';
+import {
+  BUILDING_SLOT_IDS,
+  buildingsBySlot,
+  initialBuildingStages,
+  type BuildingSlotId,
+} from '../data/buildings';
+import { deckConfig } from '../data/deck';
 import { talents } from '../data/talents';
 import { talismansById } from '../data/talismans';
 import { xpSources, type XpSource } from '../data/progression';
@@ -173,6 +181,43 @@ export interface GameState {
    * anything blocks the craft.
    */
   craftRecipe: (recipeId: string) => boolean;
+
+  /**
+   * Built stage per building slot (M5, docs/09 B1–B9). B1–B3 start at
+   * stage 1 (tent + starter stations exist in the world); everything else
+   * at 0. Persisted additive-optional (save V2, no version bump).
+   */
+  builtBuildings: Readonly<Record<BuildingSlotId, number>>;
+  /**
+   * Current workshop-station tiers (docs/10 Ausbaustufen). Starts at
+   * initialStationTiers; building B2/B3 stages mirrors into it (docs/09 —
+   * recipes unlock per tier). Persisted additive-optional.
+   */
+  stationTiers: Readonly<Record<string, number>>;
+  /**
+   * Story flags for build/arrival prerequisites (data/buildings
+   * StoryFlagId + future quest flags). Set by later M5/M6 tasks
+   * (setStoryFlag) — this task only consumes them. island_cleansed is NOT
+   * stored here (derived via cleansedOf). Persisted additive-optional.
+   */
+  storyFlags: readonly string[];
+  setStoryFlag: (flag: string) => void;
+  /**
+   * Friendship level 0–3 per NPC id (docs/09) — raised only by the personal
+   * quest chains (M5 NPC task); this task only consumes the levels for
+   * build prerequisites. Persisted additive-optional.
+   */
+  friendshipLevels: Readonly<Record<string, number>>;
+  /** Build slot whose overlay UI is open (null = closed). */
+  activeBuildSlot: BuildingSlotId | null;
+  openBuildSlot: (slot: BuildingSlotId) => void;
+  closeBuildSlot: () => void;
+  /**
+   * Builds the next stage of a slot: prerequisites + material via
+   * core/village, then deducts material and (for B2/B3) mirrors the stage
+   * into the station tier. Returns false when anything blocks the build.
+   */
+  buildBuilding: (slot: BuildingSlotId) => boolean;
 
   /**
    * Total XP ever earned (docs/02) — the level is always DERIVED via
@@ -334,6 +379,36 @@ export function cleansedOf(state: Pick<GameState, 'completedDungeons'>): boolean
 }
 
 /**
+ * Build-check context (core/village) composed from store state.
+ * `onboarding`/`beat6` are granted by default until M6 wires the real
+ * onboarding flags — they only gate stages that are pre-built anyway
+ * (data/buildings initialBuildingStages); island_cleansed is derived.
+ */
+export function buildContextOf(
+  state: Pick<
+    GameState,
+    'inventory' | 'storyFlags' | 'rescuedNpcs' | 'friendshipLevels' | 'completedDungeons'
+  >,
+): BuildContext {
+  const flags = ['onboarding', 'beat6', ...state.storyFlags];
+  if (cleansedOf(state)) flags.push('island_cleansed');
+  return {
+    inventory: state.inventory,
+    flags,
+    rescuedNpcs: state.rescuedNpcs,
+    friendshipLevels: state.friendshipLevels,
+  };
+}
+
+/**
+ * Dish slots per expedition (docs/09 B1 Haus: +1, Cap 2 gesamt) — every
+ * deck consumer (Deck-Truhe add, combat deck validation) must use this.
+ */
+export function dishSlotsOf(state: Pick<GameState, 'builtBuildings'>): number {
+  return dishSlots(state.builtBuildings, deckConfig.dishSlots);
+}
+
+/**
  * Shadow density every consumer must use (encounter rolls, dungeon scaling,
  * loot, HUD): exploration-derived density, permanently pinned to 0 once the
  * island is cleansed (core/world/exploration.effectiveShadowDensity).
@@ -360,6 +435,7 @@ function buildScaledCombatDeck(state: GameState): CardDef[] | null {
     owned,
     cardsById,
     deckLimitForLevel(levelOf(state)),
+    dishSlotsOf(state),
   );
   if (!combatDeck) return null;
   const mods = modifiersOf(state);
@@ -461,7 +537,14 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     const { deck, collection, consumedStarterDishes } = get();
     const owned = ownedCountsAfterConsumption(starterDeckIds, collection, consumedStarterDishes);
     // Deck max size is level-dependent (docs/02 milestone Lv 4: 12 → 15).
-    const next = addToDeck(deck, cardId, owned, cardsById, deckLimitForLevel(levelOf(get())));
+    const next = addToDeck(
+      deck,
+      cardId,
+      owned,
+      cardsById,
+      deckLimitForLevel(levelOf(get())),
+      dishSlotsOf(get()),
+    );
     if (!next) return false;
     set({ deck: next });
     return true;
@@ -494,6 +577,47 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     set({ activeStation: station });
   },
   closeStation: () => set({ activeStation: null }),
+
+  builtBuildings: initialBuildingStages,
+  stationTiers: initialStationTiers,
+  storyFlags: [],
+  setStoryFlag: (flag) => {
+    const { storyFlags } = get();
+    if (storyFlags.includes(flag)) return; // idempotent
+    set({ storyFlags: [...storyFlags, flag] });
+  },
+  friendshipLevels: {},
+  activeBuildSlot: null,
+  openBuildSlot: (slot) => {
+    if (get().combat) return; // no building mid-combat (same rule as stations)
+    set({ activeBuildSlot: slot });
+  },
+  closeBuildSlot: () => set({ activeBuildSlot: null }),
+  buildBuilding: (slot) => {
+    const def = buildingsBySlot[slot];
+    if (!def) return false;
+    const { builtBuildings, stationTiers } = get();
+    const currentStage = builtBuildings[slot] ?? 0;
+    const ctx = buildContextOf(get());
+    if (!canBuild(def, currentStage, ctx).allowed) return false;
+    const result = build(def, currentStage, ctx);
+    if (!result) return false;
+    set({
+      inventory: result.inventory,
+      builtBuildings: { ...builtBuildings, [slot]: result.stage },
+      // B2/B3 dock onto the workshop stations: the built stage IS the
+      // station tier (docs/09 ↔ docs/10 Ausbaustufen, never lowered).
+      ...(def.station
+        ? {
+            stationTiers: {
+              ...stationTiers,
+              [def.station]: Math.max(stationTiers[def.station] ?? 1, result.stage),
+            },
+          }
+        : {}),
+    });
+    return true;
+  },
   craftRecipe: (recipeId) => {
     const { activeStation, inventory, toolTier, collection } = get();
     const baseRecipe = allRecipes.find((r) => r.id === recipeId);
@@ -502,7 +626,8 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     // (docs/02; rule in core/economy/crafting.discountedRecipe).
     const recipe = discountedRecipe(baseRecipe, modifiersOf(get()).craftBaseMaterialDiscount);
     if (!isRecipeVisible(recipe, toolTier)) return false;
-    if (!isRecipeUnlocked(recipe, initialStationTiers[recipe.station])) return false;
+    // Station tier is store state now (M5: B2/B3 builds raise it).
+    if (!isRecipeUnlocked(recipe, get().stationTiers[recipe.station] ?? 1)) return false;
     if (!canCraft(inventory, recipe)) return false;
     const result = craft(inventory, recipe);
     if (!result) return false;
@@ -923,6 +1048,24 @@ export const gameStore = createStore<GameState>()((set, get) => ({
         ),
       ),
       lootSinceRest: data.lootSinceRest ?? emptyInventory,
+      // Buildings (M5, additive-optional): pre-M5 saves get the initial
+      // stages; stored stages never drop below the initial ones (B1–B3
+      // exist in the world from the start).
+      builtBuildings: Object.fromEntries(
+        BUILDING_SLOT_IDS.map((id) => [
+          id,
+          Math.max(initialBuildingStages[id], data.builtBuildings?.[id] ?? 0),
+        ]),
+      ) as Record<BuildingSlotId, number>,
+      // Station tiers never drop below the starter tiers (data/stations).
+      stationTiers: Object.fromEntries(
+        Object.entries(initialStationTiers).map(([station, tier]) => [
+          station,
+          Math.max(tier, data.stationTiers?.[station] ?? 0),
+        ]),
+      ),
+      storyFlags: data.storyFlags ?? [],
+      friendshipLevels: data.friendshipLevels ?? {},
       saveRecovered: recovered,
     }),
   saveRecovered: false,

@@ -7,7 +7,6 @@ import {
   isRecipeVisible,
 } from '../../core/economy/crafting';
 import { allRecipes, type RecipeDef } from '../../data/recipes';
-import { initialStationTiers } from '../../data/stations';
 import { strings } from '../../shared/strings';
 import { modifiersOf, useGameStore } from '../../shared/store';
 
@@ -92,6 +91,7 @@ export function WorkshopPanel() {
   const closeStation = useGameStore((s) => s.closeStation);
   const toolTier = useGameStore((s) => s.toolTier);
   const collection = useGameStore((s) => s.collection);
+  const stationTiers = useGameStore((s) => s.stationTiers);
 
   useEffect(() => {
     if (!activeStation) return undefined;
@@ -105,7 +105,8 @@ export function WorkshopPanel() {
   // The Deck-Truhe has its own overlay (DeckChestPanel) — this panel only
   // renders crafting stations with recipes.
   if (!activeStation || activeStation === 'deck_chest') return null;
-  const stationTier = initialStationTiers[activeStation];
+  // Station tier is store state (M5: B2/B3 builds raise it, docs/09).
+  const stationTier = stationTiers[activeStation] ?? 1;
   const recipes = allRecipes.filter(
     (r) => r.station === activeStation && isRecipeVisible(r, toolTier),
   );

@@ -31,8 +31,9 @@ export const heimatbuchtStations: readonly StationPlacement[] = [
 export const stationInteractRange = 26;
 
 /**
- * Built-out tier per station at game start (docs/10 St. column; upgrades to
- * tier 2 are an M5 build feature — until then tier-2 recipes show as locked).
+ * Built-out tier per station at GAME START (docs/10 St. column). The live
+ * tier is store state (stationTiers) — building B2/B3 stages raises it
+ * (M5, data/buildings ↔ core/village).
  */
 export const initialStationTiers: Readonly<Record<StationId, number>> = {
   smithy: 1,

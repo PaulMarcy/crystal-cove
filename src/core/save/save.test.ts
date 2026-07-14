@@ -51,6 +51,27 @@ describe('save codec', () => {
     expect(deserialize(serialize(sample))).toEqual({ ok: true, data: sample });
   });
 
+  it('round-trips the optional building fields (late-V2, no bump, M5 Task 1)', () => {
+    const withBuildings: SaveData = {
+      ...sample,
+      builtBuildings: { b1: 2, b4: 1 },
+      stationTiers: { smithy: 2, kitchen: 1 },
+      storyFlags: ['piya_chain_complete'],
+      friendshipLevels: { tilda: 1 },
+    };
+    expect(deserialize(serialize(withBuildings))).toEqual({ ok: true, data: withBuildings });
+    // Older V2 saves without the fields stay valid (additive-optional).
+    expect(deserialize(serialize(sample))).toEqual({ ok: true, data: sample });
+  });
+
+  it('rejects negative building stages/tiers (invalid_payload)', () => {
+    const broken = { ...sample, builtBuildings: { b1: -1 } };
+    expect(deserialize(serialize(broken as SaveData))).toEqual({
+      ok: false,
+      error: 'invalid_payload',
+    });
+  });
+
   it('round-trips the optional defeat-flow fields (late-V2, no bump, M4 Task 5)', () => {
     const withDefeat: SaveData = { ...sample, playerHp: 23, lootSinceRest: { wood: 2 } };
     expect(deserialize(serialize(withDefeat))).toEqual({ ok: true, data: withDefeat });
