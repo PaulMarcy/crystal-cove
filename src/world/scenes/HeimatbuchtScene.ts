@@ -561,7 +561,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     }
   }
 
-  /** Back from combat: despawn on victory, otherwise grant a contact grace. */
+  /** Back from combat: despawn on victory, wake up at the tent on defeat. */
   private onCombatEnded(outcome: string | null): void {
     const creature = this.engagedCreature;
     this.engagedCreature = null;
@@ -570,12 +570,42 @@ export class HeimatbuchtScene extends Phaser.Scene {
       creature.moveTween?.stop();
       creature.sprite.destroy();
       this.creatures = this.creatures.filter((c) => c !== creature);
+    } else if (outcome === 'defeat') {
+      // Defeat flow (M4 Task 5, docs/03): wake up at the tent. The store
+      // already applied heal, loot penalty and the sleep cycle in endCombat;
+      // the world mirrors it (position + respawned nodes + grown crops).
+      this.wakeUpAtTent();
+      this.gracePending = true; // creature stays — grace against re-trigger
     } else {
-      // Defeat/retreat: creature stays; grace so it does not instantly re-trigger.
-      // TODO(M4): richtiger Niederlage-Fluss (Aufwachen im Bett, Malus).
+      // Retreat: creature stays; grace so it does not instantly re-trigger.
       this.gracePending = true;
     }
     this.scene.resume();
+  }
+
+  /** Moves the player to the tent and mirrors the wake-up sleep cycle. */
+  private wakeUpAtTent(): void {
+    // One tile below the tent so the sprite does not overlap it.
+    this.player.setPosition(
+      heimatbuchtTent.tileX * TILE + TILE / 2,
+      (heimatbuchtTent.tileY + 1) * TILE + TILE / 2,
+    );
+    this.lastTile = {
+      x: Math.floor(this.player.x / TILE),
+      y: Math.floor(this.player.y / TILE),
+    };
+    this.publishLocation();
+    // The wake-up counted as a sleep in the store: crops advanced, harvest
+    // nodes respawned — mirror both onto the world sprites (like doSleep).
+    this.refreshFarmSprites();
+    for (const node of this.harvestNodes) {
+      node.harvested = false;
+      node.sprite.setTexture(this.nodeTextureKey(node.type, false));
+    }
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.cameras.main.fadeIn(400, 0, 0, 0);
+    });
   }
 
   /**

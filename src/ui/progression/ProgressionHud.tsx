@@ -1,8 +1,8 @@
-import { xpProgress } from '../../core/progression/progression';
+import { maxHpForLevel, xpProgress } from '../../core/progression/progression';
 import { explorationFraction } from '../../core/world/exploration';
 import { heimatbuchtExplorationMarkers } from '../../data/exploration';
 import { strings } from '../../shared/strings';
-import { cleansedOf, effectiveDensityOf, useGameStore } from '../../shared/store';
+import { cleansedOf, effectiveDensityOf, modifiersOf, useGameStore } from '../../shared/store';
 
 /**
  * Island HUD chip (M4): current level + XP progress + exploration % and
@@ -17,7 +17,12 @@ export function ProgressionHud() {
   // the HUD then says "Gereinigt" AS TEXT (never number/color alone, docs/11).
   const shadowDensity = useGameStore(effectiveDensityOf);
   const cleansed = useGameStore(cleansedOf);
+  // HP outside combat (M4 Task 5) — persisted in the store, max from
+  // level + talent "Zähigkeit" (core/progression).
+  const playerHp = useGameStore((s) => s.playerHp);
+  const maxHpBonus = useGameStore((s) => modifiersOf(s).maxHpBonus);
   const progress = xpProgress(xp);
+  const maxHp = maxHpForLevel(progress.level, maxHpBonus);
   const explorationPercent = Math.round(
     explorationFraction(discoveredMarkers, heimatbuchtExplorationMarkers) * 100,
   );
@@ -35,6 +40,11 @@ export function ProgressionHud() {
         {strings.progression.levelLabel.replace('{level}', String(progress.level))}
       </span>
       <span className="progression-xp">{xpText}</span>
+      <span className="progression-hp">
+        {strings.progression.hpLabel
+          .replace('{hp}', String(Math.min(playerHp, maxHp)))
+          .replace('{max}', String(maxHp))}
+      </span>
       <span className="progression-exploration">
         {strings.progression.explorationLabel.replace('{percent}', String(explorationPercent))}
       </span>

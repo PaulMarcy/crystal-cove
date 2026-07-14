@@ -40,6 +40,42 @@ function LootToast() {
   );
 }
 
+/**
+ * Island feedback after the defeat/abandon loot penalty (M4 Task 5,
+ * docs/03): which items the shadows kept. Shown for defeats, dungeon
+ * retreats and Aufgeben alike — the store sets lastDefeatLoss only when a
+ * penalty was applied.
+ */
+function DefeatLossToast() {
+  const lastDefeatLoss = useGameStore((s) => s.lastDefeatLoss);
+  const clearLastDefeatLoss = useGameStore((s) => s.clearLastDefeatLoss);
+
+  useEffect(() => {
+    if (!lastDefeatLoss) return undefined;
+    const timer = window.setTimeout(clearLastDefeatLoss, LOOT_TOAST_MS);
+    return () => window.clearTimeout(timer);
+  }, [lastDefeatLoss, clearLastDefeatLoss]);
+
+  if (!lastDefeatLoss) return null;
+  const entries = Object.entries(lastDefeatLoss);
+  return (
+    <div className="loot-toast loot-toast--loss" role="status">
+      <strong>
+        {entries.length > 0 ? strings.combat.defeatLossHeading : strings.combat.defeatNoLoss}
+      </strong>
+      {entries.length > 0 && (
+        <ul className="loot-list">
+          {entries.map(([item, amount]) => (
+            <li key={item}>
+              {strings.items[item as keyof typeof strings.items] ?? item} ×{amount}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /** One-time notice when the corrupt primary save was restored from backup. */
 function SaveRecoveryNotice() {
   const recovered = useGameStore((s) => s.saveRecovered);
@@ -82,6 +118,7 @@ export function App() {
         {strings.ui.startTestCombat}
       </button>
       <LootToast />
+      <DefeatLossToast />
       <ProgressionHud />
       <TalentPanel />
       <WorkshopPanel />

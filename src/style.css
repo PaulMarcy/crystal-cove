@@ -70,6 +70,11 @@ body {
 .loot-toast .loot-list {
   margin: 4px 0 0;
 }
+/* Verlust-Variante (Niederlage/Aufgeben, M4 Task 5): gedeckter Rahmen —
+   Information steht IM TEXT (docs/11: nie nur Farbe). */
+.loot-toast--loss {
+  border-color: rgba(150, 104, 216, 0.6);
+}
 
 .save-recovery-notice {
   position: absolute;

@@ -43,7 +43,7 @@ Claude Code arbeitet Tasks top-down ab und hakt sie per Commit ab.
 - [x] Erkundungs-% + Schattendichte 0–3 (Eliten ab 2, Affixe)
 - [x] Dungeon „Verwachsene Höhle": 3 Kämpfe + Wurzelwächter (phased), Orin-Rettung
 - [x] Reinigung (Dichte dauerhaft 0), Talismane funktional (Dornenring); weiterhin offen: offen aus Task 2: Schattenrisse (Dichte 3, docs/07: Beute ×2, Chance-Drops +20 pp — Loot-Konstanten liegen in data/encounters/tier1, Map-Spawn + Encounter-Mechanik fehlen)
-- [ ] Niederlage-Fluss: Aufwachen im Bett + Beute-Malus
+- [x] Niederlage-Fluss: Aufwachen im Bett + Beute-Malus (50 % der Run-Beute, docs/03)
 
 ## M5 — Dorf, NPCs & Quests
 - [ ] Bauplatz-System B1–B9 (docs/09), Bau-UI

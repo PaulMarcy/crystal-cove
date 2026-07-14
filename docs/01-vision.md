@@ -24,8 +24,9 @@ alles, was du auf der Insel tust, macht dein Deck stärker.
    keinen Kampf ohne Insel-Belohnung.
 
 2. **Cozy heißt: kein Verlust, aber echte Spannung.**
-   Kein Permadeath, kein Run-Reset. Niederlage = Aufwachen im Bett, Teil der
-   Beute weg. Spannung entsteht in Dungeons (mehrere Kämpfe ohne Heilung,
+   Kein Permadeath, kein Run-Reset. Niederlage = Aufwachen im Bett, die
+   Hälfte der seit der letzten Rast gesammelten Beute ist weg (Regel in
+   docs/03). Spannung entsteht in Dungeons (mehrere Kämpfe ohne Heilung,
    Wächter am Ende) und über die Schattendichte — nie durch Bestrafung des
    Grundspiels.
 

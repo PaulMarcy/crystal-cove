@@ -50,12 +50,37 @@ Gift ignoriert Block.
   Erfolgschance Basiswert 75 % (Balancing-Wert in src/data).
   Erfolg: Kampf endet sofort, keine Beute. Scheitern: Aktion verbraucht,
   Zug endet, Gegner agieren. Das Wanderer-Talent (docs/02) erhöht die Chance.
-- **Dungeon:** Aufgeben jederzeit garantiert, Beute-Malus (wie gehabt).
+- **Dungeon:** Aufgeben jederzeit garantiert, Beute-Malus (wie bei der
+  Niederlage: 50 % der Run-Beute); der Spieler bleibt, wo er ist —
+  Aufwachen im Bett gibt es nur bei der Niederlage.
+
+## Niederlage & Beute-Malus (verbindlich, M4)
+
+- **Niederlage** (Insel wie Dungeon): Der Spieler wacht voll geheilt im
+  Bett/Zelt auf, die Welt läuft weiter, kein Game Over. Das Aufwachen zählt
+  als Schlaf-Zyklus (Pflanzen wachsen, Ressourcen-Nodes respawnen).
+- **Beute-Malus: 50 % der Run-Beute gehen verloren**, pro Item abgerundet
+  (floor). *Run-Beute* = alle Inventar-**Zugewinne seit dem letzten Schlafen
+  bzw. Aufwachen** (Kampfbeute, Ernte an Nodes, Farm-Ernte). Bereits
+  verbaute/verkochte Items sind einfach weg — der Abzug ist auf den noch
+  vorhandenen Bestand gedeckelt, nie negativ (keine Sackgasse).
+  Umsetzungsannahme (V1): der Store trackt die Zugewinne als Multiset
+  (`lootSinceRest`); Schlafen oder Aufwachen setzt es zurück.
+- **Nicht betroffen:** XP, Talente, Karten-Sammlung/Deck, Werkzeugstufe,
+  Talisman-Besitz, Dungeon-Abschlüsse — nur Inventar-Items.
+- **Dungeon-Aufgeben und Rückzug im Dungeon-Raum**: gleicher 50 %-Malus,
+  aber ohne Aufwachen (Position und HP bleiben). Rückzug im freien Feld
+  bleibt malus-frei (nur „keine Beute", siehe oben).
+- **HP außerhalb des Kampfes** ist persistent: Insel-Kämpfe starten mit dem
+  aktuellen HP-Stand, Schlafen heilt voll, Level-Up heilt um den
+  Max-HP-Zugewinn. Dungeon-Runs starten am Eingang mit vollen HP
+  (dokumentierte Annahme, Run-HP bleibt Run-intern).
 
 ## Cozy-Anpassungen gegenüber StS
 
 1. **Kein Permadeath, kein Run-Reset.** Niederlage: Aufwachen im Bett,
-   Schattenkreatur behält einen Teil der getragenen Beute. Welt und Deck bleiben.
+   die Schattenkreatur behält 50 % der Run-Beute (Details oben).
+   Welt und Deck bleiben.
 2. **Persistente Welt statt Roguelike.** StS-Spannung entsteht in **Dungeons**:
    3–5 Kämpfe am Stück ohne Heilung, Wächter am Ende, Aufgeben jederzeit möglich
    (Beute des Durchgangs verfällt teilweise).

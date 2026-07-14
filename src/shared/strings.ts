@@ -27,7 +27,10 @@ export const strings = {
     victoryTitle: 'Sieg!',
     lootHeading: 'Beute',
     defeatTitle: 'Erschöpft …',
-    defeatBody: 'Du wachst sicher in deinem Bett auf.',
+    defeatBody: 'Du wachst sicher in deinem Zelt auf — vollständig erholt.',
+    /** Defeat loot penalty (docs/03: 50 % der Run-Beute an die Schatten). */
+    defeatLossHeading: 'Beute verloren',
+    defeatNoLoss: 'Keine Beute verloren.',
     retreatedTitle: 'Rückzug gelungen',
     retreatedBody: 'Du entkommst ohne Beute.',
     backToIsland: 'Zurück zur Insel',
@@ -212,6 +215,8 @@ export const strings = {
     noHealHint: 'Keine Heilung zwischen den Räumen.',
     startFight: 'Kampf beginnen',
     abandon: 'Aufgeben',
+    abandonedLossToast: 'Aufgegeben — Beute verloren: {items}',
+    abandonedNoLossToast: 'Aufgegeben — keine Beute verloren.',
     deckIncomplete: 'Deck unvollständig — der Kampf kann nicht beginnen.',
     npcRescued: '{npc} befreit!',
     orinRescuedBody:
@@ -259,6 +264,7 @@ export const strings = {
     levelUpToast: 'Stufe {level} erreicht!',
     xpGainToast: '+{amount} XP',
     explorationLabel: 'Erkundet: {percent} %',
+    hpLabel: 'HP: {hp}/{max}',
     densityLabel: 'Schattendichte: {density}',
     cleansedLabel: 'Gereinigt',
   },
