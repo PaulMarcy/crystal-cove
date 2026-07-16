@@ -8,7 +8,11 @@
  * Maros Werkzeug) plus everything the doc does not price (Schattenfaser,
  * Kürbis, Chili — not listed under "Überschussmaterial").
  */
+import type { BuildingSlotId } from './buildings';
 import type { ResourceId } from './resources';
+
+/** Building slot whose built stage enables Markt + Schwarzes Brett (docs/09 B8). */
+export const marketSlot: BuildingSlotId = 'b8';
 
 export const sellPrices: Readonly<Partial<Record<ResourceId, number>>> = {
   // Basis-Sammelgut (docs/10: Holz/Stein/Beere/Fisch/Ranken 1)

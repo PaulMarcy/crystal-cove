@@ -10,6 +10,7 @@ import { InventoryPanel } from './inventory/InventoryPanel';
 import { QuestLogPanel } from './quests/QuestLogPanel';
 import { WorkshopPanel } from './workshop/WorkshopPanel';
 import { BuildPanel } from './village/BuildPanel';
+import { MarketPanel } from './market/MarketPanel';
 import { DialogOverlay } from './dialog/DialogOverlay';
 import { DeckChestPanel } from './deck/DeckChestPanel';
 import { ProgressionHud } from './progression/ProgressionHud';
@@ -109,6 +110,35 @@ function QuestToast() {
   );
 }
 
+/**
+ * Brief pier feedback after a catch (M5 Task 4b, docs/09 Angeln V1). The
+ * Riesenwels gets an EXTRA text line + emphasized frame — the information
+ * is in the text, never in color alone (docs/11).
+ */
+function FishCatchToast() {
+  const lastFishCatch = useGameStore((s) => s.lastFishCatch);
+  const clearLastFishCatch = useGameStore((s) => s.clearLastFishCatch);
+
+  useEffect(() => {
+    if (!lastFishCatch) return undefined;
+    const timer = window.setTimeout(clearLastFishCatch, LOOT_TOAST_MS);
+    return () => window.clearTimeout(timer);
+  }, [lastFishCatch, clearLastFishCatch]);
+
+  if (!lastFishCatch) return null;
+  return (
+    <div
+      className={`loot-toast fish-toast${lastFishCatch.giantCatfish ? ' fish-toast--giant' : ''}`}
+      role="status"
+    >
+      <strong>
+        {strings.fishing.caughtToast.replace('{amount}', String(lastFishCatch.amount))}
+      </strong>
+      {lastFishCatch.giantCatfish && <div>{strings.fishing.giantCatfishToast}</div>}
+    </div>
+  );
+}
+
 /** One-time notice when the corrupt primary save was restored from backup. */
 function SaveRecoveryNotice() {
   const recovered = useGameStore((s) => s.saveRecovered);
@@ -156,6 +186,8 @@ export function App() {
       <TalentPanel />
       <WorkshopPanel />
       <BuildPanel />
+      <MarketPanel />
+      <FishCatchToast />
       <DialogOverlay />
       <DeckChestPanel />
       <QuestToast />

@@ -22,6 +22,8 @@ function resetStore(): void {
     fishedSinceSleep: false,
     catfishCatches: 0,
     lastFishCatch: null,
+    marketOpen: false,
+    activeDialog: null,
     storyFlags: [],
     activeQuests: [],
     completedQuests: [],
@@ -69,6 +71,37 @@ describe('coins + market (docs/10)', () => {
     expect(gameStore.getState().inventory).toEqual({ resin: 1 });
     expect(gameStore.getState().buyMarketOffer('offer_resin')).toBe(false);
     expect(gameStore.getState().buyMarketOffer('nonsense')).toBe(false);
+  });
+});
+
+describe('Markt-Panel wiring (M5 Task 4b)', () => {
+  it('opens via Piyas openTrade-Dialog-Choice („Zeig mir deine Waren")', () => {
+    expect(gameStore.getState().startDialog('piya_default')).toBe(true);
+    // piya_default has 1 line; the choice gate sits after it (docs/13).
+    gameStore.getState().chooseDialogOption(0);
+    expect(gameStore.getState().activeDialog).toBeNull();
+    expect(gameStore.getState().marketOpen).toBe(true);
+    gameStore.getState().closeMarket();
+    expect(gameStore.getState().marketOpen).toBe(false);
+  });
+
+  it('„Später" only closes the dialog — no market', () => {
+    expect(gameStore.getState().startDialog('piya_default')).toBe(true);
+    gameStore.getState().chooseDialogOption(1);
+    expect(gameStore.getState().activeDialog).toBeNull();
+    expect(gameStore.getState().marketOpen).toBe(false);
+  });
+
+  it('one overlay at a time: no dialog over an open market', () => {
+    gameStore.getState().openMarket();
+    expect(gameStore.getState().marketOpen).toBe(true);
+    expect(gameStore.getState().startDialog('piya_default')).toBe(false);
+  });
+
+  it('does not open mid-combat (same rule as stations)', () => {
+    gameStore.setState({ combat: {} as never });
+    gameStore.getState().openMarket();
+    expect(gameStore.getState().marketOpen).toBe(false);
   });
 });
 

@@ -471,6 +471,106 @@ body {
   opacity: 0.9;
 }
 
+/* ── Markt (M5 Task 4b): Verkaufen / Piyas Sortiment / Schwarzes Brett ── */
+
+.market-coins {
+  margin: 6px 0 2px;
+  font-weight: bold;
+  color: var(--color-sand);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Aktions-Feedback (verkauft/gekauft/erfüllt) — Text im Panel, kein Toast. */
+.market-notice {
+  margin: 4px 0;
+  font-size: 0.85rem;
+  border: 1px solid rgba(236, 217, 163, 0.35);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.market-heading {
+  margin: 12px 0 6px;
+  font-size: 1rem;
+  color: var(--color-sand);
+}
+
+.market-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.market-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  border: 1px solid rgba(236, 217, 163, 0.35);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.market-row-name {
+  font-weight: bold;
+}
+
+.market-row-price {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.market-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Blockiert-Grund als TEXT neben dem Button — nie nur Disabled (docs/11). */
+.market-blocked {
+  font-size: 0.8rem;
+  color: #ff8a7a;
+}
+
+.market-empty,
+.market-hint {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.board-active-heading {
+  margin: 4px 0 2px;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.board-request-text {
+  margin: 2px 0;
+  font-weight: bold;
+}
+
+.board-reward,
+.board-fulfilled {
+  margin: 2px 0 6px;
+  font-size: 0.9rem;
+}
+
+.board-progress {
+  margin-bottom: 8px;
+}
+
+/* Riesenwels-Fang: betonter Rahmen — die Info steht IM TEXT (docs/11). */
+.fish-toast--giant {
+  border-color: var(--color-action);
+  font-weight: bold;
+}
+
 /* ── Combat screen (docs/11 Zonen-Layout) ─────────────────────────────── */
 
 .combat-screen {

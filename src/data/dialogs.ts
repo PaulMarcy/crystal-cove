@@ -147,7 +147,17 @@ export const dialogs: readonly DialogDef[] = [
     lines: ['piya_arrival_1', 'piya_arrival_2'],
     endActions: [{ type: 'setStoryFlag', flag: 'met_piya' }],
   },
-  { id: 'piya_default', speaker: 'piya', lines: ['piya_default_1'] },
+  {
+    // Handel (docs/13 V1 use case 2): „Zeig mir deine Waren" öffnet das
+    // Markt-Panel (openTrade → store, M5 Task 4b); „Später" schließt nur.
+    id: 'piya_default',
+    speaker: 'piya',
+    lines: ['piya_default_1'],
+    choices: [
+      { labelKey: 'trade_open', action: { type: 'openTrade', npcId: 'piya' } },
+      { labelKey: 'quest_later' },
+    ],
+  },
   ...questDialogs('piya', 'piya_1', 2, 1),
   ...questDialogs('piya', 'piya_2', 2, 1),
   ...questDialogs('piya', 'piya_3', 2, 2),

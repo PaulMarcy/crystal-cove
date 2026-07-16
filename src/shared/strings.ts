@@ -187,7 +187,7 @@ export const strings = {
     // ── Piya (Händlerin, docs/09) ───────────────────────────────────────
     piya_arrival_1: 'Ahoi! Piya, fahrende Händlerin — na ja, gestrandete Händlerin.',
     piya_arrival_2: 'Mein Boot braucht Hilfe. Und du siehst nach Hilfe aus!',
-    piya_default_1: 'Sobald der Markt steht, zeige ich dir Waren von drei Inseln.',
+    piya_default_1: 'Ein paar Waren habe ich immer dabei — mit Markt wird es erst richtig gut.',
     piya_1_offer_1: 'Der Rumpf ist ein Sieb. Ich brauche 10 Holz und 4 Zähes Leder.',
     piya_1_offer_2: 'Hilf mir, und ich nehme dich mit, wenn es wieder losgeht.',
     piya_1_reminder_1: '10 Holz, 4 Zähes Leder — der Rumpf wartet nicht ewig.',
@@ -231,6 +231,7 @@ export const strings = {
     sellPriceLabel: '{price} Münzen/Stück',
     buyPriceLabel: '{price} Münzen',
     sellButton: 'Verkaufen',
+    sellAllButton: 'Alle verkaufen',
     buyButton: 'Kaufen',
     soldToast: '{amount}× {item} verkauft (+{coins} Münzen)',
     boughtToast: '{item} gekauft (−{coins} Münzen)',

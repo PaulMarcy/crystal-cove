@@ -11,6 +11,8 @@ import { isZoneId, zoneAt, type ZoneRect } from '../../core/world/zones';
 import { heimatbuchtHarvestNodes, type HarvestNodeType } from '../../data/resources';
 import { heimatbuchtStations, stationInteractRange } from '../../data/stations';
 import { buildings, buildSlotInteractRange, type BuildingDef } from '../../data/buildings';
+import { marketSlot } from '../../data/market';
+import { fishingConfig } from '../../data/fishing';
 import { npcInteractRange } from '../../data/dialogs';
 import {
   npcPlacements,
@@ -303,6 +305,11 @@ export class HeimatbuchtScene extends Phaser.Scene {
         this.scene.pause();
       } else if (prev.activeDialog !== null && state.activeDialog === null) {
         this.scene.resume();
+      } else if (!prev.marketOpen && state.marketOpen) {
+        // Markt-Panel open (React overlay, M5 Task 4b) → freeze the world.
+        this.scene.pause();
+      } else if (prev.marketOpen && !state.marketOpen) {
+        this.scene.resume();
       }
       // Built stage changed (build panel) → mirror onto the world sprites.
       if (state.builtBuildings !== prev.builtBuildings) this.refreshBuildSlotSprites();
@@ -372,7 +379,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
       } else if (this.focusedStation) {
         gameStore.getState().openStation(this.focusedStation.station);
       } else if (this.focusedBuildSlot) {
-        gameStore.getState().openBuildSlot(this.focusedBuildSlot.def.id);
+        this.interactWithBuildSlot(this.focusedBuildSlot.def);
       } else if (this.focusedEntrance) {
         // Dungeon flow runs in the React overlay (store-driven, M4).
         gameStore.getState().enterDungeon(this.focusedEntrance.placement.dungeonId);
@@ -875,7 +882,11 @@ export class HeimatbuchtScene extends Phaser.Scene {
         }
       }
     }
-    if (nearest === this.focusedBuildSlot) return;
+    if (nearest === this.focusedBuildSlot) {
+      // Pier prompt flips after fishing (fishedSinceSleep) — keep it fresh.
+      if (nearest) this.refreshBuildSlotPrompt();
+      return;
+    }
 
     this.focusedBuildSlot?.sprite.clearTint();
     this.focusedBuildSlot = nearest;
@@ -892,10 +903,55 @@ export class HeimatbuchtScene extends Phaser.Scene {
       return;
     }
     nearest.sprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
+    this.refreshBuildSlotPrompt();
+  }
+
+  /** Prompt of the focused slot (position + current text). */
+  private refreshBuildSlotPrompt(): void {
+    const slot = this.focusedBuildSlot;
+    if (!slot) return;
     this.harvestPrompt
-      .setText(strings.build.slotPrompt.replace('{name}', strings.buildings[nearest.def.id].name))
-      .setPosition(nearest.sprite.x, nearest.sprite.y - 14)
+      .setText(this.buildSlotPromptText(slot.def))
+      .setPosition(slot.sprite.x, slot.sprite.y - 14)
       .setVisible(true);
+  }
+
+  /**
+   * Prompt text for a build slot (M5 Task 4b): the BUILT Markt (B8) and
+   * Steg (B5) switch from the build prompt to their use — Markt öffnen bzw.
+   * Angeln; an exhausted pier says so AS TEXT (docs/09: 1 Fang pro
+   * Schlafphase; docs/11: Zustand nie nur über Farbe).
+   */
+  private buildSlotPromptText(def: BuildingDef): string {
+    const state = gameStore.getState();
+    const stage = state.builtBuildings[def.id] ?? 0;
+    if (def.id === marketSlot && stage >= 1) return strings.market.openPrompt;
+    if (def.id === fishingConfig.pierSlot && stage >= 1) {
+      return state.fishedSinceSleep ? strings.fishing.nothingBiting : strings.fishing.prompt;
+    }
+    return strings.build.slotPrompt.replace('{name}', strings.buildings[def.id].name);
+  }
+
+  /**
+   * [E] on a build slot: the built Markt opens the trade panel, the built
+   * Steg casts the line (fishAtPier — feedback via lastFishCatch toast);
+   * everything else opens the build panel. All rules live in core/store —
+   * the scene only routes the interaction.
+   */
+  private interactWithBuildSlot(def: BuildingDef): void {
+    const state = gameStore.getState();
+    const stage = state.builtBuildings[def.id] ?? 0;
+    if (def.id === marketSlot && stage >= 1) {
+      state.openMarket();
+      return;
+    }
+    if (def.id === fishingConfig.pierSlot && stage >= 1) {
+      // false = nothing biting today — the prompt text already says so.
+      state.fishAtPier();
+      this.refreshBuildSlotPrompt();
+      return;
+    }
+    state.openBuildSlot(def.id);
   }
 
   /**

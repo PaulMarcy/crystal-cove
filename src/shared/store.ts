@@ -108,7 +108,7 @@ import {
   type BuildingSlotId,
 } from '../data/buildings';
 import { dialogsById, type DialogActionDef } from '../data/dialogs';
-import { piyaOffersById, sellPrices } from '../data/market';
+import { marketSlot, piyaOffersById, sellPrices } from '../data/market';
 import { boardRequests, type BoardRequestDef } from '../data/board';
 import { fishingConfig } from '../data/fishing';
 import { npcsById, questCollectNodes } from '../data/npcs';
@@ -304,6 +304,14 @@ export interface GameState {
   boardRequestFulfilled: boolean;
   /** Fulfils the active request (needs the built Markt B8). */
   fulfillActiveBoardRequest: () => boolean;
+  /**
+   * Markt-Panel open? (M5 Task 4b) — transient UI state like activeStation,
+   * never persisted. Opened at the built Markt (B8) or via Piyas
+   * openTrade-Dialog-Choice (docs/13); the world pauses while it is open.
+   */
+  marketOpen: boolean;
+  openMarket: () => void;
+  closeMarket: () => void;
 
   /**
    * Angeln (M5 Task 4, docs/09 V1): 1 Fisch pro Schlafphase am Steg (B5);
@@ -641,8 +649,8 @@ function applyEquippedTalismans(
 /**
  * Interprets declarative dialog-end actions (docs/13: Flags/Quest-Folgen
  * als Events durch core) and closes the dialog. acceptQuest/completeQuest
- * dispatch to the quest actions (rules in core/quests); openTrade stays a
- * PREPARED no-op until the M5 market task.
+ * dispatch to the quest actions (rules in core/quests); openTrade opens the
+ * Markt-Panel (M5 Task 4b).
  */
 function endDialog(
   actions: readonly DialogActionDef[],
@@ -662,7 +670,8 @@ function endDialog(
         get().completeQuest(action.questId);
         break;
       case 'openTrade':
-        // Markt-Task (M5) dockt hier an: Handels-Panel öffnen (docs/13).
+        // Piyas „Zeig mir deine Waren" (docs/13) → Markt-Panel (M5 Task 4b).
+        get().openMarket();
         break;
     }
   }
@@ -956,7 +965,7 @@ export const gameStore = createStore<GameState>()((set, get) => ({
   fulfillActiveBoardRequest: () => {
     const { builtBuildings, boardRequestFulfilled, inventory, coins } = get();
     // The Brett hangs at the Markt (docs/09 B8) — no Markt, no Bitten.
-    if ((builtBuildings.b8 ?? 0) < 1) return false;
+    if ((builtBuildings[marketSlot] ?? 0) < 1) return false;
     if (boardRequestFulfilled) return false; // once per sleep phase
     const request = activeBoardRequestOf(get());
     if (!request) return false;
@@ -966,6 +975,12 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     set({ inventory: result.inventory, coins: result.coins, boardRequestFulfilled: true });
     return true;
   },
+  marketOpen: false,
+  openMarket: () => {
+    if (get().combat) return; // no market mid-combat (same rule as stations)
+    set({ marketOpen: true });
+  },
+  closeMarket: () => set({ marketOpen: false }),
 
   fishedSinceSleep: false,
   catfishCatches: 0,
@@ -1002,9 +1017,10 @@ export const gameStore = createStore<GameState>()((set, get) => ({
 
   activeDialog: null,
   startDialog: (dialogId) => {
-    const { combat, currentDungeonRun, activeStation, activeBuildSlot, activeDialog } = get();
+    const { combat, currentDungeonRun, activeStation, activeBuildSlot, activeDialog, marketOpen } =
+      get();
     // One overlay at a time — dialogs follow the station/build rule.
-    if (combat || currentDungeonRun || activeStation || activeBuildSlot || activeDialog) {
+    if (combat || currentDungeonRun || activeStation || activeBuildSlot || activeDialog || marketOpen) {
       return false;
     }
     const def = dialogsById[dialogId];

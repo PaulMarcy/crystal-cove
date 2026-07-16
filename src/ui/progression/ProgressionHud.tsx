@@ -1,6 +1,7 @@
 import { maxHpForLevel, xpProgress } from '../../core/progression/progression';
 import { explorationFraction } from '../../core/world/exploration';
 import { heimatbuchtExplorationMarkers } from '../../data/exploration';
+import { marketSlot } from '../../data/market';
 import { strings } from '../../shared/strings';
 import { cleansedOf, effectiveDensityOf, modifiersOf, useGameStore } from '../../shared/store';
 
@@ -20,6 +21,11 @@ export function ProgressionHud() {
   // HP outside combat (M4 Task 5) — persisted in the store, max from
   // level + talent "Zähigkeit" (core/progression).
   const playerHp = useGameStore((s) => s.playerHp);
+  // Münzen (M5 Task 4b, docs/10): dezenter Chip-Eintrag, erst sichtbar
+  // sobald Münzen existieren oder der Markt (B8) steht — vorher ist die
+  // Münz-Ökonomie für den Spieler noch kein Thema.
+  const coins = useGameStore((s) => s.coins);
+  const marketBuilt = useGameStore((s) => (s.builtBuildings[marketSlot] ?? 0) >= 1);
   const maxHpBonus = useGameStore((s) => modifiersOf(s).maxHpBonus);
   const progress = xpProgress(xp);
   const maxHp = maxHpForLevel(progress.level, maxHpBonus);
@@ -45,6 +51,11 @@ export function ProgressionHud() {
           .replace('{hp}', String(Math.min(playerHp, maxHp)))
           .replace('{max}', String(maxHp))}
       </span>
+      {(coins > 0 || marketBuilt) && (
+        <span className="progression-coins">
+          {strings.coins.label.replace('{count}', String(coins))}
+        </span>
+      )}
       <span className="progression-exploration">
         {strings.progression.explorationLabel.replace('{percent}', String(explorationPercent))}
       </span>
