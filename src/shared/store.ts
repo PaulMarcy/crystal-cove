@@ -29,6 +29,9 @@ import {
 } from '../core/economy/farming';
 import { harvestNode } from '../core/economy/harvest';
 import { addItem, emptyInventory, type Inventory } from '../core/economy/inventory';
+import { buyOffer, sellResource } from '../core/economy/market';
+import { activeBoardRequest, fulfillBoardRequest } from '../core/economy/board';
+import { fishAtPier } from '../core/economy/fishing';
 import {
   canUnlockTalent,
   deckLimitForLevel,
@@ -105,6 +108,9 @@ import {
   type BuildingSlotId,
 } from '../data/buildings';
 import { dialogsById, type DialogActionDef } from '../data/dialogs';
+import { piyaOffersById, sellPrices } from '../data/market';
+import { boardRequests, type BoardRequestDef } from '../data/board';
+import { fishingConfig } from '../data/fishing';
 import { npcsById, questCollectNodes } from '../data/npcs';
 import { deckConfig } from '../data/deck';
 import { talents } from '../data/talents';
@@ -273,6 +279,44 @@ export interface GameState {
   /** Last quest accept/complete — brief UI feedback, cleared by the toast. */
   lastQuestEvent: { kind: 'accepted' | 'completed'; questId: string; xp: number } | null;
   clearLastQuestEvent: () => void;
+
+  /**
+   * Münzen (M5 Task 4, docs/10): plain counter OUTSIDE the item inventory —
+   * no ResourceId, never disenchantable, never part of the defeat loot
+   * penalty (docs/03 targets Run-Beute). Persisted additive-optional.
+   */
+  coins: number;
+  /**
+   * Sells surplus material at Piya's Markt (docs/10 prices, data/market).
+   * False for unsellable material or too few units. The UI gates ACCESS
+   * (Piya trade dialog / built Markt) — the math has no building gate.
+   */
+  sellResource: (resource: string, amount: number) => boolean;
+  /** Buys one of Piya's offers (data/market). False when coins are short. */
+  buyMarketOffer: (offerId: string) => boolean;
+  /**
+   * Schwarzes Brett (docs/10): the active request is DERIVED from
+   * sleepCount (activeBoardRequestOf) — only "fulfilled this phase?" is
+   * state. Repeatable across phases, at most once per phase (a request
+   * pays above sell value, docs/10 — unlimited repeats would break the
+   * coin flow), NO XP (Kein-Grind-Regel). Persisted additive-optional.
+   */
+  boardRequestFulfilled: boolean;
+  /** Fulfils the active request (needs the built Markt B8). */
+  fulfillActiveBoardRequest: () => boolean;
+
+  /**
+   * Angeln (M5 Task 4, docs/09 V1): 1 Fisch pro Schlafphase am Steg (B5);
+   * reset on sleep like harvest nodes. Persisted additive-optional.
+   */
+  fishedSinceSleep: boolean;
+  /** Catches counted WHILE bruna_2 is active (Riesenwels-Regel, docs/09). */
+  catfishCatches: number;
+  /** One pier interaction. False without Steg or when already fished. */
+  fishAtPier: () => boolean;
+  /** Last catch — brief UI feedback (Riesenwels!), cleared by the toast. */
+  lastFishCatch: { amount: number; giantCatfish: boolean } | null;
+  clearLastFishCatch: () => void;
 
   /**
    * Running dialog (M5, docs/13) — transient UI/flow state, never persisted.
@@ -535,6 +579,15 @@ export function dishSlotsOf(state: Pick<GameState, 'builtBuildings'>): number {
 }
 
 /**
+ * Active Schwarzes-Brett request (docs/10) — DERIVED deterministically from
+ * the persisted sleep counter (core/economy/board), so saves need no
+ * rotation state and every consumer (UI, fulfil action) sees the same one.
+ */
+export function activeBoardRequestOf(state: Pick<GameState, 'sleepCount'>): BoardRequestDef | null {
+  return activeBoardRequest(boardRequests, state.sleepCount);
+}
+
+/**
  * Shadow density every consumer must use (encounter rolls, dungeon scaling,
  * loot, HUD): exploration-derived density, permanently pinned to 0 once the
  * island is cleansed (core/world/exploration.effectiveShadowDensity).
@@ -688,6 +741,10 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       // rested loot is banked, a later defeat cannot touch it (docs/03).
       playerHp: fullHpOf(get()),
       lootSinceRest: emptyInventory,
+      // New sleep phase: next pier catch is free (docs/09) and the Brett
+      // rotates (derived from the incremented sleepCount, docs/10).
+      fishedSinceSleep: false,
+      boardRequestFulfilled: false,
     });
   },
 
@@ -873,6 +930,75 @@ export const gameStore = createStore<GameState>()((set, get) => ({
   },
   lastQuestEvent: null,
   clearLastQuestEvent: () => set({ lastQuestEvent: null }),
+
+  coins: 0,
+  sellResource: (resource, amount) => {
+    const { inventory, coins } = get();
+    // Price map keys are ResourceIds — unknown strings fall out as null.
+    const result = sellResource(inventory, coins, resource as never, amount, sellPrices);
+    if (!result) return false;
+    // Selling only REMOVES items — lootSinceRest (defeat penalty basis)
+    // stays untouched; coins are never penalized (docs/03).
+    set({ inventory: result.inventory, coins: result.coins });
+    return true;
+  },
+  buyMarketOffer: (offerId) => {
+    const offer = piyaOffersById[offerId];
+    if (!offer) return false;
+    const result = buyOffer(get().coins, get().inventory, offer);
+    if (!result) return false;
+    // Purchases are NOT run loot (lootSinceRest): they are paid for, not
+    // Beute — losing them to the defeat penalty would double-charge.
+    set({ inventory: result.inventory, coins: result.coins });
+    return true;
+  },
+  boardRequestFulfilled: false,
+  fulfillActiveBoardRequest: () => {
+    const { builtBuildings, boardRequestFulfilled, inventory, coins } = get();
+    // The Brett hangs at the Markt (docs/09 B8) — no Markt, no Bitten.
+    if ((builtBuildings.b8 ?? 0) < 1) return false;
+    if (boardRequestFulfilled) return false; // once per sleep phase
+    const request = activeBoardRequestOf(get());
+    if (!request) return false;
+    const result = fulfillBoardRequest(inventory, coins, request);
+    if (!result) return false;
+    // Coins only, NO XP (docs/09 Quest-Typen: Kein-Grind-Regel docs/02).
+    set({ inventory: result.inventory, coins: result.coins, boardRequestFulfilled: true });
+    return true;
+  },
+
+  fishedSinceSleep: false,
+  catfishCatches: 0,
+  fishAtPier: () => {
+    const { inventory, builtBuildings, fishedSinceSleep, catfishCatches, activeQuests } = get();
+    const result = fishAtPier(
+      inventory,
+      builtBuildings[fishingConfig.pierSlot] ?? 0,
+      fishedSinceSleep,
+      catfishCatches,
+      // Riesenwels counter runs ONLY while bruna_2 is active (docs/09).
+      activeQuests.includes(fishingConfig.catfishQuestId),
+      fishingConfig,
+    );
+    if (!result) return false;
+    set({
+      inventory: result.inventory,
+      fishedSinceSleep: true,
+      catfishCatches: result.catfishCatches,
+      lastFishCatch: { amount: fishingConfig.fishPerCatch, giantCatfish: result.caughtGiantCatfish },
+      // Fish are gathered goods → run-loot tracking like harvest nodes.
+      lootSinceRest: trackGains(
+        get().lootSinceRest,
+        inventoryGains(inventory, result.inventory),
+      ),
+    });
+    // The 5th quest-active catch IS the Riesenwels (docs/09) — the flag is
+    // bruna_2's turn-in requirement (data/npcs); setStoryFlag is idempotent.
+    if (result.caughtGiantCatfish) get().setStoryFlag(fishingConfig.catfishFlag);
+    return true;
+  },
+  lastFishCatch: null,
+  clearLastFishCatch: () => set({ lastFishCatch: null }),
 
   activeDialog: null,
   startDialog: (dialogId) => {
@@ -1112,6 +1238,9 @@ export const gameStore = createStore<GameState>()((set, get) => ({
             farmPlots: advanceSleep(farmPlots),
             sleepCount: sleepCount + 1,
             harvestedNodeIds: [] as readonly string[],
+            // Same sleep-phase resets as sleep(): fishing and Brett.
+            fishedSinceSleep: false,
+            boardRequestFulfilled: false,
           }
         : { farmPlots, sleepCount, harvestedNodeIds }),
     });
@@ -1329,6 +1458,12 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       activeQuests: data.activeQuests ?? [],
       completedQuests: data.completedQuests ?? [],
       unlockedRecipes: data.unlockedRecipes ?? [],
+      // Coins/Brett/Angeln (M5 Task 4, additive-optional): pre-market saves
+      // start at 0 coins, nothing fulfilled, nothing fished.
+      coins: data.coins ?? 0,
+      boardRequestFulfilled: data.boardRequestFulfilled ?? false,
+      fishedSinceSleep: data.fishedSinceSleep ?? false,
+      catfishCatches: data.catfishCatches ?? 0,
       saveRecovered: recovered,
     }),
   saveRecovered: false,

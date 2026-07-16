@@ -123,6 +123,20 @@ export interface SaveDataV2 extends Omit<SaveDataV1, 'collection' | 'toolTier'> 
   completedQuests?: readonly string[];
   /** Recipe ids taught by NPC quest rewards (docs/09). */
   unlockedRecipes?: readonly string[];
+  /**
+   * M5 market/board/fishing (Task 4) — additive-OPTIONAL late-V2 fields
+   * (no version bump, same pattern as xp): absent = 0 coins, nothing
+   * fulfilled, nothing fished. The ACTIVE board request is derived from
+   * sleepCount (core/economy/board) and never stored.
+   */
+  /** Münzen (docs/10) — plain counter, never an inventory item. */
+  coins?: number;
+  /** Active Brett-Bitte already fulfilled this sleep phase? (docs/10). */
+  boardRequestFulfilled?: boolean;
+  /** Pier catch of this sleep phase already taken? (docs/09 V1-Angeln). */
+  fishedSinceSleep?: boolean;
+  /** Catches counted while bruna_2 was active (Riesenwels-Regel, docs/09). */
+  catfishCatches?: number;
 }
 
 /** Current save shape — alias moves forward with each new version. */
@@ -303,6 +317,15 @@ function isValidSaveData(value: unknown): value is SaveData {
       if (!Array.isArray(list)) return false;
       if (!list.every((id) => typeof id === 'string')) return false;
     }
+  }
+  // M5 market/board/fishing — counters ≥ 0, plain booleans.
+  for (const key of ['coins', 'catfishCatches'] as const) {
+    if (v[key] !== undefined && (!Number.isInteger(v[key]) || (v[key] as number) < 0)) {
+      return false;
+    }
+  }
+  for (const key of ['boardRequestFulfilled', 'fishedSinceSleep'] as const) {
+    if (v[key] !== undefined && typeof v[key] !== 'boolean') return false;
   }
   if (v.lootSinceRest !== undefined) {
     if (typeof v.lootSinceRest !== 'object' || v.lootSinceRest === null) return false;

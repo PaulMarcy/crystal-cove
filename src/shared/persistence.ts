@@ -52,6 +52,12 @@ export function snapshotFromState(state: GameState): SaveData {
     activeQuests: state.activeQuests,
     completedQuests: state.completedQuests,
     unlockedRecipes: state.unlockedRecipes,
+    // Market/Brett/Angeln (M5 Task 4): coins + per-sleep-phase flags; the
+    // active board request is derived from sleepCount, never stored.
+    coins: state.coins,
+    boardRequestFulfilled: state.boardRequestFulfilled,
+    fishedSinceSleep: state.fishedSinceSleep,
+    catfishCatches: state.catfishCatches,
   };
 }
 
@@ -95,7 +101,11 @@ export function initPersistence(storage: SaveStorage): LoadResult {
       state.friendshipLevels !== prev.friendshipLevels ||
       state.activeQuests !== prev.activeQuests ||
       state.completedQuests !== prev.completedQuests ||
-      state.unlockedRecipes !== prev.unlockedRecipes;
+      state.unlockedRecipes !== prev.unlockedRecipes ||
+      state.coins !== prev.coins ||
+      state.boardRequestFulfilled !== prev.boardRequestFulfilled ||
+      state.fishedSinceSleep !== prev.fishedSinceSleep ||
+      state.catfishCatches !== prev.catfishCatches;
     if (combatJustEnded || persistedSliceChanged) {
       saveGame(storage, snapshotFromState(state));
     }

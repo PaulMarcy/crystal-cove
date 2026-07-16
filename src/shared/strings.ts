@@ -218,6 +218,55 @@ export const strings = {
     toggleHint: '[I] Inventar',
     empty: 'Noch nichts gesammelt.',
   },
+  /** Münzen (docs/10) — eigener Zähler, bewusst NICHT im Inventar-Panel. */
+  coins: {
+    name: 'Münzen',
+    label: '{count} Münzen',
+  },
+  market: {
+    title: 'Markt',
+    openPrompt: '[E] Markt öffnen',
+    sellHeading: 'Verkaufen',
+    buyHeading: 'Piyas Sortiment',
+    sellPriceLabel: '{price} Münzen/Stück',
+    buyPriceLabel: '{price} Münzen',
+    sellButton: 'Verkaufen',
+    buyButton: 'Kaufen',
+    soldToast: '{amount}× {item} verkauft (+{coins} Münzen)',
+    boughtToast: '{item} gekauft (−{coins} Münzen)',
+    notSellable: 'Unverkäuflich',
+    notEnoughCoins: 'Nicht genug Münzen',
+    nothingToSell: 'Nichts zu verkaufen.',
+    /** V1: festes Sortiment; Rotation kommt mit der Weltkarte (docs/09). */
+    stockHint: 'Piyas Vorrat wechselt, sobald wieder Boote fahren.',
+  },
+  board: {
+    title: 'Schwarzes Brett',
+    openPrompt: '[E] Schwarzes Brett lesen',
+    activeHeading: 'Aktuelle Bitte',
+    rewardLabel: 'Belohnung: {coins} Münzen',
+    fulfillButton: 'Erfüllen',
+    fulfilledToast: 'Bitte erfüllt (+{coins} Münzen)',
+    /** Einmal pro Schlafphase — danach rotiert die Bitte (docs/10). */
+    alreadyFulfilled: 'Für heute erledigt — nach dem Schlafen hängt eine neue Bitte aus.',
+    missingItems: 'Dir fehlt noch etwas dafür.',
+    /** Texte je Bitte (data/board) — Anzeige-Namen der 6 festen Bitten. */
+    requests: {
+      board_wood: 'Gesucht: 5 Holz für den Zaunbau.',
+      board_berry: 'Gesucht: 3 Beeren für einen Kuchen.',
+      board_stone: 'Gesucht: 3 Steine für den Wegebau.',
+      board_fish: 'Gesucht: 2 Fische, möglichst frisch!',
+      board_resin: 'Gesucht: 2 Harz zum Abdichten.',
+      board_beetle_shell: 'Gesucht: 1 Käferpanzer — als Anschauungsstück.',
+    },
+  },
+  fishing: {
+    prompt: '[E] Angeln',
+    caughtToast: '+{amount} Fisch geangelt!',
+    giantCatfishToast: 'Der Riesenwels! Erzähl das Bruna!',
+    /** 1 Fang pro Schlafphase (docs/09 V1) — danach beißt nichts mehr. */
+    nothingBiting: 'Heute beißt nichts mehr — versuch es nach dem Schlafen wieder.',
+  },
   questLog: {
     title: 'Quests',
     toggleHint: '[Q] Quests',
