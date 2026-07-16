@@ -132,10 +132,7 @@ export function BuildPanel() {
                 const have = inventory[resource] ?? 0;
                 const short = have < (need ?? 0);
                 return (
-                  <li
-                    key={resource}
-                    className={`build-cost${short ? ' build-cost--missing' : ''}`}
-                  >
+                  <li key={resource} className={`build-cost${short ? ' build-cost--missing' : ''}`}>
                     {itemNames[resource] ?? resource} {Math.min(have, need ?? 0)}/{need}
                     {/* Text marker so missing material is never color-only. */}
                     {short && (

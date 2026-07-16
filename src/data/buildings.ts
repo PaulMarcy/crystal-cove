@@ -15,17 +15,7 @@
 import type { ResourceId } from './resources';
 import type { StationId } from './recipes';
 
-export const BUILDING_SLOT_IDS = [
-  'b1',
-  'b2',
-  'b3',
-  'b4',
-  'b5',
-  'b6',
-  'b7',
-  'b8',
-  'b9',
-] as const;
+export const BUILDING_SLOT_IDS = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6', 'b7', 'b8', 'b9'] as const;
 export type BuildingSlotId = (typeof BUILDING_SLOT_IDS)[number];
 
 export function isBuildingSlotId(value: unknown): value is BuildingSlotId {
@@ -131,9 +121,7 @@ export const buildings: readonly BuildingDef[] = [
     // B6 Kristallschrein (docs/09): Orin befreit + 10 Schattenstaub —
     // explicitly INDEPENDENT of B7 (docs/09, commit daacc2b).
     id: 'b6',
-    stages: [
-      { costs: { shadow_dust: 10 }, requirements: [{ kind: 'npcRescued', npc: 'orin' }] },
-    ],
+    stages: [{ costs: { shadow_dust: 10 }, requirements: [{ kind: 'npcRescued', npc: 'orin' }] }],
     tileX: 30,
     tileY: 15,
   },
@@ -161,9 +149,7 @@ export const buildings: readonly BuildingDef[] = [
   {
     // B9 Bootshaus (docs/09): quest-gated only — no material costs in docs.
     id: 'b9',
-    stages: [
-      { costs: {}, requirements: [{ kind: 'flag', flag: 'piya_chain_complete' }] },
-    ],
+    stages: [{ costs: {}, requirements: [{ kind: 'flag', flag: 'piya_chain_complete' }] }],
     tileX: 33,
     tileY: 21,
   },

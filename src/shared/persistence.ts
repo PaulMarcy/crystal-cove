@@ -47,6 +47,11 @@ export function snapshotFromState(state: GameState): SaveData {
     stationTiers: state.stationTiers,
     storyFlags: state.storyFlags,
     friendshipLevels: state.friendshipLevels,
+    // Quests (M5 Task 3): quest state + taught recipes; NPC arrival is
+    // derived from buildings/rescues/flags and never stored.
+    activeQuests: state.activeQuests,
+    completedQuests: state.completedQuests,
+    unlockedRecipes: state.unlockedRecipes,
   };
 }
 
@@ -87,7 +92,10 @@ export function initPersistence(storage: SaveStorage): LoadResult {
       state.builtBuildings !== prev.builtBuildings ||
       state.stationTiers !== prev.stationTiers ||
       state.storyFlags !== prev.storyFlags ||
-      state.friendshipLevels !== prev.friendshipLevels;
+      state.friendshipLevels !== prev.friendshipLevels ||
+      state.activeQuests !== prev.activeQuests ||
+      state.completedQuests !== prev.completedQuests ||
+      state.unlockedRecipes !== prev.unlockedRecipes;
     if (combatJustEnded || persistedSliceChanged) {
       saveGame(storage, snapshotFromState(state));
     }

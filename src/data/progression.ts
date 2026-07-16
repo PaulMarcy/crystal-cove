@@ -44,7 +44,7 @@ export const xpSources = {
   shrineDiscovered: 40,
 } as const;
 
-export type XpSource = 'combat' | 'elite' | 'boss' | 'area' | 'shrine' | 'scripted';
+export type XpSource = 'combat' | 'elite' | 'boss' | 'area' | 'shrine' | 'quest' | 'scripted';
 
 /**
  * Level milestones (docs/02 table). Only the M4-relevant entries are data

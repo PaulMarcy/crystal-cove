@@ -13,6 +13,7 @@ import {
   canCraft,
   craft,
   discountedRecipe,
+  isRecipeTaught,
   isRecipeUnlocked,
   isRecipeVisible,
 } from '../core/economy/crafting';
@@ -53,6 +54,16 @@ import {
   startDialogRun,
   type DialogRunState,
 } from '../core/dialog/dialog';
+import {
+  acceptQuest as acceptQuestRules,
+  completeQuest as completeQuestRules,
+  dialogIdForNpc,
+  npcArrived,
+  questById,
+  questIndicator,
+  questNodeVisible,
+  type QuestContext,
+} from '../core/quests/quests';
 import { rollEncounter, type EncounterResult, type ShadowDensity } from '../core/world/encounters';
 import {
   densityForExploration,
@@ -94,6 +105,7 @@ import {
   type BuildingSlotId,
 } from '../data/buildings';
 import { dialogsById, type DialogActionDef } from '../data/dialogs';
+import { npcsById, questCollectNodes } from '../data/npcs';
 import { deckConfig } from '../data/deck';
 import { talents } from '../data/talents';
 import { talismansById } from '../data/talismans';
@@ -232,10 +244,41 @@ export interface GameState {
   buildBuilding: (slot: BuildingSlotId) => boolean;
 
   /**
+   * Quests (M5 Task 3, docs/09): accepted-but-open and completed quest ids.
+   * Friendship levels rise ONLY through completions (core/quests); NPC
+   * arrival is DERIVED (npcArrivedOf), never stored. Persisted
+   * additive-optional (save V2, no version bump).
+   */
+  activeQuests: readonly string[];
+  completedQuests: readonly string[];
+  /**
+   * Recipe ids taught by NPC quest rewards (docs/09: NPCs lehren Rezepte).
+   * Quest-gated recipes stay hidden at the station until listed here.
+   * May contain ids whose RecipeDef arrives with a later task (Schrein).
+   */
+  unlockedRecipes: readonly string[];
+  /** Accepts an available quest (rules in core/quests). False when blocked. */
+  acceptQuest: (questId: string) => boolean;
+  /**
+   * Turns an active, fulfilled quest in: deducts requirement items and
+   * applies the declarative rewards (recipes, talismans, flags, uniform
+   * stage XP, friendship +1). False when the turn-in is blocked.
+   */
+  completeQuest: (questId: string) => boolean;
+  /**
+   * Collects a quest-spawned pickup (docs/09 Honig / Maros Kiste) — only
+   * while its quest is active and the item is still missing (core/quests).
+   */
+  collectQuestNode: (nodeId: string) => boolean;
+  /** Last quest accept/complete — brief UI feedback, cleared by the toast. */
+  lastQuestEvent: { kind: 'accepted' | 'completed'; questId: string; xp: number } | null;
+  clearLastQuestEvent: () => void;
+
+  /**
    * Running dialog (M5, docs/13) — transient UI/flow state, never persisted.
    * Flow rules live in core/dialog; this store only holds the run state and
-   * interprets the declarative end actions (setStoryFlag today; the
-   * acceptQuest/openTrade hooks dock onto the questlog/market tasks).
+   * interprets the declarative end actions (setStoryFlag, acceptQuest,
+   * completeQuest; the openTrade hook docks onto the market task).
    */
   activeDialog: DialogRunState | null;
   /** Starts a dialog by id. False mid-combat/-run, with another overlay
@@ -429,6 +472,61 @@ export function buildContextOf(
 }
 
 /**
+ * Quest-check context (core/quests) composed from store state. Flags
+ * include the DERIVED island_cleansed (same rule as buildContextOf) — the
+ * data layer references it like any stored flag (Piya arrival, Bruna 3).
+ */
+export function questContextOf(
+  state: Pick<
+    GameState,
+    | 'inventory'
+    | 'storyFlags'
+    | 'builtBuildings'
+    | 'rescuedNpcs'
+    | 'completedDungeons'
+    | 'activeQuests'
+    | 'completedQuests'
+  >,
+): QuestContext {
+  const flags = [...state.storyFlags];
+  if (cleansedOf(state)) flags.push('island_cleansed');
+  return {
+    inventory: state.inventory,
+    flags,
+    builtBuildings: state.builtBuildings,
+    rescuedNpcs: state.rescuedNpcs,
+    activeQuests: state.activeQuests,
+    completedQuests: state.completedQuests,
+  };
+}
+
+type QuestStateSlice = Parameters<typeof questContextOf>[0];
+
+/** Has the NPC arrived? (docs/09 Ankunft durch Taten — derived, world layer.) */
+export function npcArrivedOf(state: QuestStateSlice, npcId: string): boolean {
+  const npc = npcsById[npcId];
+  return npc ? npcArrived(npc, questContextOf(state)) : false;
+}
+
+/** Dialog that talking to the NPC opens right now (core/quests priority). */
+export function npcDialogIdOf(state: QuestStateSlice, npcId: string): string | null {
+  const npc = npcsById[npcId];
+  return npc ? dialogIdForNpc(npc, questContextOf(state)) : null;
+}
+
+/** Overhead quest symbol for the NPC (docs/13: ! / ? — nie nur Farbe). */
+export function questIndicatorOf(state: QuestStateSlice, npcId: string): '!' | '?' | null {
+  const npc = npcsById[npcId];
+  return npc ? questIndicator(npc, questContextOf(state)) : null;
+}
+
+/** Visibility of a quest-spawned collect point (docs/09, core/quests). */
+export function questNodeVisibleOf(state: QuestStateSlice, nodeId: string): boolean {
+  const node = questCollectNodes.find((n) => n.id === nodeId);
+  return node ? questNodeVisible(node, questContextOf(state)) : false;
+}
+
+/**
  * Dish slots per expedition (docs/09 B1 Haus: +1, Cap 2 gesamt) — every
  * deck consumer (Deck-Truhe add, combat deck validation) must use this.
  */
@@ -489,9 +587,9 @@ function applyEquippedTalismans(
 
 /**
  * Interprets declarative dialog-end actions (docs/13: Flags/Quest-Folgen
- * als Events durch core) and closes the dialog. setStoryFlag works today;
- * acceptQuest/openTrade are PREPARED no-ops — the M5 questlog and market
- * tasks replace the branches with their real triggers.
+ * als Events durch core) and closes the dialog. acceptQuest/completeQuest
+ * dispatch to the quest actions (rules in core/quests); openTrade stays a
+ * PREPARED no-op until the M5 market task.
  */
 function endDialog(
   actions: readonly DialogActionDef[],
@@ -505,7 +603,10 @@ function endDialog(
         get().setStoryFlag(action.flag);
         break;
       case 'acceptQuest':
-        // Questlog-Task (M5) dockt hier an: Eintrag erzeugen (docs/13).
+        get().acceptQuest(action.questId);
+        break;
+      case 'completeQuest':
+        get().completeQuest(action.questId);
         break;
       case 'openTrade':
         // Markt-Task (M5) dockt hier an: Handels-Panel öffnen (docs/13).
@@ -686,6 +787,8 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     // (docs/02; rule in core/economy/crafting.discountedRecipe).
     const recipe = discountedRecipe(baseRecipe, modifiersOf(get()).craftBaseMaterialDiscount);
     if (!isRecipeVisible(recipe, toolTier)) return false;
+    // Quest-gated recipes need their NPC lesson first (docs/09, M5 Task 3).
+    if (!isRecipeTaught(recipe, get().unlockedRecipes)) return false;
     // Station tier is store state now (M5: B2/B3 builds raise it).
     if (!isRecipeUnlocked(recipe, get().stationTiers[recipe.station] ?? 1)) return false;
     if (!canCraft(inventory, recipe)) return false;
@@ -713,6 +816,63 @@ export const gameStore = createStore<GameState>()((set, get) => ({
     }
     return true;
   },
+
+  activeQuests: [],
+  completedQuests: [],
+  unlockedRecipes: [],
+  acceptQuest: (questId) => {
+    const quest = questById(questId);
+    if (!quest) return false;
+    const npc = npcsById[quest.npcId];
+    if (!npc) return false;
+    const next = acceptQuestRules(quest, npc, questContextOf(get()));
+    if (!next) return false;
+    set({
+      activeQuests: next,
+      lastQuestEvent: { kind: 'accepted', questId, xp: 0 },
+    });
+    return true;
+  },
+  completeQuest: (questId) => {
+    const quest = questById(questId);
+    if (!quest) return false;
+    const result = completeQuestRules(quest, questContextOf(get()));
+    if (!result) return false;
+    const { unlockedRecipes, ownedTalismans, friendshipLevels, storyFlags } = get();
+    set({
+      inventory: result.inventory,
+      activeQuests: result.activeQuests,
+      completedQuests: result.completedQuests,
+      // Rewards are declarative (docs/09): recipe unlocks, talisman
+      // OWNERSHIP (same channel as loot drops), story flags.
+      unlockedRecipes: [
+        ...unlockedRecipes,
+        ...result.recipeIds.filter((id) => !unlockedRecipes.includes(id)),
+      ],
+      ownedTalismans: [...ownedTalismans, ...result.talismanIds],
+      storyFlags: [...storyFlags, ...result.flags.filter((f) => !storyFlags.includes(f))],
+      // Friendship = completed chain stages (docs/09; never lowered).
+      friendshipLevels: {
+        ...friendshipLevels,
+        [quest.npcId]: Math.max(friendshipLevels[quest.npcId] ?? 0, result.friendshipLevel),
+      },
+      lastQuestEvent: { kind: 'completed', questId, xp: result.xp },
+    });
+    // Uniform stage XP (docs/09: 30/50/80) — level-up heal via grantXp.
+    get().grantXp(result.xp, 'quest');
+    return true;
+  },
+  collectQuestNode: (nodeId) => {
+    const node = questCollectNodes.find((n) => n.id === nodeId);
+    if (!node) return false;
+    if (!questNodeVisible(node, questContextOf(get()))) return false;
+    // Quest pickups are NOT tracked as run loot (lootSinceRest): losing a
+    // quest item to the defeat penalty would soft-lock cozy chains.
+    set({ inventory: addItem(get().inventory, node.resource, node.amount) });
+    return true;
+  },
+  lastQuestEvent: null,
+  clearLastQuestEvent: () => set({ lastQuestEvent: null }),
 
   activeDialog: null,
   startDialog: (dialogId) => {
@@ -1165,6 +1325,10 @@ export const gameStore = createStore<GameState>()((set, get) => ({
       ),
       storyFlags: data.storyFlags ?? [],
       friendshipLevels: data.friendshipLevels ?? {},
+      // Quests (M5 Task 3, additive-optional): pre-quest saves start clean.
+      activeQuests: data.activeQuests ?? [],
+      completedQuests: data.completedQuests ?? [],
+      unlockedRecipes: data.unlockedRecipes ?? [],
       saveRecovered: recovered,
     }),
   saveRecovered: false,

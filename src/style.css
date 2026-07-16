@@ -177,6 +177,114 @@ body {
   color: var(--color-sand);
 }
 
+/* ── Questlog (M5 Task 3): Panel neben dem Inventar ───────────────────── */
+
+.questlog-hint {
+  position: absolute;
+  top: 76px; /* below [I] Inventar (12) and [T] Talente (44) */
+  right: 12px;
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--color-text);
+  background: rgba(58, 46, 40, 0.85);
+  border: 1px solid var(--color-action);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.questlog-panel {
+  position: absolute;
+  top: 112px;
+  right: 12px;
+  width: min(300px, 88vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--color-ui-ground);
+  border: 2px solid var(--color-sand);
+  border-radius: 8px;
+  padding: 10px 14px;
+  pointer-events: auto;
+}
+
+.questlog-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--color-sand);
+}
+
+.questlog-heading {
+  margin: 8px 0 4px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.questlog-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.questlog-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.questlog-entry {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(236, 217, 163, 0.25);
+}
+
+.questlog-entry:last-child {
+  border-bottom: none;
+}
+
+.questlog-entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.questlog-name {
+  font-weight: 700;
+  color: var(--color-sand);
+}
+
+.questlog-ready-tag {
+  font-size: 0.75rem;
+  color: var(--color-action);
+  border: 1px solid var(--color-action);
+  border-radius: 4px;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.questlog-giver {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+.questlog-goal {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
+}
+
+.questlog-reward {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: var(--color-sand);
+}
+
+.questlog-completed-row {
+  padding: 2px 0;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
 /* ── Werkstatt (M3): Rezeptliste Schmiede/Küche ───────────────────────── */
 
 .workshop-panel {

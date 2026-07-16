@@ -3,6 +3,7 @@ import {
   canCraft,
   discountedRecipe,
   ingredientStatus,
+  isRecipeTaught,
   isRecipeUnlocked,
   isRecipeVisible,
 } from '../../core/economy/crafting';
@@ -92,6 +93,7 @@ export function WorkshopPanel() {
   const toolTier = useGameStore((s) => s.toolTier);
   const collection = useGameStore((s) => s.collection);
   const stationTiers = useGameStore((s) => s.stationTiers);
+  const unlockedRecipes = useGameStore((s) => s.unlockedRecipes);
 
   useEffect(() => {
     if (!activeStation) return undefined;
@@ -107,8 +109,13 @@ export function WorkshopPanel() {
   if (!activeStation || activeStation === 'deck_chest') return null;
   // Station tier is store state (M5: B2/B3 builds raise it, docs/09).
   const stationTier = stationTiers[activeStation] ?? 1;
+  // Quest-gated recipes stay hidden until their NPC lesson (docs/09, M5);
+  // tier-locked ones remain visible-but-locked (docs/10).
   const recipes = allRecipes.filter(
-    (r) => r.station === activeStation && isRecipeVisible(r, toolTier),
+    (r) =>
+      r.station === activeStation &&
+      isRecipeVisible(r, toolTier) &&
+      isRecipeTaught(r, unlockedRecipes),
   );
 
   return (

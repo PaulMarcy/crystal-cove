@@ -84,8 +84,10 @@ describe('dialog data ↔ strings (docs/13: keine Literale in Dialogdaten)', () 
       const choices = def.choices ?? [];
       expect(choices.length).toBeLessThanOrEqual(MAX_DIALOG_CHOICES);
       for (const choice of choices) {
-        expect(choiceKeys[choice.labelKey], `missing strings.dialogChoices.${choice.labelKey}`)
-          .toBeTruthy();
+        expect(
+          choiceKeys[choice.labelKey],
+          `missing strings.dialogChoices.${choice.labelKey}`,
+        ).toBeTruthy();
       }
     }
   });

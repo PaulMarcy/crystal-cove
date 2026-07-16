@@ -55,6 +55,15 @@ export function isRecipeUnlocked(recipe: RecipeDef, stationTier: number): boolea
 }
 
 /**
+ * Quest gate (M5, docs/09: NPCs lehren Rezepte): quest-gated recipes stay
+ * HIDDEN at the station until the NPC quest reward unlocks them
+ * (store unlockedRecipes). Non-gated recipes are always taught.
+ */
+export function isRecipeTaught(recipe: RecipeDef, unlockedRecipes: readonly string[]): boolean {
+  return !recipe.questGated || unlockedRecipes.includes(recipe.id);
+}
+
+/**
  * Tool upgrades vanish from the list once the player owns that tier or higher
  * (docs/10 Werkzeugstufen — each upgrade is a one-time purchase).
  */

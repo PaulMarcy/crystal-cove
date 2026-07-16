@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DialogDef } from '../../data/dialogs';
-import {
-  advanceDialogRun,
-  awaitingChoice,
-  resolveDialogChoice,
-  startDialogRun,
-} from './dialog';
+import { advanceDialogRun, awaitingChoice, resolveDialogChoice, startDialogRun } from './dialog';
 
 /** Plain multi-line dialog with end actions (flag on close). */
 const plainDialog: DialogDef = {
@@ -95,8 +90,12 @@ describe('resolveDialogChoice', () => {
   it('rejects invalid indices and non-gate states', () => {
     expect(resolveDialogChoice(questDialog, gate, 2)).toBeNull();
     expect(resolveDialogChoice(questDialog, gate, -1)).toBeNull();
-    expect(resolveDialogChoice(questDialog, { dialogId: 'test_quest', lineIndex: 0 }, 0)).toBeNull();
-    expect(resolveDialogChoice(plainDialog, { dialogId: 'test_plain', lineIndex: 2 }, 0)).toBeNull();
+    expect(
+      resolveDialogChoice(questDialog, { dialogId: 'test_quest', lineIndex: 0 }, 0),
+    ).toBeNull();
+    expect(
+      resolveDialogChoice(plainDialog, { dialogId: 'test_plain', lineIndex: 2 }, 0),
+    ).toBeNull();
   });
 
   it('supports the second V1 case: openTrade (Piya-Handel)', () => {

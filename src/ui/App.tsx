@@ -7,6 +7,7 @@ import { useGameStore } from '../shared/store';
 import { CombatScreen } from './combat/CombatScreen';
 import { DungeonPanel } from './dungeon/DungeonPanel';
 import { InventoryPanel } from './inventory/InventoryPanel';
+import { QuestLogPanel } from './quests/QuestLogPanel';
 import { WorkshopPanel } from './workshop/WorkshopPanel';
 import { BuildPanel } from './village/BuildPanel';
 import { DialogOverlay } from './dialog/DialogOverlay';
@@ -78,6 +79,36 @@ function DefeatLossToast() {
   );
 }
 
+/**
+ * Brief island feedback after quest accept/turn-in (M5 Task 3, docs/13
+ * Quest-Integration — minimal toast in place of the full reward panel).
+ */
+function QuestToast() {
+  const lastQuestEvent = useGameStore((s) => s.lastQuestEvent);
+  const clearLastQuestEvent = useGameStore((s) => s.clearLastQuestEvent);
+
+  useEffect(() => {
+    if (!lastQuestEvent) return undefined;
+    const timer = window.setTimeout(clearLastQuestEvent, LOOT_TOAST_MS);
+    return () => window.clearTimeout(timer);
+  }, [lastQuestEvent, clearLastQuestEvent]);
+
+  if (!lastQuestEvent) return null;
+  const questTexts = strings.quests as Readonly<Record<string, { name: string }>>;
+  const name = questTexts[lastQuestEvent.questId]?.name ?? lastQuestEvent.questId;
+  const text =
+    lastQuestEvent.kind === 'accepted'
+      ? strings.questLog.questAcceptedToast.replace('{name}', name)
+      : strings.questLog.questCompletedToast
+          .replace('{name}', name)
+          .replace('{xp}', String(lastQuestEvent.xp));
+  return (
+    <div className="loot-toast quest-toast" role="status">
+      <strong>{text}</strong>
+    </div>
+  );
+}
+
 /** One-time notice when the corrupt primary save was restored from backup. */
 function SaveRecoveryNotice() {
   const recovered = useGameStore((s) => s.saveRecovered);
@@ -127,6 +158,8 @@ export function App() {
       <BuildPanel />
       <DialogOverlay />
       <DeckChestPanel />
+      <QuestToast />
+      <QuestLogPanel />
       <InventoryPanel />
       <SaveRecoveryNotice />
     </>

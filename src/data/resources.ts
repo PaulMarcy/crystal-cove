@@ -27,6 +27,10 @@ export const RESOURCE_IDS = [
   'honey',
   // Angeln (Steg)
   'fish',
+  // Quest-Gegenstände (M5, docs/09: Maros Werkzeugkiste am Strandwrack) —
+  // quest-gespawnte Sammelpunkte (data/npcs questCollectNodes), kein
+  // Kampf-Drop und nie Rezept-Zutat.
+  'old_tools',
   // Kampf-Drops (= Spezialmaterial, nie erstattet)
   'shadow_fiber',
   'tough_leather',

@@ -87,6 +87,12 @@ export const strings = {
     harvestGain: '+{amount} {item}',
     lootToastHeading: 'Beute erhalten',
     npcTalkPrompt: '[E] Mit {npc} sprechen',
+    /** Quest-spawned collect points (docs/09; data/npcs questCollectNodes). */
+    questCollectPrompt: '[E] {node} einsammeln',
+    questNodes: {
+      'quest-maro-toolbox': 'Werkzeugkiste',
+      'quest-tilda-honey': 'Wilder Honig',
+    },
   },
   dialog: {
     /** Blinking ▼ carries this label — never a glyph alone (docs/11). */
@@ -100,6 +106,101 @@ export const strings = {
   dialogLines: {
     lumen_intro_1: 'Da bist du ja endlich — ich bin Lumen!',
     lumen_intro_2: 'Die Insel hat dich schon erwartet.',
+    lumen_default_1: 'Die Insel atmet ruhiger, wenn du da bist.',
+
+    // ── Maro (Schmied, docs/09) ─────────────────────────────────────────
+    maro_arrival_1: 'Oh — Besuch! Ich bin Maro. Die alte Schmiede hier ist ein Traum.',
+    maro_arrival_2: 'Wenn du Erz findest, bring es vorbei. Ich mache dir was Scharfes draus.',
+    maro_default_1: 'Der Amboss singt heute wieder. Hörst du das?',
+    maro_1_offer_1: 'Mein altes Werkzeug liegt noch im Wrack unten am Strand.',
+    maro_1_offer_2: 'Holst du mir die Kiste? Dafür zeige ich dir den Schweren Hieb.',
+    maro_1_reminder_1: 'Die Kiste liegt im Strandwrack, ganz im Westen.',
+    maro_1_done_1: 'Meine alten Hämmer! Jetzt kann ich richtig loslegen.',
+    maro_1_done_2:
+      'Hier — das Rezept für den Schweren Hieb. Und die Schmiede baue ich dir gern aus.',
+    maro_2_offer_1: 'Kupferkäferpanzer sind härter als alles, was ich gießen kann.',
+    maro_2_offer_2: 'Bring mir drei davon, dann lernst du den Panzerbrecher.',
+    maro_2_reminder_1: 'Drei Käferpanzer — die Kupferkäfer am Waldrand lassen sie manchmal fallen.',
+    maro_2_done_1: 'Perfekt! Damit knackst du jeden Panzer — das Rezept gehört dir.',
+    maro_3_offer_1: 'Ein Meisterstück braucht ein Herz. Ein Herzdorn, um genau zu sein.',
+    maro_3_offer_2: 'Die tragen nur die ganz zähen Schattenwesen. Trau dich ran!',
+    maro_3_reminder_1: 'Ein Herzdorn — such die Elite-Schatten, die haben so was.',
+    maro_3_done_1: 'Da ist es. Mein Meisterstück: das Amboss-Herz.',
+    maro_3_done_2: 'Trag es. Jeder Schild, den du hebst, hält ein Stück mehr aus.',
+
+    // ── Tilda (Köchin, docs/09) ─────────────────────────────────────────
+    tilda_arrival_1: 'Hallo! Ich bin Tilda. Das Wohnhaus ist wunderbar geworden.',
+    tilda_arrival_2: 'Ab jetzt wird hier ordentlich gekocht — versprochen.',
+    tilda_default_1: 'Irgendwas köchelt immer. Komm später auf einen Löffel vorbei.',
+    tilda_1_offer_1: 'Für meinen Kürbiseintopf fehlen mir 5 Beeren und 2 Fleisch.',
+    tilda_1_offer_2: 'Bringst du sie mir? Das Rezept teile ich natürlich mit dir.',
+    tilda_1_reminder_1: 'Beeren wachsen auf der Wiese, Fleisch lassen die Wildschweine fallen.',
+    tilda_1_done_1: 'Wunderbar! Der Eintopf-Duft gehört jetzt zur Bucht. Hier, dein Rezept.',
+    tilda_2_offer_1: 'Frischer Fisch! Drei Stück, und ich zeige dir meinen Chili-Spieß.',
+    tilda_2_offer_2: 'Bruna am Steg weiß, wie man sie aus dem Wasser holt.',
+    tilda_2_reminder_1: 'Drei Fische — frag Bruna am Steg, sie hilft dir bestimmt.',
+    tilda_2_done_1: 'Herrlich! Scharf, saftig — das Chili-Spieß-Rezept gehört dir.',
+    tilda_3_offer_1: 'Ich träume von Honigglasur. Auf der Wiese summt es neuerdings …',
+    tilda_3_offer_2: 'Magst du mir einen Wilden Honig besorgen? Nur einen!',
+    tilda_3_reminder_1: 'Der Bienenstock steht auf der Wiese — pass auf die Finger auf.',
+    tilda_3_done_1: 'Süßes Gold! Danke dir von Herzen.',
+    tilda_3_done_2: 'Nimm diesen Talisman: ein warmer Bauch hat noch niemandem geschadet.',
+
+    // ── Bruna (Fischerin, docs/09) ──────────────────────────────────────
+    bruna_arrival_1: 'Ein Steg! Endlich wieder Planken unter den Füßen. Ich bin Bruna.',
+    bruna_arrival_2: 'Ich bringe dir bei, wie man einen Treffer zurückgibt. Später.',
+    bruna_default_1: 'Das Meer ist geduldig. Wir sollten es auch sein.',
+    bruna_1_offer_1: 'Meine Netze sind hinüber. Vier feste Ranken, und ich knüpfe neue.',
+    bruna_1_offer_2: 'Dafür zeige ich dir das Gegenhalten — Fischerinnen-Trick.',
+    bruna_1_reminder_1: 'Vier Ranken — die Dornenkriecher lassen sie fallen.',
+    bruna_1_done_1: 'Gute Arbeit. Hier: Gegenhalten. Wer dich trifft, spürt es jetzt selbst.',
+    bruna_2_offer_1: 'Im tiefen Wasser wohnt ein Riesenwels. Ein alter Streit zwischen uns.',
+    bruna_2_offer_2: 'Angle weiter — irgendwann beißt er an. Dann reden wir über die Riposte.',
+    bruna_2_reminder_1: 'Der Riesenwels wartet. Wirf die Angel aus, immer wieder.',
+    bruna_2_done_1: 'DER Wels! Ha! Abgemacht ist abgemacht: die Riposte gehört dir.',
+    bruna_3_offer_1: 'Die Insel ist still geworden. Zeit für eine alte Geschichte.',
+    bruna_3_offer_2: 'Setz dich zu mir, wenn du einen Moment hast.',
+    bruna_3_reminder_1: 'Die Geschichte wartet auf dich, keine Sorge.',
+    bruna_3_done_1: 'So war das damals mit dem Nebel. Jetzt weißt du es.',
+    bruna_3_done_2: 'Nimm mein Seemannsgarn. Der erste Schild kostet dich nichts mehr.',
+
+    // ── Orin (Einsiedler-Magier, docs/09) ───────────────────────────────
+    orin_arrival_1: 'Du warst das in der Höhle, nicht wahr? Ich stehe in deiner Schuld.',
+    orin_arrival_2: 'Ich bin Orin. Die Kristalle hier … sie flüstern wieder.',
+    orin_default_1: 'Schattenstaub ist kein Abfall. Er ist Möglichkeit.',
+    orin_1_offer_1: 'Errichte einen Kristallschrein — zehn Schattenstaub genügen.',
+    orin_1_offer_2: 'Dann lehre ich dich den Splitterblitz.',
+    orin_1_reminder_1:
+      'Der Schrein wartet auf seinen Platz. Zehn Schattenstaub, mehr braucht es nicht.',
+    orin_1_done_1: 'Der Schrein steht. Spürst du das Summen?',
+    orin_1_done_2: 'Wie versprochen: der Splitterblitz. Präge ihn am Schrein.',
+    orin_2_offer_1: 'Eine Resonanzprobe: Zieh mit drei verzauberten Karten in einen Kampf.',
+    orin_2_offer_2: 'Dann zeige ich dir, wie man Karten dauerhaft verbessert.',
+    orin_2_reminder_1: 'Drei verzauberte Karten im Deck, ein Kampf. Lass dir Zeit.',
+    orin_2_done_1: 'Die Resonanz hält. Ab jetzt kannst du Karten am Schrein verstärken.',
+    orin_3_offer_1: 'Die Insel ist rein. Der Schrein kann jetzt mehr — du auch.',
+    orin_3_offer_2: 'Komm zu mir, wenn du bereit für den Kristallschild bist.',
+    orin_3_reminder_1: 'Der Kristallschild wartet. Kein Grund zur Eile.',
+    orin_3_done_1: 'Hier: der Kristallschild. Er schützt und schenkt Schwung.',
+    orin_3_done_2: 'Du hast einem alten Einsiedler die Welt zurückgegeben. Danke.',
+
+    // ── Piya (Händlerin, docs/09) ───────────────────────────────────────
+    piya_arrival_1: 'Ahoi! Piya, fahrende Händlerin — na ja, gestrandete Händlerin.',
+    piya_arrival_2: 'Mein Boot braucht Hilfe. Und du siehst nach Hilfe aus!',
+    piya_default_1: 'Sobald der Markt steht, zeige ich dir Waren von drei Inseln.',
+    piya_1_offer_1: 'Der Rumpf ist ein Sieb. Ich brauche 10 Holz und 4 Zähes Leder.',
+    piya_1_offer_2: 'Hilf mir, und ich nehme dich mit, wenn es wieder losgeht.',
+    piya_1_reminder_1: '10 Holz, 4 Zähes Leder — der Rumpf wartet nicht ewig.',
+    piya_1_done_1: 'Der Rumpf hält wieder dicht! Du bist Gold wert.',
+    piya_2_offer_1: 'Jetzt die Fugen: 5 Harz, und das Boot schwimmt wie neu.',
+    piya_2_offer_2: 'Die Dornenkriecher horten das Zeug, hab ich gehört.',
+    piya_2_reminder_1: 'Fünf Harz für die Fugen — dann sind wir fast fertig.',
+    piya_2_done_1: 'Abgedichtet! Bleibt nur noch eins: die Probefahrt.',
+    piya_3_offer_1: 'Eine Runde um die Bucht — Probefahrt! Bist du dabei?',
+    piya_3_offer_2: 'Wenn alles hält, steht uns der Nebelwald offen.',
+    piya_3_reminder_1: 'Die Probefahrt wartet — das Wetter ist perfekt.',
+    piya_3_done_1: 'Sie schwimmt! Keine Lecks, kein Knarzen.',
+    piya_3_done_2: 'Bau das Bootshaus, dann planen wir die Überfahrt zum Nebelwald.',
   },
   /** Choice labels (docs/13: V1 nur Quest-Annahme und Piya-Handel). */
   dialogChoices: {
@@ -116,6 +217,97 @@ export const strings = {
     title: 'Inventar',
     toggleHint: '[I] Inventar',
     empty: 'Noch nichts gesammelt.',
+  },
+  questLog: {
+    title: 'Quests',
+    toggleHint: '[Q] Quests',
+    activeHeading: 'Aktiv',
+    completedHeading: 'Abgeschlossen',
+    empty: 'Keine Quests — sprich mit den Bewohnern der Bucht.',
+    giverLabel: 'Auftrag von {npc}',
+    rewardLabel: 'Belohnung: {reward}',
+    /** Turn-in-ready marker (docs/13 „?" ) — text, never color-only. */
+    readyTag: 'abschlussbereit',
+    questAcceptedToast: 'Quest angenommen: {name}',
+    questCompletedToast: 'Quest abgeschlossen: {name} (+{xp} XP)',
+  },
+  /** Questlog texts per quest id (data/npcs) — name, goal, reward line. */
+  quests: {
+    maro_1: {
+      name: 'Mein altes Werkzeug',
+      goal: 'Birg Maros Werkzeugkiste aus dem Strandwrack (0/1).',
+      reward: 'Rezept „Schwerer Hieb“',
+    },
+    maro_2: {
+      name: 'Käferpanzer',
+      goal: 'Bring Maro 3 Käferpanzer (Kupferkäfer-Drop).',
+      reward: 'Rezept „Panzerbrecher“',
+    },
+    maro_3: {
+      name: 'Das Meisterstück',
+      goal: 'Bring Maro 1 Herzdorn (Elite-Drop).',
+      reward: 'Talisman „Amboss-Herz“',
+    },
+    tilda_1: {
+      name: 'Eintopf-Träume',
+      goal: 'Bring Tilda 5 Beeren und 2 Fleisch.',
+      reward: 'Rezept „Kürbiseintopf“',
+    },
+    tilda_2: {
+      name: 'Fang des Tages',
+      goal: 'Bring Tilda 3 Fische (Angeln am Steg — frag Bruna).',
+      reward: 'Rezept „Chili-Spieß“',
+    },
+    tilda_3: {
+      name: 'Süßes Gold',
+      goal: 'Sammle 1 Wilden Honig auf der Wiese (0/1).',
+      reward: 'Talisman „Warmer Bauch“',
+    },
+    bruna_1: {
+      name: 'Alte Netze',
+      goal: 'Bring Bruna 4 Ranken (Dornenkriecher-Drop).',
+      reward: 'Rezept „Gegenhalten“',
+    },
+    bruna_2: {
+      name: 'Der Riesenwels',
+      goal: 'Fange den Riesenwels beim Angeln (0/1).',
+      reward: 'Rezept „Riposte“',
+    },
+    bruna_3: {
+      name: 'Brunas Geschichte',
+      goal: 'Hör dir Brunas Geschichte an.',
+      reward: 'Talisman „Seemannsgarn“',
+    },
+    orin_1: {
+      name: 'Der Kristallschrein',
+      goal: 'Errichte den Kristallschrein (10 Schattenstaub).',
+      reward: 'Rezept „Splitterblitz“',
+    },
+    orin_2: {
+      name: 'Resonanzprobe',
+      goal: 'Bestehe 1 Kampf mit mind. 3 verzauberten Karten im Deck.',
+      reward: 'Karten-Upgrade am Schrein',
+    },
+    orin_3: {
+      name: 'Reines Licht',
+      goal: 'Sprich mit Orin, sobald die Insel gereinigt ist.',
+      reward: 'Rezept „Kristallschild“',
+    },
+    piya_1: {
+      name: 'Leck im Rumpf',
+      goal: 'Bring Piya 10 Holz und 4 Zähes Leder.',
+      reward: 'Boot-Reparatur, Teil 1',
+    },
+    piya_2: {
+      name: 'Dichte Fugen',
+      goal: 'Bring Piya 5 Harz (Dornenkriecher-Drop).',
+      reward: 'Boot-Reparatur, Teil 2',
+    },
+    piya_3: {
+      name: 'Die Probefahrt',
+      goal: 'Begleite Piya auf die Probefahrt.',
+      reward: 'Bootshaus baubar (Überfahrt Nebelwald)',
+    },
   },
   items: {
     wood: 'Holz',
@@ -137,6 +329,7 @@ export const strings = {
     chili: 'Chili',
     fish: 'Fisch',
     honey: 'Honig',
+    old_tools: 'Altes Werkzeug',
   },
   stations: {
     smithy: 'Schmiede',

@@ -61,8 +61,7 @@ function resolveTargets(
  */
 export function isDefenseCard(card: CardDef): boolean {
   return card.effects.some(
-    (effect) =>
-      effect.kind === 'block' && (effect.target === 'self' || effect.target === 'player'),
+    (effect) => effect.kind === 'block' && (effect.target === 'self' || effect.target === 'player'),
   );
 }
 

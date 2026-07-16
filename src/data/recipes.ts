@@ -39,6 +39,12 @@ export interface RecipeDef {
   station: StationId;
   /** Minimum workshop tier required to craft (docs/10 St. column). */
   stationTier: number;
+  /**
+   * Taught by an NPC quest (docs/09/10 chain columns): hidden at the
+   * station until the quest reward unlocks it (store unlockedRecipes;
+   * check in core/economy/crafting.isRecipeTaught).
+   */
+  questGated?: true;
   output: RecipeOutput;
   ingredients: readonly RecipeIngredient[];
 }
@@ -62,6 +68,7 @@ export const smithyRecipes: readonly RecipeDef[] = [
     name: strings.cards.heavy_blow.name,
     station: 'smithy',
     stationTier: 1,
+    questGated: true, // Maro-Kette 1 (docs/09/10)
     output: { kind: 'card', cardId: 'heavy_blow' },
     ingredients: [
       { resource: 'copper_ore', amount: 3 },
@@ -95,6 +102,7 @@ export const smithyRecipes: readonly RecipeDef[] = [
     name: strings.cards.armor_breaker.name,
     station: 'smithy',
     stationTier: 2,
+    questGated: true, // Maro-Kette 2 (docs/09/10)
     output: { kind: 'card', cardId: 'armor_breaker' },
     ingredients: [
       { resource: 'copper_ore', amount: 2 },
@@ -116,7 +124,8 @@ export const smithyRecipes: readonly RecipeDef[] = [
     id: 'recipe_counter_stance',
     name: strings.cards.counter_stance.name,
     station: 'smithy',
-    stationTier: 2, // plus Bruna quest chain 1 (docs/09/10) — quest gate lives in quest data later
+    stationTier: 2, // docs/10: „2 (Bruna 1)“
+    questGated: true, // Bruna-Kette 1 (docs/09/10)
     output: { kind: 'card', cardId: 'counter_stance' },
     ingredients: [
       { resource: 'wood', amount: 2 },
@@ -127,7 +136,8 @@ export const smithyRecipes: readonly RecipeDef[] = [
     id: 'recipe_riposte',
     name: strings.cards.riposte.name,
     station: 'smithy',
-    stationTier: 2, // plus Bruna quest chain 2 (docs/09/10)
+    stationTier: 2, // docs/10: „2 (Bruna 2)“
+    questGated: true, // Bruna-Kette 2 (docs/09/10)
     output: { kind: 'card', cardId: 'riposte' },
     ingredients: [
       { resource: 'copper_ore', amount: 2 },
@@ -163,7 +173,8 @@ export const kitchenRecipes: readonly RecipeDef[] = [
     id: 'recipe_pumpkin_stew',
     name: strings.cards.pumpkin_stew.name,
     station: 'kitchen',
-    stationTier: 1, // Tilda chain 1 (docs/10)
+    stationTier: 1,
+    questGated: true, // Tilda-Kette 1 (docs/09/10)
     output: { kind: 'card', cardId: 'pumpkin_stew' },
     ingredients: [
       { resource: 'pumpkin', amount: 1 },
@@ -174,7 +185,8 @@ export const kitchenRecipes: readonly RecipeDef[] = [
     id: 'recipe_chili_skewer',
     name: strings.cards.chili_skewer.name,
     station: 'kitchen',
-    stationTier: 2, // Tilda chain 2 (docs/10)
+    stationTier: 2,
+    questGated: true, // Tilda-Kette 2 (docs/09/10)
     output: { kind: 'card', cardId: 'chili_skewer' },
     ingredients: [
       { resource: 'chili', amount: 1 },

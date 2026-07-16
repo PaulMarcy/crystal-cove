@@ -7,21 +7,20 @@
  * by shared/dialogs.test.ts. Content rules from docs/13 apply to the
  * strings: max 2 lines à ~60 chars per box, Lumen max 1 sentence (docs/06).
  *
- * The M5 NPC/quest tasks (content-smith) only ADD entries here — the
- * format already covers the two V1 choice cases (docs/13): quest
- * acceptance ("Annehmen"/"Später") and opening Piya's trade.
+ * Which dialog an NPC opens is decided in core/quests.dialogIdForNpc
+ * (first meeting → turn-in → reminder → offer → default); the per-quest
+ * dialog ids are wired in data/npcs (QuestDef.dialogs).
  */
 
 /**
  * Declarative dialog-end effect (docs/13 "Flags/Quest-Folgen laufen als
  * Events durch core"). The store interprets these — no free-form callbacks
- * in data. `acceptQuest` and `openTrade` are PREPARED hooks: the questlog
- * task and the market task (M5) dock their handling onto the existing
- * interpreter in shared/store.
+ * in data. `openTrade` is a PREPARED hook for the M5 market task.
  */
 export type DialogActionDef =
   | { type: 'setStoryFlag'; flag: string }
   | { type: 'acceptQuest'; questId: string }
+  | { type: 'completeQuest'; questId: string }
   | { type: 'openTrade'; npcId: string };
 
 /** One selectable option (docs/13: max 3, shown after the last line). */
@@ -47,39 +46,116 @@ export interface DialogDef {
 /** docs/13: max 3 options — enforced in core/dialog and by data tests. */
 export const MAX_DIALOG_CHOICES = 3;
 
+/** Quest-offer choices (docs/13 V1: „Annehmen" / „Später"). */
+function offerChoices(questId: string): readonly DialogChoiceDef[] {
+  return [
+    { labelKey: 'quest_accept', action: { type: 'acceptQuest', questId } },
+    { labelKey: 'quest_later' },
+  ];
+}
+
+/** Standard quest dialog triple: offer (choice gate), reminder, turn-in. */
+function questDialogs(
+  speaker: string,
+  questId: string,
+  offerLines: number,
+  doneLines: number,
+): DialogDef[] {
+  const lineKeys = (suffix: string, count: number) =>
+    Array.from({ length: count }, (_, i) => `${questId}_${suffix}_${i + 1}`);
+  return [
+    {
+      id: `${questId}_offer`,
+      speaker,
+      lines: lineKeys('offer', offerLines),
+      choices: offerChoices(questId),
+    },
+    { id: `${questId}_reminder`, speaker, lines: lineKeys('reminder', 1) },
+    {
+      id: `${questId}_done`,
+      speaker,
+      lines: lineKeys('done', doneLines),
+      endActions: [{ type: 'completeQuest', questId }],
+    },
+  ];
+}
+
 export const dialogs: readonly DialogDef[] = [
+  // ── Lumen (Mentor, docs/09 — keine Kette) ────────────────────────────────
   {
-    // Demo dialog (M5 dialog task): proves the flow end-to-end. The real
-    // Lumen onboarding lines arrive with M6 (docs/06 Beat 2). Sets a flag
-    // so the end-action path is exercised in the shipped game too.
+    // First meeting (M5 dialog task). The real Lumen onboarding lines
+    // arrive with M6 (docs/06 Beat 2). Sets the met flag (core/quests).
     id: 'lumen_intro',
     speaker: 'lumen',
     lines: ['lumen_intro_1', 'lumen_intro_2'],
     endActions: [{ type: 'setStoryFlag', flag: 'lumen_greeted' }],
   },
+  { id: 'lumen_default', speaker: 'lumen', lines: ['lumen_default_1'] },
+
+  // ── Maro (Schmied) ───────────────────────────────────────────────────────
+  {
+    id: 'maro_arrival',
+    speaker: 'maro',
+    lines: ['maro_arrival_1', 'maro_arrival_2'],
+    endActions: [{ type: 'setStoryFlag', flag: 'met_maro' }],
+  },
+  { id: 'maro_default', speaker: 'maro', lines: ['maro_default_1'] },
+  ...questDialogs('maro', 'maro_1', 2, 2),
+  ...questDialogs('maro', 'maro_2', 2, 1),
+  ...questDialogs('maro', 'maro_3', 2, 2),
+
+  // ── Tilda (Köchin) ───────────────────────────────────────────────────────
+  {
+    id: 'tilda_arrival',
+    speaker: 'tilda',
+    lines: ['tilda_arrival_1', 'tilda_arrival_2'],
+    endActions: [{ type: 'setStoryFlag', flag: 'met_tilda' }],
+  },
+  { id: 'tilda_default', speaker: 'tilda', lines: ['tilda_default_1'] },
+  ...questDialogs('tilda', 'tilda_1', 2, 1),
+  ...questDialogs('tilda', 'tilda_2', 2, 1),
+  ...questDialogs('tilda', 'tilda_3', 2, 2),
+
+  // ── Bruna (Fischerin) ────────────────────────────────────────────────────
+  {
+    id: 'bruna_arrival',
+    speaker: 'bruna',
+    lines: ['bruna_arrival_1', 'bruna_arrival_2'],
+    endActions: [{ type: 'setStoryFlag', flag: 'met_bruna' }],
+  },
+  { id: 'bruna_default', speaker: 'bruna', lines: ['bruna_default_1'] },
+  ...questDialogs('bruna', 'bruna_1', 2, 1),
+  ...questDialogs('bruna', 'bruna_2', 2, 1),
+  ...questDialogs('bruna', 'bruna_3', 2, 2),
+
+  // ── Orin (Einsiedler-Magier) ─────────────────────────────────────────────
+  {
+    id: 'orin_arrival',
+    speaker: 'orin',
+    lines: ['orin_arrival_1', 'orin_arrival_2'],
+    endActions: [{ type: 'setStoryFlag', flag: 'met_orin' }],
+  },
+  { id: 'orin_default', speaker: 'orin', lines: ['orin_default_1'] },
+  ...questDialogs('orin', 'orin_1', 2, 2),
+  ...questDialogs('orin', 'orin_2', 2, 1),
+  ...questDialogs('orin', 'orin_3', 2, 2),
+
+  // ── Piya (Händlerin) ─────────────────────────────────────────────────────
+  {
+    id: 'piya_arrival',
+    speaker: 'piya',
+    lines: ['piya_arrival_1', 'piya_arrival_2'],
+    endActions: [{ type: 'setStoryFlag', flag: 'met_piya' }],
+  },
+  { id: 'piya_default', speaker: 'piya', lines: ['piya_default_1'] },
+  ...questDialogs('piya', 'piya_1', 2, 1),
+  ...questDialogs('piya', 'piya_2', 2, 1),
+  ...questDialogs('piya', 'piya_3', 2, 2),
 ];
 
 export const dialogsById: Readonly<Record<string, DialogDef>> = Object.fromEntries(
   dialogs.map((d) => [d.id, d]),
 );
-
-/** A talkable NPC placed on the island (world layer renders + triggers). */
-export interface DialogNpcPlacement {
-  npcId: string;
-  dialogId: string;
-  /** Marker tile on the Heimatbucht map (16 px tiles, like buildings). */
-  tileX: number;
-  tileY: number;
-}
-
-/**
- * Placed dialog NPCs. Only the Lumen demo for now — NPC arrival triggers
- * (Tilda, Maro, …) are the next M5 task and will feed this list (or a
- * dynamic variant) from arrival state.
- */
-export const dialogNpcPlacements: readonly DialogNpcPlacement[] = [
-  { npcId: 'lumen', dialogId: 'lumen_intro', tileX: 28, tileY: 20 },
-];
 
 /** Max distance (px) at which an NPC can be talked to. */
 export const npcInteractRange = 26;

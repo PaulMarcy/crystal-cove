@@ -47,12 +47,7 @@ export const sailorsYarn: TalismanDef = {
   effect: { kind: 'firstDefenseCardFree' },
 };
 
-export const allTalismans: readonly TalismanDef[] = [
-  thornRing,
-  warmBelly,
-  anvilHeart,
-  sailorsYarn,
-];
+export const allTalismans: readonly TalismanDef[] = [thornRing, warmBelly, anvilHeart, sailorsYarn];
 
 export const talismansById: Readonly<Record<string, TalismanDef>> = Object.fromEntries(
   allTalismans.map((t) => [t.id, t]),

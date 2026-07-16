@@ -4,11 +4,7 @@
  * against a caller-supplied context and performs the material deduction.
  * No per-building special code — everything is data-driven.
  */
-import {
-  villageConfig,
-  type BuildingDef,
-  type BuildRequirement,
-} from '../../data/buildings';
+import { villageConfig, type BuildingDef, type BuildRequirement } from '../../data/buildings';
 import type { Inventory } from '../economy/inventory';
 
 /** Everything a build check needs — composed by the store, pure here. */

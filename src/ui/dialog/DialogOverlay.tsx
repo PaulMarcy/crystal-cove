@@ -39,9 +39,7 @@ function useTypewriter(text: string): { shown: string; done: boolean; revealAll:
     if (prefersReducedMotion()) return undefined;
     const timer = window.setInterval(() => {
       setState((current) =>
-        current.count >= current.text.length
-          ? current
-          : { ...current, count: current.count + 1 },
+        current.count >= current.text.length ? current : { ...current, count: current.count + 1 },
       );
     }, TYPEWRITER_TICK_MS);
     return () => window.clearInterval(timer);

@@ -60,9 +60,11 @@ describe('talismanCombatModifiers', () => {
     expect(warmBelly.effect).toEqual({ kind: 'combatStartHeal', amount: 3 });
     expect(anvilHeart.effect).toEqual({ kind: 'defenseCardBlockBonus', amount: 1 });
     expect(sailorsYarn.effect).toEqual({ kind: 'firstDefenseCardFree' });
-    expect(
-      talismanCombatModifiers(['warm_belly', 'anvil_heart', 'sailors_yarn'], defs),
-    ).toEqual({ combatStartHeal: 3, defenseCardBlockBonus: 1, firstDefenseCardFree: true });
+    expect(talismanCombatModifiers(['warm_belly', 'anvil_heart', 'sailors_yarn'], defs)).toEqual({
+      combatStartHeal: 3,
+      defenseCardBlockBonus: 1,
+      firstDefenseCardFree: true,
+    });
   });
 
   it('stacks amount kinds, ignores status kinds and unknown ids', () => {

@@ -1,15 +1,24 @@
 import Phaser from 'phaser';
-import { gameStore } from '../../shared/store';
+import {
+  gameStore,
+  npcArrivedOf,
+  npcDialogIdOf,
+  questIndicatorOf,
+  questNodeVisibleOf,
+} from '../../shared/store';
 import { strings } from '../../shared/strings';
 import { isZoneId, zoneAt, type ZoneRect } from '../../core/world/zones';
 import { heimatbuchtHarvestNodes, type HarvestNodeType } from '../../data/resources';
 import { heimatbuchtStations, stationInteractRange } from '../../data/stations';
 import { buildings, buildSlotInteractRange, type BuildingDef } from '../../data/buildings';
+import { npcInteractRange } from '../../data/dialogs';
 import {
-  dialogNpcPlacements,
-  npcInteractRange,
-  type DialogNpcPlacement,
-} from '../../data/dialogs';
+  npcPlacements,
+  npcs,
+  questCollectNodes,
+  type NpcDef,
+  type QuestCollectNode,
+} from '../../data/npcs';
 import {
   crops,
   farmInteractRange,
@@ -67,7 +76,14 @@ interface WorldBuildSlot {
 }
 
 interface WorldDialogNpc {
-  placement: DialogNpcPlacement;
+  npc: NpcDef;
+  sprite: Phaser.GameObjects.Sprite;
+  /** Quest symbol over the head (docs/13: ! neue Quest · ? abschlussbereit). */
+  indicator: Phaser.GameObjects.Text;
+}
+
+interface WorldQuestNode {
+  node: QuestCollectNode;
   sprite: Phaser.GameObjects.Sprite;
 }
 
@@ -117,6 +133,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
   private focusedBuildSlot: WorldBuildSlot | null = null;
   private dialogNpcs: WorldDialogNpc[] = [];
   private focusedNpc: WorldDialogNpc | null = null;
+  private questNodes: WorldQuestNode[] = [];
+  private focusedQuestNode: WorldQuestNode | null = null;
   private farmPlots: WorldFarmPlot[] = [];
   private focusedPlot: WorldFarmPlot | null = null;
   private tentSprite: Phaser.GameObjects.Sprite | null = null;
@@ -155,6 +173,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.focusedBuildSlot = null;
     this.dialogNpcs = [];
     this.focusedNpc = null;
+    this.questNodes = [];
+    this.focusedQuestNode = null;
     this.farmPlots = [];
     this.focusedPlot = null;
     this.tentSprite = null;
@@ -189,6 +209,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.spawnStations();
     this.spawnBuildSlots();
     this.spawnDialogNpcs();
+    this.spawnQuestNodes();
     this.spawnFarm();
     this.spawnShrines();
     this.spawnDungeonEntrances();
@@ -285,6 +306,20 @@ export class HeimatbuchtScene extends Phaser.Scene {
       }
       // Built stage changed (build panel) → mirror onto the world sprites.
       if (state.builtBuildings !== prev.builtBuildings) this.refreshBuildSlotSprites();
+      // NPC arrival, quest indicators and quest pickups derive from these
+      // slices (M5 Task 3, core/quests) — mirror onto the world sprites.
+      if (
+        state.builtBuildings !== prev.builtBuildings ||
+        state.rescuedNpcs !== prev.rescuedNpcs ||
+        state.completedDungeons !== prev.completedDungeons ||
+        state.storyFlags !== prev.storyFlags ||
+        state.activeQuests !== prev.activeQuests ||
+        state.completedQuests !== prev.completedQuests ||
+        state.inventory !== prev.inventory
+      ) {
+        this.refreshNpcPresence();
+        this.refreshQuestNodes();
+      }
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.unsubscribeStore?.();
@@ -322,13 +357,18 @@ export class HeimatbuchtScene extends Phaser.Scene {
     this.updateDungeonEntranceFocus();
     this.updateFarmFocus();
     this.updateHarvestFocus();
+    this.updateQuestNodeFocus();
     this.updateNpcFocus();
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
       // Priority when several are in range:
-      // station > build slot > entrance > tent > plot > node > npc.
+      // station > build slot > entrance > tent > plot > node > quest node > npc.
       if (this.focusedNpc) {
-        // Dialog flow runs in the React overlay (store-driven, docs/13).
-        gameStore.getState().startDialog(this.focusedNpc.placement.dialogId);
+        // Dialog flow runs in the React overlay (store-driven, docs/13);
+        // WHICH dialog opens is quest-state-driven (core/quests).
+        const dialogId = npcDialogIdOf(gameStore.getState(), this.focusedNpc.npc.id);
+        if (dialogId) gameStore.getState().startDialog(dialogId);
+      } else if (this.focusedQuestNode) {
+        this.tryCollectQuestNode(this.focusedQuestNode);
       } else if (this.focusedStation) {
         gameStore.getState().openStation(this.focusedStation.station);
       } else if (this.focusedBuildSlot) {
@@ -853,9 +893,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     }
     nearest.sprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
     this.harvestPrompt
-      .setText(
-        strings.build.slotPrompt.replace('{name}', strings.buildings[nearest.def.id].name),
-      )
+      .setText(strings.build.slotPrompt.replace('{name}', strings.buildings[nearest.def.id].name))
       .setPosition(nearest.sprite.x, nearest.sprite.y - 14)
       .setVisible(true);
   }
@@ -891,20 +929,173 @@ export class HeimatbuchtScene extends Phaser.Scene {
     });
   }
 
-  // ── Dialog-NPCs (M5, docs/13) ───────────────────────────────────────────
+  // ── Dialog-NPCs (M5, docs/13 + docs/09 Ankunft) ─────────────────────────
 
   /**
-   * Spawns talkable NPCs (data/dialogs). Only the Lumen demo for now —
-   * the NPC arrival task (M5) feeds this from arrival state.
+   * Spawns all roster NPCs (data/npcs) with a quest-symbol slot over the
+   * head; visibility mirrors the DERIVED arrival state (core/quests via
+   * refreshNpcPresence) — arrived NPCs stand in the Heimatbucht.
    */
   private spawnDialogNpcs(): void {
     this.createNpcTextures();
-    for (const placement of dialogNpcPlacements) {
+    for (const npc of npcs) {
+      const placement = npcPlacements[npc.id];
       const x = placement.tileX * TILE + TILE / 2;
       const y = placement.tileY * TILE + TILE / 2;
-      const sprite = this.add.sprite(x, y, `npc-${placement.npcId}`).setDepth(6);
-      this.dialogNpcs.push({ placement, sprite });
+      const sprite = this.add.sprite(x, y, `npc-${npc.id}`).setDepth(6);
+      // Symbol as TEXT over the head (docs/13: ! / ? — nie nur Farbe).
+      const indicator = this.add
+        .text(x, y - 14, '', {
+          fontFamily: 'monospace',
+          fontSize: '10px',
+          color: '#3a2e28',
+          backgroundColor: '#ecd9a3',
+          padding: { x: 2, y: 0 },
+        })
+        .setOrigin(0.5, 1)
+        .setDepth(7)
+        .setVisible(false);
+      this.dialogNpcs.push({ npc, sprite, indicator });
     }
+    this.refreshNpcPresence();
+  }
+
+  /** Mirrors arrival + quest symbols onto the NPC sprites (store-derived). */
+  private refreshNpcPresence(): void {
+    const state = gameStore.getState();
+    for (const npc of this.dialogNpcs) {
+      const arrived = npcArrivedOf(state, npc.npc.id);
+      npc.sprite.setVisible(arrived);
+      const symbol = arrived ? questIndicatorOf(state, npc.npc.id) : null;
+      npc.indicator.setText(symbol ?? '').setVisible(symbol !== null);
+      if (!arrived && this.focusedNpc === npc) {
+        npc.sprite.clearTint();
+        this.focusedNpc = null;
+        this.harvestPrompt.setVisible(false);
+      }
+    }
+  }
+
+  // ── Quest-Sammelpunkte (M5 Task 3, docs/09 Honig / Maros Kiste) ─────────
+
+  /** Spawns quest-gated pickups; visibility mirrors quest state. */
+  private spawnQuestNodes(): void {
+    this.createQuestNodeTextures();
+    for (const node of questCollectNodes) {
+      const x = node.tileX * TILE + TILE / 2;
+      const y = node.tileY * TILE + TILE / 2;
+      const sprite = this.add.sprite(x, y, `quest-node-${node.id}`).setDepth(5);
+      this.questNodes.push({ node, sprite });
+    }
+    this.refreshQuestNodes();
+  }
+
+  /** Visible only while the quest is active and the item missing (core/quests). */
+  private refreshQuestNodes(): void {
+    const state = gameStore.getState();
+    for (const questNode of this.questNodes) {
+      const visible = questNodeVisibleOf(state, questNode.node.id);
+      questNode.sprite.setVisible(visible);
+      if (!visible && this.focusedQuestNode === questNode) {
+        questNode.sprite.clearTint();
+        this.focusedQuestNode = null;
+        this.harvestPrompt.setVisible(false);
+      }
+    }
+  }
+
+  /** Nearest visible quest pickup gets highlight + prompt; others win. */
+  private updateQuestNodeFocus(): void {
+    if (
+      this.focusedStation ||
+      this.focusedBuildSlot ||
+      this.focusedEntrance ||
+      this.focusedPlot ||
+      this.tentFocused ||
+      this.focusedNode
+    ) {
+      if (this.focusedQuestNode) {
+        this.focusedQuestNode.sprite.clearTint();
+        this.focusedQuestNode = null;
+      }
+      return;
+    }
+    let nearest: WorldQuestNode | null = null;
+    let nearestDist = HARVEST_RANGE;
+    for (const questNode of this.questNodes) {
+      if (!questNode.sprite.visible) continue;
+      const dist = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        questNode.sprite.x,
+        questNode.sprite.y,
+      );
+      if (dist <= nearestDist) {
+        nearest = questNode;
+        nearestDist = dist;
+      }
+    }
+    if (nearest === this.focusedQuestNode) return;
+
+    this.focusedQuestNode?.sprite.clearTint();
+    this.focusedQuestNode = nearest;
+    if (!nearest) {
+      if (!this.focusedNpc) this.harvestPrompt.setVisible(false);
+      return;
+    }
+    nearest.sprite.setTint(ACTION_TINT); // orange = actionable (docs/04)
+    const nodeNames = strings.world.questNodes as Readonly<Record<string, string>>;
+    this.harvestPrompt
+      .setText(
+        strings.world.questCollectPrompt.replace(
+          '{node}',
+          nodeNames[nearest.node.id] ?? nearest.node.id,
+        ),
+      )
+      .setPosition(nearest.sprite.x, nearest.sprite.y - 12)
+      .setVisible(true);
+  }
+
+  /** Dispatches the pickup to the store; refreshQuestNodes despawns it. */
+  private tryCollectQuestNode(questNode: WorldQuestNode): void {
+    if (!gameStore.getState().collectQuestNode(questNode.node.id)) return;
+    // Visibility refresh happens via the store subscription (inventory
+    // changed); clear the local focus immediately for snappy feedback.
+    if (this.focusedQuestNode === questNode) {
+      this.focusedQuestNode = null;
+      this.harvestPrompt.setVisible(false);
+    }
+  }
+
+  /**
+   * Placeholder quest-pickup textures (grade 1 "Funktional", docs/04):
+   * washed-up toolbox and a beehive — material tones, orange only as tint.
+   */
+  private createQuestNodeTextures(): void {
+    const make = (key: string, draw: (g: Phaser.GameObjects.Graphics) => void): void => {
+      if (this.textures.exists(key)) return;
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      draw(g);
+      g.generateTexture(key, 16, 16);
+      g.destroy();
+    };
+    make('quest-node-quest-maro-toolbox', (g) => {
+      g.fillStyle(0x6b4a2f); // wooden chest
+      g.fillRect(2, 7, 12, 8);
+      g.fillStyle(0x8d6a45); // lid
+      g.fillRect(2, 5, 12, 3);
+      g.fillStyle(0xb87333); // copper clasp
+      g.fillRect(7, 8, 2, 3);
+    });
+    make('quest-node-quest-tilda-honey', (g) => {
+      g.fillStyle(0xd9a94a); // beehive gold
+      g.fillEllipse(8, 9, 11, 10);
+      g.fillStyle(0xb8863b); // rings
+      g.fillRect(3, 7, 10, 1);
+      g.fillRect(3, 10, 10, 1);
+      g.fillStyle(0x3a2e28); // entrance
+      g.fillRect(7, 11, 2, 2);
+    });
   }
 
   /**
@@ -920,7 +1111,8 @@ export class HeimatbuchtScene extends Phaser.Scene {
       this.focusedEntrance ||
       this.focusedPlot ||
       this.tentFocused ||
-      this.focusedNode
+      this.focusedNode ||
+      this.focusedQuestNode
     ) {
       if (this.focusedNpc) {
         this.focusedNpc.sprite.clearTint();
@@ -931,6 +1123,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     let nearest: WorldDialogNpc | null = null;
     let nearestDist = npcInteractRange;
     for (const npc of this.dialogNpcs) {
+      if (!npc.sprite.visible) continue; // not arrived yet (docs/09)
       const dist = Phaser.Math.Distance.Between(
         this.player.x,
         this.player.y,
@@ -954,10 +1147,7 @@ export class HeimatbuchtScene extends Phaser.Scene {
     const npcNames = strings.npcs as Readonly<Record<string, string>>;
     this.harvestPrompt
       .setText(
-        strings.world.npcTalkPrompt.replace(
-          '{npc}',
-          npcNames[nearest.placement.npcId] ?? nearest.placement.npcId,
-        ),
+        strings.world.npcTalkPrompt.replace('{npc}', npcNames[nearest.npc.id] ?? nearest.npc.id),
       )
       .setPosition(nearest.sprite.x, nearest.sprite.y - 14)
       .setVisible(true);
@@ -966,22 +1156,47 @@ export class HeimatbuchtScene extends Phaser.Scene {
   /**
    * Placeholder NPC textures (grade 1 "Funktional", docs/04): Lumen is a
    * crystal fox (docs/06) — crystal violet = magic (docs/04 color rule);
-   * orange appears only as focus tint.
+   * villagers share a silhouette with distinct garment colors (material
+   * tones; orange appears only as focus tint, violet stays Orin/magic).
    */
   private createNpcTextures(): void {
-    if (this.textures.exists('npc-lumen')) return;
-    const g = this.make.graphics({ x: 0, y: 0 }, false);
-    g.fillStyle(0x9668d8); // crystal violet body
-    g.fillEllipse(8, 12, 12, 8); // body
-    g.fillTriangle(4, 8, 6, 3, 8, 8); // left ear
-    g.fillTriangle(8, 8, 10, 3, 12, 8); // right ear
-    g.fillEllipse(8, 8, 8, 6); // head
-    g.fillTriangle(13, 12, 17, 8, 15, 15); // tail
-    g.fillStyle(0xd8c8f0); // pale crystal glow accents
-    g.fillRect(6, 7, 1, 1);
-    g.fillRect(10, 7, 1, 1);
-    g.generateTexture('npc-lumen', 18, 18);
-    g.destroy();
+    if (!this.textures.exists('npc-lumen')) {
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      g.fillStyle(0x9668d8); // crystal violet body
+      g.fillEllipse(8, 12, 12, 8); // body
+      g.fillTriangle(4, 8, 6, 3, 8, 8); // left ear
+      g.fillTriangle(8, 8, 10, 3, 12, 8); // right ear
+      g.fillEllipse(8, 8, 8, 6); // head
+      g.fillTriangle(13, 12, 17, 8, 15, 15); // tail
+      g.fillStyle(0xd8c8f0); // pale crystal glow accents
+      g.fillRect(6, 7, 1, 1);
+      g.fillRect(10, 7, 1, 1);
+      g.generateTexture('npc-lumen', 18, 18);
+      g.destroy();
+    }
+    const villagerColors: Record<string, number> = {
+      maro: 0x8d5a3b, // smith leather-brown
+      tilda: 0xc4534f, // cook warm red
+      bruna: 0x4a7d8c, // fisher sea-blue
+      orin: 0x9668d8, // magician — crystal violet (docs/04: Magie)
+      piya: 0x5a8f46, // trader herb-green
+    };
+    for (const [npcId, color] of Object.entries(villagerColors)) {
+      const key = `npc-${npcId}`;
+      if (this.textures.exists(key)) continue;
+      const g = this.make.graphics({ x: 0, y: 0 }, false);
+      g.fillStyle(0x3a2e28); // outline (UI warm brown)
+      g.fillRect(3, 0, 10, 15);
+      g.fillStyle(0xecd9a3); // face (cream)
+      g.fillRect(4, 1, 8, 6);
+      g.fillStyle(color); // garment
+      g.fillRect(4, 7, 8, 7);
+      g.fillStyle(0x3a2e28); // eyes
+      g.fillRect(6, 3, 1, 2);
+      g.fillRect(9, 3, 1, 2);
+      g.generateTexture(key, 16, 15);
+      g.destroy();
+    }
   }
 
   // ── Farming (M3, docs/10 Farming & Zeit) ────────────────────────────────

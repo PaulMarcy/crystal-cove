@@ -112,6 +112,17 @@ export interface SaveDataV2 extends Omit<SaveDataV1, 'collection' | 'toolTier'> 
   storyFlags?: readonly string[];
   /** Friendship level 0–3 per NPC id (docs/09 quest chains). */
   friendshipLevels?: Readonly<Record<string, number>>;
+  /**
+   * M5 quests (Task 3) — additive-OPTIONAL late-V2 fields (no version bump,
+   * same pattern as xp): absent = no quests / nothing taught. NPC arrival
+   * is DERIVED (buildings/rescues/flags) and never stored.
+   */
+  /** Accepted, not yet completed quest ids (data/npcs). */
+  activeQuests?: readonly string[];
+  /** Completed quest ids — friendship levels follow from these. */
+  completedQuests?: readonly string[];
+  /** Recipe ids taught by NPC quest rewards (docs/09). */
+  unlockedRecipes?: readonly string[];
 }
 
 /** Current save shape — alias moves forward with each new version. */
@@ -283,6 +294,15 @@ function isValidSaveData(value: unknown): value is SaveData {
   if (v.storyFlags !== undefined) {
     if (!Array.isArray(v.storyFlags)) return false;
     if (!v.storyFlags.every((id) => typeof id === 'string')) return false;
+  }
+  // M5 quests — string lists like rescuedNpcs (unknown ids are tolerated
+  // and ignored by consumers, so removed content never corrupts a save).
+  for (const key of ['activeQuests', 'completedQuests', 'unlockedRecipes'] as const) {
+    const list = v[key];
+    if (list !== undefined) {
+      if (!Array.isArray(list)) return false;
+      if (!list.every((id) => typeof id === 'string')) return false;
+    }
   }
   if (v.lootSinceRest !== undefined) {
     if (typeof v.lootSinceRest !== 'object' || v.lootSinceRest === null) return false;
