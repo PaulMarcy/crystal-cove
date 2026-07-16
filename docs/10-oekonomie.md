@@ -65,8 +65,14 @@ Expedition: 1, ab Haus-Ausbau bzw. Lv 12 → 2 (siehe docs/02/09).
 
 ## Münz-Ökonomie
 
-**Quellen:** Glanzstück-Verkauf (15), Überschussmaterial (1–3/Stück),
-Schwarzes Brett (10–25 pro Bitte).
+**Quellen:** Glanzstück-Verkauf (15), Überschussmaterial (1–3/Stück:
+Basis-Sammelgut Holz/Stein/Beere/Fisch/Ranken 1 · Kampf-/Chance-Drops
+Harz/Käferpanzer/Leder/Fleisch/Feder/Kupfer 2 · seltene Drops
+Schattenstaub/Honig 3; Spezial-/Questmaterial wie Herzdorn oder Maros
+Werkzeug ist unverkäuflich), Schwarzes Brett (10–25 pro Bitte; V1-Pool:
+6 feste Bitten — 5 Holz→10, 3 Beeren→10, 3 Stein→10, 2 Fische→15,
+2 Harz→20, 1 Käferpanzer→25 — je Schlafphase rotiert 1 zufällige Bitte
+aktiv, wiederholbar, ohne XP: Kein-Grind-Regel doc 02).
 **Senken:** Schrein-Upgrades, Piyas Sortiment (Spezialmaterial: Käferpanzer 12,
 Harz 10, Herzdorn 60 — rotiert pro Weltkarten-Besuch, teurer als Erspielen →
 Kaufen ist Abkürzung, nie Pflicht).

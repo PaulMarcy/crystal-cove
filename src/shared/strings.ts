@@ -322,7 +322,7 @@ export const strings = {
     copper_ore: 'Kupfererz',
     beetle_shell: 'Käferpanzer',
     feather: 'Feder',
-    shiny_trinket: 'Glitzerkram',
+    shiny_trinket: 'Glanzstück',
     heart_thorn: 'Herzdorn',
     thorn_ring: 'Dornenring',
     pumpkin: 'Kürbis',
